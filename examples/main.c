@@ -21,6 +21,12 @@ extern int luaopen_sokol_time(lua_State *L);
 extern int luaopen_sokol_gl(lua_State *L);
 extern int luaopen_sokol_debugtext(lua_State *L);
 
+#ifdef MANE3D_HAS_SHDC
+extern int luaopen_shdc(lua_State *L);
+extern void shdc_init(void);
+extern void shdc_shutdown(void);
+#endif
+
 static lua_State *L = NULL;
 
 static void call_lua(const char *func)
@@ -60,6 +66,9 @@ static void frame(void)
 static void cleanup(void)
 {
     call_lua("cleanup");
+#ifdef MANE3D_HAS_SHDC
+    shdc_shutdown();
+#endif
     sgl_shutdown();
     sg_shutdown();
     lua_close(L);
@@ -107,6 +116,12 @@ sapp_desc sokol_main(int argc, char *argv[])
     lua_pop(L, 1);
     luaL_requiref(L, "sokol.debugtext", luaopen_sokol_debugtext, 0);
     lua_pop(L, 1);
+
+#ifdef MANE3D_HAS_SHDC
+    shdc_init();
+    luaL_requiref(L, "shdc", luaopen_shdc, 0);
+    lua_pop(L, 1);
+#endif
 
     /* Load script */
     const char *script = (argc > 1) ? argv[1] : "main.lua";

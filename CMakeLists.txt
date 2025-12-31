@@ -1,8 +1,14 @@
-cmake_minimum_required(VERSION 3.10)
-project(mane3d C)
+cmake_minimum_required(VERSION 3.20)
+project(mane3d C CXX)
+
+# MSVC parallel compilation
+if(MSVC)
+    add_compile_options(/MP)
+endif()
 
 # Options
 option(MANE3D_BUILD_SHARED "Build as shared library" OFF)
+option(MANE3D_BUILD_SHDC "Build sokol-shdc library" OFF)
 option(MANE3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
 option(MANE3D_BACKEND_GL "Use OpenGL backend" OFF)
 option(MANE3D_BACKEND_GLES3 "Use OpenGL ES3 backend" OFF)
@@ -205,6 +211,11 @@ if(MANE3D_BUILD_EXAMPLE)
     )
     target_link_libraries(mane3d-example mane3d)
 
+    # SHDC support
+    if(MANE3D_BUILD_SHDC)
+        target_compile_definitions(mane3d-example PRIVATE MANE3D_HAS_SHDC)
+    endif()
+
     # Backend defines for example
     if(MANE3D_BACKEND_GL)
         target_compile_definitions(mane3d-example PRIVATE SOKOL_GLCORE)
@@ -250,3 +261,27 @@ install(TARGETS mane3d
 install(DIRECTORY deps/sokol/ DESTINATION include/sokol FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY deps/sokol/util/ DESTINATION include/sokol FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY deps/lua/ DESTINATION include/lua FILES_MATCHING PATTERN "*.h")
+
+# sokol-shdc library (optional)
+if(MANE3D_BUILD_SHDC)
+    include(cmake/sokol-shdc.cmake)
+
+    # Wrapper library (C++20)
+    add_library(shdc_wrapper STATIC src/shdc_wrapper.cc)
+    target_include_directories(shdc_wrapper PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol-tools/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+    )
+    target_link_libraries(shdc_wrapper sokol_shdc_lib)
+    set_target_properties(shdc_wrapper PROPERTIES CXX_STANDARD 20)
+
+    # Add Lua bindings and link wrapper
+    target_sources(mane3d PRIVATE src/shdc_lua.c)
+    target_include_directories(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(mane3d PRIVATE MANE3D_HAS_SHDC)
+    target_link_libraries(mane3d PUBLIC shdc_wrapper)
+
+    # Test executable
+    add_executable(test_shdc tests/test_shdc.cc)
+    target_link_libraries(test_shdc sokol_shdc_lib)
+endif()

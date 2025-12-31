@@ -27,111 +27,40 @@ function M.get_shader_lang()
     end
 end
 
--- Find Windows SDK path for fxc.exe
-function M.find_fxc_path()
-    local sdk_base = "C:\\Program Files (x86)\\Windows Kits\\10\\bin"
-    local handle = io.popen('dir "' .. sdk_base .. '" /b /ad 2>nul')
-    if not handle then return nil end
-
-    local latest = nil
-    for line in handle:lines() do
-        if line:match("^10%.") then latest = line end
-    end
-    handle:close()
-
-    if latest then
-        local path = sdk_base .. "\\" .. latest .. "\\x64"
-        local f = io.open(path .. "\\fxc.exe", "rb")
-        if f then
-            f:close()
-            return path
-        end
-    end
-    return nil
-end
-
--- Compile shader using sokol-shdc
+-- Compile shader using sokol-shdc library
 -- @param source string: shader source code
 -- @param program_name string: program name in shader
 -- @param uniform_blocks table|nil: optional uniform block descriptors
 -- @return shader handle or nil on failure
 function M.compile_shader(source, program_name, uniform_blocks)
-    local tmp_dir = os.getenv("TEMP") or os.getenv("TMP") or "/tmp"
-    local tmp_glsl = tmp_dir .. "/shader_" .. os.time() .. ".glsl"
-    local tmp_out = tmp_dir .. "/shader_" .. os.time()
-
-    -- Write shader source
-    local f = assert(io.open(tmp_glsl, "w"))
-    f:write(source)
-    f:close()
-
+    local shdc = require("shdc")
     local lang = M.get_shader_lang()
-    local fxc_path = (lang == "hlsl5" or lang == "hlsl4") and M.find_fxc_path() or nil
 
-    -- Run sokol-shdc
-    local ok
-    if fxc_path then
-        local bat_file = tmp_dir .. "\\run_shdc.bat"
-        local bat = assert(io.open(bat_file, "w"))
-        bat:write('set PATH=%PATH%;' .. fxc_path .. '\r\n')
-        bat:write('sokol-shdc -i "' ..
-        tmp_glsl:gsub("/", "\\") .. '" -o "' .. tmp_out:gsub("/", "\\") .. '" -l ' .. lang .. ' -f bare -b\r\n')
-        bat:close()
-        ok = os.execute('cmd /c "' .. bat_file .. '"')
-        os.remove(bat_file)
-    else
-        ok = os.execute(string.format('sokol-shdc -i "%s" -o "%s" -l %s -f bare -b', tmp_glsl, tmp_out, lang))
-    end
-
-    os.remove(tmp_glsl)
-
-    if not ok then
-        M.log("Failed to run sokol-shdc")
+    -- Compile using library
+    local result = shdc.compile(source, program_name, lang)
+    if not result.success then
+        M.log("Shader compile error: " .. (result.error or "unknown"))
         return nil
     end
-
-    -- Determine output file extensions
-    local vs_file, fs_file
-    if lang == "hlsl5" or lang == "hlsl4" then
-        vs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_vertex.fxc"
-        fs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_fragment.fxc"
-    elseif lang:find("glsl") then
-        vs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_vertex.glsl"
-        fs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_fragment.glsl"
-    elseif lang:find("metal") then
-        vs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_vertex.metallib"
-        fs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_fragment.metallib"
-    elseif lang == "wgsl" then
-        vs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_vertex.wgsl"
-        fs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_fragment.wgsl"
-    else
-        vs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_vertex.bin"
-        fs_file = tmp_out .. "_" .. program_name .. "_" .. lang .. "_fragment.bin"
-    end
-
-    -- Read shader files
-    local vs_f = io.open(vs_file, "rb")
-    if not vs_f then
-        M.log("Failed to open VS file: " .. vs_file)
-        return nil
-    end
-    local vs_data = vs_f:read("*a")
-    vs_f:close()
-
-    local fs_f = io.open(fs_file, "rb")
-    if not fs_f then
-        M.log("Failed to open FS file: " .. fs_file)
-        return nil
-    end
-    local fs_data = fs_f:read("*a")
-    fs_f:close()
-
-    os.remove(vs_file)
-    os.remove(fs_file)
 
     -- Create shader using generated bindings
     local backend = gfx.query_backend()
     local is_glsl = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3)
+
+    local vs_data, fs_data
+    if is_glsl then
+        vs_data = result.vs_source
+        fs_data = result.fs_source
+    else
+        -- Use bytecode for HLSL/Metal
+        vs_data = result.vs_bytecode or result.vs_source
+        fs_data = result.fs_bytecode or result.fs_source
+    end
+
+    if not vs_data or not fs_data then
+        M.log("Missing shader data")
+        return nil
+    end
 
     local desc_table = {
         vertex_func = is_glsl and { source = vs_data } or { bytecode = vs_data },
