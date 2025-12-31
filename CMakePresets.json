@@ -1,0 +1,178 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "win-d3d11-debug",
+      "displayName": "Windows D3D11 Debug",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-d3d11",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MANE3D_BACKEND_D3D11": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "win-d3d11-release",
+      "displayName": "Windows D3D11 Release",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-d3d11",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MANE3D_BACKEND_D3D11": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "win-d3d11-shared",
+      "displayName": "Windows D3D11 Shared",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-d3d11-shared",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MANE3D_BACKEND_D3D11": "ON",
+        "MANE3D_BUILD_SHARED": "ON"
+      }
+    },
+    {
+      "name": "win-gl-debug",
+      "displayName": "Windows OpenGL Debug",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-gl",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MANE3D_BACKEND_GL": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "macos-metal-release",
+      "displayName": "macOS Metal Release",
+      "generator": "Xcode",
+      "binaryDir": "${sourceDir}/build/macos-metal",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MANE3D_BACKEND_METAL": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "macos-gl-debug",
+      "displayName": "macOS OpenGL Debug",
+      "generator": "Xcode",
+      "binaryDir": "${sourceDir}/build/macos-gl",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MANE3D_BACKEND_GL": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "linux-gl-debug",
+      "displayName": "Linux OpenGL Debug",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/linux-gl",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MANE3D_BACKEND_GL": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "linux-gles3-debug",
+      "displayName": "Linux OpenGL ES3 Debug",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/linux-gles3",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MANE3D_BACKEND_GLES3": "ON",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "win-d3d11-debug",
+      "configurePreset": "win-d3d11-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "win-d3d11-release",
+      "configurePreset": "win-d3d11-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "win-d3d11-shared",
+      "configurePreset": "win-d3d11-shared",
+      "configuration": "Release"
+    },
+    {
+      "name": "win-gl-debug",
+      "configurePreset": "win-gl-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "macos-metal-release",
+      "configurePreset": "macos-metal-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "macos-gl-debug",
+      "configurePreset": "macos-gl-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "linux-gl-debug",
+      "configurePreset": "linux-gl-debug"
+    },
+    {
+      "name": "linux-gles3-debug",
+      "configurePreset": "linux-gles3-debug"
+    }
+  ]
+}

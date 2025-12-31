@@ -1,0 +1,14 @@
+# Build output
+build/
+out/
+install/
+
+# Generated code
+gen/
+
+# IDE
+.vs/
+.vscode/
+CMakeSettings.json
+*.user
+.claude/settings.local.json

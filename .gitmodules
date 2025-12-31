@@ -1,0 +1,6 @@
+[submodule "deps/lua"]
+	path = deps/lua
+	url = https://github.com/lua/lua
+[submodule "deps/sokol"]
+	path = deps/sokol
+	url = https://github.com/floooh/sokol
