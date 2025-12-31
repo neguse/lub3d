@@ -924,8 +924,13 @@ def gen_luacats_types(inp, prefix, module_name):
     # Define module class with struct constructors as fields
     lines.append(f'---@class {module_name}')
     for struct_decl in structs:
-        struct_name = as_struct_metatable_name(struct_decl['name'])
-        lines.append(f'---@field {struct_name} fun(t?: {module_name}.{struct_name}): {module_name}.{struct_name}')
+        c_struct_name = struct_decl['name']
+        struct_name = as_struct_metatable_name(c_struct_name)
+        # sg_range can be initialized from string
+        if c_struct_name == 'sg_range':
+            lines.append(f'---@field {struct_name} fun(t?: {module_name}.{struct_name}|string): {module_name}.{struct_name}')
+        else:
+            lines.append(f'---@field {struct_name} fun(t?: {module_name}.{struct_name}): {module_name}.{struct_name}')
     lines.append(f'local {module_name} = {{}}')
     lines.append('')
 
