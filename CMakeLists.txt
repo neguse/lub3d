@@ -84,11 +84,20 @@ set(MANE3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_debugtext.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_shape.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
 if(Python3_FOUND)
     add_custom_command(
-        OUTPUT ${MANE3D_GENERATED}
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_log.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_app.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_time.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_audio.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gl.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_debugtext.c
+               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_shape.c
         COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
             ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_lua.py
             --sokol ${SOKOL_DIR}
@@ -96,6 +105,15 @@ if(Python3_FOUND)
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gen_lua.py
         COMMENT "Generating Lua bindings..."
+    )
+
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/gen_licenses.py
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/gen_licenses.py
+        COMMENT "Generating license data..."
     )
 endif()
 

@@ -20,6 +20,7 @@ extern int luaopen_sokol_log(lua_State *L);
 extern int luaopen_sokol_time(lua_State *L);
 extern int luaopen_sokol_gl(lua_State *L);
 extern int luaopen_sokol_debugtext(lua_State *L);
+extern int luaopen_mane3d_licenses(lua_State *L);
 
 #ifdef MANE3D_HAS_SHDC
 extern int luaopen_shdc(lua_State *L);
@@ -115,6 +116,8 @@ sapp_desc sokol_main(int argc, char *argv[])
     luaL_requiref(L, "sokol.gl", luaopen_sokol_gl, 0);
     lua_pop(L, 1);
     luaL_requiref(L, "sokol.debugtext", luaopen_sokol_debugtext, 0);
+    lua_pop(L, 1);
+    luaL_requiref(L, "mane3d.licenses", luaopen_mane3d_licenses, 0);
     lua_pop(L, 1);
 
 #ifdef MANE3D_HAS_SHDC

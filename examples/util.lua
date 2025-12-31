@@ -4,10 +4,21 @@ local slog = require("sokol.log")
 
 local M = {}
 
--- Log using sokol_log (OutputDebugString on Windows)
-function M.log(msg)
+-- Logging (uses sokol_log, OutputDebugString on Windows)
+function M.info(msg)
+    slog.func("lua", 3, 0, msg, 0, "", nil)
+end
+
+function M.warn(msg)
+    slog.func("lua", 2, 0, msg, 0, "", nil)
+end
+
+function M.error(msg)
     slog.func("lua", 1, 0, msg, 0, "", nil)
 end
+
+-- Alias for backward compatibility
+M.log = M.info
 
 -- Get shader language for current backend
 function M.get_shader_lang()
@@ -39,7 +50,7 @@ function M.compile_shader(source, program_name, uniform_blocks)
     -- Compile using library
     local result = shdc.compile(source, program_name, lang)
     if not result.success then
-        M.log("Shader compile error: " .. (result.error or "unknown"))
+        M.error("Shader compile error: " .. (result.error or "unknown"))
         return nil
     end
 
@@ -58,7 +69,7 @@ function M.compile_shader(source, program_name, uniform_blocks)
     end
 
     if not vs_data or not fs_data then
-        M.log("Missing shader data")
+        M.error("Missing shader data")
         return nil
     end
 
@@ -82,7 +93,7 @@ function M.compile_shader(source, program_name, uniform_blocks)
 
     local shd = gfx.make_shader(gfx.ShaderDesc(desc_table))
     if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
-        M.log("Failed to create shader")
+        M.error("Failed to create shader")
         return nil
     end
 

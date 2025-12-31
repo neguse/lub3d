@@ -3,6 +3,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local util = require("util")
+local licenses = require("mane3d.licenses")
 
 local t = 0
 ---@type gfx.Shader?
@@ -38,6 +39,12 @@ void main() {
 ]]
 
 function init()
+    -- Log license information
+    util.log("=== Third-party licenses ===")
+    for _, lib in ipairs(licenses.libraries()) do
+        util.log(string.format("  %s (%s)", lib.name, lib.type))
+    end
+
     shader = util.compile_shader(shader_source, "triangle")
     if not shader then
         util.log("Shader compilation failed!")
