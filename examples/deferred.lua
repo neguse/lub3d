@@ -12,10 +12,10 @@ local camera_pos = glm.vec3(0, -20, 10)
 local camera_yaw = 0
 local camera_pitch = 0.3
 
--- Light
+-- Light (matches original sunlightColor1 and ambientLight)
 local light_pos = glm.vec3(10, -10, 20)
-local light_color = glm.vec3(1.5, 1.4, 1.3)
-local ambient_color = glm.vec3(0.2, 0.2, 0.25)
+local light_color = glm.vec3(0.765, 0.573, 0.400)
+local ambient_color = glm.vec3(0.388, 0.356, 0.447)
 
 -- Fog parameters
 local fog_enabled = true
@@ -24,6 +24,12 @@ local fog_far = 150.0
 local fog_sun_position = 0.5  -- 0-1, affects color brightness
 local fog_bg_color0 = { 0.7, 0.8, 0.9 }  -- Horizon color
 local fog_bg_color1 = { 0.3, 0.4, 0.6 }  -- Zenith color
+
+-- Lighting effect parameters
+local fresnel_enabled = true
+local fresnel_power = 5.0
+local rim_light_enabled = true
+local cel_shading_enabled = true
 
 -- Blur parameters
 local blur_enabled = false
@@ -218,6 +224,9 @@ layout(binding=0) uniform fs_params {
     vec4 backgroundColor0;   // Fog gradient color 0 (horizon)
     vec4 backgroundColor1;   // Fog gradient color 1 (zenith)
     vec4 fog_params;         // x = near, y = far, z = enabled, w = sunPosition
+    vec4 fresnel_params;     // x = enabled, y = power
+    vec4 rim_params;         // x = enabled, y = power
+    vec4 cel_params;         // x = enabled
 };
 
 const float PI = 3.14159265359;
@@ -261,16 +270,48 @@ void main() {
     // Ambient (modulated by SSAO)
     vec3 ambient = ambient_color.rgb * albedo.rgb * ssao;
 
-    // Diffuse
-    float diff = max(dot(n, light_dir), 0.0);
-    vec3 diffuse = light_color.rgb * diff * albedo.rgb;
+    // Diffuse intensity
+    float diffuseIntensity = max(dot(n, light_dir), 0.0);
+
+    // Apply cel shading to diffuse (before specular calculation)
+    if (cel_params.x > 0.5) {
+        diffuseIntensity = smoothstep(0.1, 0.2, diffuseIntensity);
+    }
 
     // Specular (Blinn-Phong)
     vec3 halfway = normalize(light_dir + view_dir);
-    float spec = pow(max(dot(n, halfway), 0.0), 32.0);
-    vec3 specular = light_color.rgb * spec * vec3(0.3);
+    float specularIntensity = pow(max(dot(n, halfway), 0.0), 32.0);
 
-    vec3 result = ambient + diffuse + specular;
+    // Apply cel shading to specular
+    if (cel_params.x > 0.5) {
+        specularIntensity = smoothstep(0.9, 1.0, specularIntensity);
+    }
+
+    // Fresnel factor - modulates material specular color
+    // Original: mix(materialSpecularColor, white, fresnelFactor)
+    vec3 materialSpecularColor = vec3(0.3);
+    if (fresnel_params.x > 0.5) {
+        float fresnelFactor = 1.0 - max(dot(halfway, view_dir), 0.0);
+        fresnelFactor = pow(fresnelFactor, fresnel_params.y);
+        materialSpecularColor = mix(materialSpecularColor, vec3(1.0), clamp(fresnelFactor, 0.0, 1.0));
+    }
+
+    // Rim lighting - illuminates silhouette edges
+    vec3 rimLight = vec3(0.0);
+    if (rim_params.x > 0.5) {
+        float rimIntensity = 1.0 - max(dot(view_dir, n), 0.0);
+        if (cel_params.x > 0.5) {
+            rimIntensity = smoothstep(0.3, 0.4, rimIntensity);
+        } else {
+            rimIntensity = pow(rimIntensity, 2.0) * 1.2;
+        }
+        rimLight = rimIntensity * diffuseIntensity * light_color.rgb * albedo.rgb;
+    }
+
+    vec3 diffuse = light_color.rgb * diffuseIntensity * albedo.rgb;
+    vec3 specular = light_color.rgb * specularIntensity * materialSpecularColor;
+
+    vec3 result = ambient + diffuse + specular + rimLight;
 
     // Apply fog (distance from camera in view space, using z-depth)
     if (fog_params.z > 0.5) {
@@ -432,12 +473,11 @@ void main() {
     if (params.w < 0.5) { return; }
 
     vec2 texSize = vec2(textureSize(sampler2D(position_tex, position_smp), 0));
-    vec2 texCoord = gl_FragCoord.xy / texSize;
 
-    vec4 position = texture(sampler2D(position_tex, position_smp), texCoord);
+    vec4 position = texture(sampler2D(position_tex, position_smp), v_uv);
     if (position.a <= 0.0) { return; }
 
-    vec3 normal = normalize(texture(sampler2D(normal_tex, normal_smp), texCoord).xyz * 2.0 - 1.0);
+    vec3 normal = normalize(texture(sampler2D(normal_tex, normal_smp), v_uv).xyz * 2.0 - 1.0);
 
     // Get noise based on screen position
     int noiseX = int(gl_FragCoord.x - 0.5) % 2;
@@ -459,6 +499,7 @@ void main() {
         offsetUV           = lensProjection * offsetUV;
         offsetUV.xyz      /= offsetUV.w;
         offsetUV.xy        = offsetUV.xy * 0.5 + 0.5;
+        offsetUV.y         = 1.0 - offsetUV.y;  // Flip Y to match v_uv
 
         vec4 offsetPosition = texture(sampler2D(position_tex, position_smp), offsetUV.xy);
 
@@ -804,7 +845,7 @@ function init()
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.FRAGMENT,
-                size = 96,  -- 6 vec4
+                size = 144,  -- 9 vec4
                 glsl_uniforms = {
                     { glsl_name = "light_pos_view", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "light_color", type = gfx.UniformType.FLOAT4 },
@@ -812,6 +853,9 @@ function init()
                     { glsl_name = "backgroundColor0", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "backgroundColor1", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "fog_params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "fresnel_params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "rim_params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "cel_params", type = gfx.UniformType.FLOAT4 },
                 },
             },
         },
@@ -1275,14 +1319,17 @@ function frame()
     -- Transform light position to view space
     local light_view = view * glm.vec4(light_pos.x, light_pos.y, light_pos.z, 1.0)
 
-    -- Lighting uniforms (including fog)
-    local light_uniforms = string.pack("ffff ffff ffff ffff ffff ffff",
+    -- Lighting uniforms (including fog, fresnel, rim, cel)
+    local light_uniforms = string.pack("ffff ffff ffff ffff ffff ffff ffff ffff ffff",
         light_view.x, light_view.y, light_view.z, 1.0,
         light_color.x, light_color.y, light_color.z, 1.0,
         ambient_color.x, ambient_color.y, ambient_color.z, 1.0,
         fog_bg_color0[1], fog_bg_color0[2], fog_bg_color0[3], 1.0,
         fog_bg_color1[1], fog_bg_color1[2], fog_bg_color1[3], 1.0,
-        fog_near, fog_far, fog_enabled and 1.0 or 0.0, fog_sun_position
+        fog_near, fog_far, fog_enabled and 1.0 or 0.0, fog_sun_position,
+        fresnel_enabled and 1.0 or 0.0, fresnel_power, 0.0, 0.0,
+        rim_light_enabled and 1.0 or 0.0, 0.0, 0.0, 0.0,
+        cel_shading_enabled and 1.0 or 0.0, 0.0, 0.0, 0.0
     )
     gfx.apply_uniforms(0, gfx.Range(light_uniforms))
     gfx.draw(0, 6, 1)
@@ -1363,6 +1410,25 @@ function frame()
         imgui.Text("Deferred Rendering + Fog + Blur")
         imgui.Separator()
 
+        if imgui.CollapsingHeader("Light") then
+            local lx, ly, lz, changed = imgui.InputFloat3("Light Position", light_pos.x, light_pos.y, light_pos.z)
+            if changed then
+                light_pos = glm.vec3(lx, ly, lz)
+            end
+
+            local lr, lg, lb
+            lr, lg, lb, changed = imgui.ColorEdit3("Light Color", light_color.x, light_color.y, light_color.z)
+            if changed then
+                light_color = glm.vec3(lr, lg, lb)
+            end
+
+            local ar, ag, ab
+            ar, ag, ab, changed = imgui.ColorEdit3("Ambient Color", ambient_color.x, ambient_color.y, ambient_color.z)
+            if changed then
+                ambient_color = glm.vec3(ar, ag, ab)
+            end
+        end
+
         if imgui.CollapsingHeader("Fog") then
             fog_enabled = imgui.Checkbox("Fog Enabled", fog_enabled)
 
@@ -1406,6 +1472,15 @@ function frame()
             motion_blur_enabled = imgui.Checkbox("Motion Blur Enabled", motion_blur_enabled)
             motion_blur_size = imgui.SliderInt("Samples", motion_blur_size, 1, 16)
             motion_blur_separation = imgui.SliderFloat("Separation", motion_blur_separation, 0.5, 3.0)
+        end
+
+        if imgui.CollapsingHeader("Lighting Effects") then
+            fresnel_enabled = imgui.Checkbox("Fresnel Enabled", fresnel_enabled)
+            fresnel_power = imgui.SliderFloat("Fresnel Power", fresnel_power, 1.0, 5.0)
+
+            rim_light_enabled = imgui.Checkbox("Rim Light Enabled", rim_light_enabled)
+
+            cel_shading_enabled = imgui.Checkbox("Cel Shading Enabled", cel_shading_enabled)
         end
 
         imgui.Separator()
