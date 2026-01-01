@@ -1,10 +1,11 @@
--- mane3d example: Deferred Rendering
+-- mane3d example: Deferred Rendering + Fog
 -- Based on lettier/3d-game-shaders-for-beginners
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local util = require("util")
 local glm = require("glm")
+local imgui = require("imgui")
 
 -- Camera
 local camera_pos = glm.vec3(0, -20, 10)
@@ -15,6 +16,12 @@ local camera_pitch = 0.3
 local light_pos = glm.vec3(10, -10, 20)
 local light_color = glm.vec3(1.5, 1.4, 1.3)
 local ambient_color = glm.vec3(0.2, 0.2, 0.25)
+
+-- Fog parameters
+local fog_enabled = true
+local fog_color = { 0.5, 0.6, 0.7 }
+local fog_near = 20.0
+local fog_far = 150.0
 
 -- Graphics resources
 local geom_shader = nil
@@ -149,6 +156,8 @@ layout(binding=0) uniform fs_params {
     vec4 light_color;
     vec4 ambient_color;
     vec4 camera_pos;
+    vec4 fog_color;      // rgb = color, a = enabled
+    vec4 fog_params;     // x = near, y = far
 };
 
 void main() {
@@ -180,6 +189,14 @@ void main() {
     vec3 specular = light_color.rgb * spec * vec3(0.3);
 
     vec3 result = ambient + diffuse + specular;
+
+    // Apply fog
+    if (fog_color.a > 0.5) {
+        float dist = length(world_pos - camera_pos.xyz);
+        float fog_intensity = clamp((dist - fog_params.x) / (fog_params.y - fog_params.x), 0.0, 0.97);
+        result = mix(result, fog_color.rgb, fog_intensity);
+    }
+
     frag_color = vec4(result, 1.0);
 }
 @end
@@ -296,6 +313,9 @@ end
 function init()
     util.info("Deferred rendering example init")
 
+    -- Setup ImGui
+    imgui.setup()
+
     -- Create G-Buffer
     local w, h = app.width(), app.height()
     create_gbuffer(w, h)
@@ -371,12 +391,14 @@ function init()
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.FRAGMENT,
-                size = 64,  -- 4 vec4
+                size = 96,  -- 6 vec4
                 glsl_uniforms = {
                     { glsl_name = "light_pos", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "light_color", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "ambient_color", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "camera_pos", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "fog_color", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "fog_params", type = gfx.UniformType.FLOAT4 },
                 },
             },
         },
@@ -565,6 +587,7 @@ function init()
 end
 
 function frame()
+    imgui.new_frame()
 
     t = t + 1/60
 
@@ -644,26 +667,56 @@ function frame()
         samplers = { gbuf_sampler, gbuf_sampler, gbuf_sampler },
     }))
 
-    -- Lighting uniforms
-    local light_uniforms = string.pack("ffff ffff ffff ffff",
+    -- Lighting uniforms (including fog)
+    local light_uniforms = string.pack("ffff ffff ffff ffff ffff ffff",
         light_pos.x, light_pos.y, light_pos.z, 1.0,
         light_color.x, light_color.y, light_color.z, 1.0,
         ambient_color.x, ambient_color.y, ambient_color.z, 1.0,
-        camera_pos.x, camera_pos.y, camera_pos.z, 1.0
+        camera_pos.x, camera_pos.y, camera_pos.z, 1.0,
+        fog_color[1], fog_color[2], fog_color[3], fog_enabled and 1.0 or 0.0,
+        fog_near, fog_far, 0.0, 0.0
     )
     gfx.apply_uniforms(0, gfx.Range(light_uniforms))
     gfx.draw(0, 6, 1)
+
+    -- ImGui debug UI
+    if imgui.Begin("Debug") then
+        imgui.Text("Deferred Rendering + Fog")
+        imgui.Separator()
+
+        fog_enabled = imgui.Checkbox("Fog Enabled", fog_enabled)
+
+        local r, g, b, changed = imgui.ColorEdit3("Fog Color", fog_color[1], fog_color[2], fog_color[3])
+        if changed then
+            fog_color = { r, g, b }
+        end
+
+        fog_near = imgui.SliderFloat("Fog Near", fog_near, 0.0, 100.0)
+        fog_far = imgui.SliderFloat("Fog Far", fog_far, 50.0, 300.0)
+
+        imgui.Separator()
+        imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera_pos.x, camera_pos.y, camera_pos.z))
+    end
+    imgui.End()
+
+    imgui.render()
 
     gfx.end_pass()
     gfx.commit()
 end
 
 function cleanup()
+    imgui.shutdown()
     util.info("cleanup")
 end
 
 local event_logged = false
 function event(ev)
+    -- Let ImGui handle events first
+    if imgui.handle_event(ev) then
+        return
+    end
+
     if not event_logged then
         util.info("Lua event() called!")
         event_logged = true
