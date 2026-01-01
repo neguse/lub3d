@@ -23,6 +23,11 @@ local fog_color = { 0.5, 0.6, 0.7 }
 local fog_near = 20.0
 local fog_far = 150.0
 
+-- Blur parameters
+local blur_enabled = false
+local blur_size = 2
+local blur_separation = 1.0
+
 -- Graphics resources
 local geom_shader = nil
 ---@type gfx.Pipeline
@@ -51,6 +56,18 @@ local gbuf_sampler = nil
 
 -- Full-screen quad
 local quad_vbuf = nil
+
+-- Scene render target (for post-processing)
+local scene_img = nil
+local scene_attach = nil
+local scene_tex = nil
+local scene_depth_img = nil
+local scene_depth_attach = nil
+
+-- Blur shader/pipeline
+local blur_shader = nil
+---@type gfx.Pipeline
+local blur_pipeline = nil
 
 -- Time
 local t = 0
@@ -204,6 +221,64 @@ void main() {
 @program light light_vs light_fs
 ]]
 
+-- Box Blur Shader
+local blur_shader_source = [[
+@vs blur_vs
+in vec2 pos;
+in vec2 uv;
+
+out vec2 v_uv;
+
+void main() {
+    gl_Position = vec4(pos, 0.0, 1.0);
+    v_uv = vec2(uv.x, 1.0 - uv.y);  // Flip V for render target
+}
+@end
+
+@fs blur_fs
+in vec2 v_uv;
+
+out vec4 frag_color;
+
+layout(binding=0) uniform texture2D color_tex;
+layout(binding=0) uniform sampler color_smp;
+
+layout(binding=0) uniform fs_params {
+    vec4 params;  // x = size, y = separation, z = enabled
+};
+
+void main() {
+    vec2 tex_size = vec2(textureSize(sampler2D(color_tex, color_smp), 0));
+
+    int size = int(params.x);
+    float separation = params.y;
+    float enabled = params.z;
+
+    if (enabled < 0.5 || size <= 0) {
+        frag_color = texture(sampler2D(color_tex, color_smp), v_uv);
+        return;
+    }
+
+    separation = max(separation, 1.0);
+
+    vec4 color = vec4(0.0);
+    float count = 0.0;
+
+    for (int i = -size; i <= size; ++i) {
+        for (int j = -size; j <= size; ++j) {
+            vec2 offset = vec2(float(i), float(j)) * separation / tex_size;
+            color += texture(sampler2D(color_tex, color_smp), v_uv + offset);
+            count += 1.0;
+        }
+    }
+
+    frag_color = color / count;
+}
+@end
+
+@program blur blur_vs blur_fs
+]]
+
 -- Compute tangent vectors for a triangle
 local function compute_tangent(p1, p2, p3, uv1, uv2, uv3)
     local edge1 = { p2[1] - p1[1], p2[2] - p1[2], p2[3] - p1[3] }
@@ -291,6 +366,20 @@ local function create_gbuffer(w, h)
         mag_filter = gfx.Filter.NEAREST,
         wrap_u = gfx.Wrap.CLAMP_TO_EDGE,
         wrap_v = gfx.Wrap.CLAMP_TO_EDGE,
+    }))
+
+    -- Scene render target (for post-processing)
+    scene_img = gfx.make_image(gfx.ImageDesc({
+        usage = { color_attachment = true },
+        width = w,
+        height = h,
+        pixel_format = gfx.PixelFormat.RGBA8,
+    }))
+    scene_attach = gfx.make_view(gfx.ViewDesc({
+        color_attachment = { image = scene_img },
+    }))
+    scene_tex = gfx.make_view(gfx.ViewDesc({
+        texture = { image = scene_img },
     }))
 end
 
@@ -428,9 +517,57 @@ function init()
         return
     end
 
-    -- Lighting pipeline (fullscreen quad to swapchain)
+    -- Lighting pipeline (fullscreen quad to scene render target)
     light_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = light_shader,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT2 },  -- pos
+                { format = gfx.VertexFormat.FLOAT2 },  -- uv
+            },
+        },
+        colors = {
+            { pixel_format = gfx.PixelFormat.RGBA8 },
+        },
+        depth = {
+            pixel_format = gfx.PixelFormat.NONE,
+        },
+    }))
+
+    -- Blur shader
+    local blur_desc = {
+        uniform_blocks = {
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                size = 16,  -- 1 vec4
+                glsl_uniforms = {
+                    { glsl_name = "params", type = gfx.UniformType.FLOAT4 },
+                },
+            },
+        },
+        views = {
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+        },
+        samplers = {
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
+        },
+        texture_sampler_pairs = {
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "color_tex_color_smp" },
+        },
+        attrs = {
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
+        },
+    }
+    blur_shader = util.compile_shader_full(blur_shader_source, "blur", blur_desc)
+    if not blur_shader then
+        util.error("Failed to compile blur shader")
+        return
+    end
+
+    -- Blur pipeline (fullscreen quad to swapchain)
+    blur_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+        shader = blur_shader,
         layout = {
             attrs = {
                 { format = gfx.VertexFormat.FLOAT2 },  -- pos
@@ -648,7 +785,7 @@ function frame()
     end
 
     gfx.end_pass()
-    -- === LIGHTING PASS ===
+    -- === LIGHTING PASS (to scene render target) ===
     gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = {{
@@ -656,7 +793,9 @@ function frame()
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 },
             }},
         }),
-        swapchain = glue.swapchain(),
+        attachments = {
+            colors = { scene_attach },
+        },
     }))
 
     gfx.apply_pipeline(light_pipeline)
@@ -679,20 +818,56 @@ function frame()
     gfx.apply_uniforms(0, gfx.Range(light_uniforms))
     gfx.draw(0, 6, 1)
 
+    gfx.end_pass()
+
+    -- === BLUR PASS (to swapchain) ===
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
+            colors = {{
+                load_action = gfx.LoadAction.CLEAR,
+                clear_value = { r = 0.0, g = 0.0, b = 0.0, a = 1.0 },
+            }},
+        }),
+        swapchain = glue.swapchain(),
+    }))
+
+    gfx.apply_pipeline(blur_pipeline)
+
+    gfx.apply_bindings(gfx.Bindings({
+        vertex_buffers = { quad_vbuf },
+        views = { scene_tex },
+        samplers = { gbuf_sampler },
+    }))
+
+    -- Blur uniforms
+    local blur_uniforms = string.pack("ffff",
+        blur_size, blur_separation, blur_enabled and 1.0 or 0.0, 0.0
+    )
+    gfx.apply_uniforms(0, gfx.Range(blur_uniforms))
+    gfx.draw(0, 6, 1)
+
     -- ImGui debug UI
     if imgui.Begin("Debug") then
-        imgui.Text("Deferred Rendering + Fog")
+        imgui.Text("Deferred Rendering + Fog + Blur")
         imgui.Separator()
 
-        fog_enabled = imgui.Checkbox("Fog Enabled", fog_enabled)
+        if imgui.CollapsingHeader("Fog") then
+            fog_enabled = imgui.Checkbox("Fog Enabled", fog_enabled)
 
-        local r, g, b, changed = imgui.ColorEdit3("Fog Color", fog_color[1], fog_color[2], fog_color[3])
-        if changed then
-            fog_color = { r, g, b }
+            local r, g, b, changed = imgui.ColorEdit3("Fog Color", fog_color[1], fog_color[2], fog_color[3])
+            if changed then
+                fog_color = { r, g, b }
+            end
+
+            fog_near = imgui.SliderFloat("Fog Near", fog_near, 0.0, 100.0)
+            fog_far = imgui.SliderFloat("Fog Far", fog_far, 50.0, 300.0)
         end
 
-        fog_near = imgui.SliderFloat("Fog Near", fog_near, 0.0, 100.0)
-        fog_far = imgui.SliderFloat("Fog Far", fog_far, 50.0, 300.0)
+        if imgui.CollapsingHeader("Blur") then
+            blur_enabled = imgui.Checkbox("Blur Enabled", blur_enabled)
+            blur_size = imgui.SliderInt("Blur Size", blur_size, 0, 8)
+            blur_separation = imgui.SliderFloat("Separation", blur_separation, 1.0, 5.0)
+        end
 
         imgui.Separator()
         imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera_pos.x, camera_pos.y, camera_pos.z))
