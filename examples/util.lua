@@ -192,8 +192,10 @@ function M.load_image_data(filename)
     local stb = require("stb.image")
 
     -- Check if running in WASM (fetch_file is defined in main.c for Emscripten)
-    if _G.fetch_file then
-        local data = _G.fetch_file(filename)
+    ---@type fun(filename: string): string?
+    local fetch_file = _G["fetch_file"]
+    if fetch_file then
+        local data = fetch_file(filename)
         if not data then
             return nil, "Failed to fetch: " .. filename
         end
@@ -205,9 +207,10 @@ function M.load_image_data(filename)
 end
 
 -- Load texture from file
--- @param filename string: path to image file (PNG, JPG, etc.)
--- @param opts table|nil: optional settings { filter_min, filter_mag, wrap_u, wrap_v }
--- @return sg_view, sg_sampler or nil, error_message on failure
+---@param filename string path to image file (PNG, JPG, etc.)
+---@param opts? table optional settings { filter_min, filter_mag, wrap_u, wrap_v }
+---@return gfx.View? view
+---@return gfx.Sampler|string smp_or_error sampler on success, error message on failure
 function M.load_texture(filename, opts)
     opts = opts or {}
 

@@ -18,9 +18,11 @@ local ambient_color = glm.vec3(0.2, 0.2, 0.25)
 
 -- Graphics resources
 local shader = nil
+---@type gfx.Pipeline
 local pipeline = nil
 local meshes = {}  -- { vbuf, index_count, diffuse_img, diffuse_smp, normal_img, normal_smp, material }
-local textures_cache = {}  -- path -> { img, smp }
+---@type table<string, {img: gfx.View, smp: gfx.Sampler}>
+local textures_cache = {}
 
 -- Time
 local t = 0
@@ -194,16 +196,18 @@ local function add_tangents(vertices)
 end
 
 -- Load texture with caching
+---@return gfx.View?, gfx.Sampler?
 local function load_texture_cached(path)
     if textures_cache[path] then
         return textures_cache[path].img, textures_cache[path].smp
     end
 
     local full_path = "textures/" .. path
-    local img, smp = util.load_texture(full_path)
-    if img then
-        textures_cache[path] = { img = img, smp = smp }
-        return img, smp
+    local view, smp_or_err = util.load_texture(full_path)
+    if view and type(smp_or_err) ~= "string" then
+        ---@cast smp_or_err gfx.Sampler
+        textures_cache[path] = { img = view, smp = smp_or_err }
+        return view, smp_or_err
     end
     return nil, nil
 end
@@ -261,8 +265,8 @@ function init()
             },
         },
         views = {
-            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType._2D, sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
-            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType._2D, sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
         },
         samplers = {
             { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
@@ -329,14 +333,16 @@ function init()
                 }))
 
                 -- Get textures (views)
+                ---@type gfx.View, gfx.Sampler
                 local diffuse_view, diffuse_smp = default_diffuse_view, default_diffuse_smp
+                ---@type gfx.View, gfx.Sampler
                 local normal_view, normal_smp = default_normal_view, default_normal_smp
 
                 if mesh.textures and #mesh.textures > 0 then
                     local tex_info = scene.textures[mesh.textures[1]]
                     if tex_info then
                         local view, smp = load_texture_cached(tex_info.path)
-                        if view then
+                        if view and smp then
                             diffuse_view, diffuse_smp = view, smp
                         end
                     end
@@ -345,7 +351,7 @@ function init()
                         local nrm_info = scene.textures[mesh.textures[2]]
                         if nrm_info then
                             local view, smp = load_texture_cached(nrm_info.path)
-                            if view then
+                            if view and smp then
                                 normal_view, normal_smp = view, smp
                             end
                         end

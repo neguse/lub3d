@@ -20,13 +20,15 @@ local ambient_color = glm.vec3(0.5, 0.5, 0.5)  -- brighter
 
 -- Graphics resources
 local shader = nil
+---@type gfx.Pipeline
 local pipeline = nil
 local cube_vbuf = nil
 local cube_ibuf = nil
 local cube_data = nil
 local sphere_vbuf = nil
 local sphere_ibuf = nil
-local sphere_data = nil
+---@type {index_count: integer}
+local sphere_data
 
 -- Time
 local t = 0
@@ -448,36 +450,37 @@ function frame()
 end
 
 function event(ev)
-    if ev:type() == app.EventType.KEY_DOWN then
-        local key = ev:key_code()
-        if key == app.KeyCode.ESCAPE then
+    local evtype = ev.type
+    if evtype == app.EventType.KEY_DOWN then
+        local key = ev.key_code
+        if key == app.Keycode.ESCAPE then
             mouse_captured = false
             app.show_mouse(true)
             app.lock_mouse(false)
-        elseif key == app.KeyCode.W then keys_down["W"] = true
-        elseif key == app.KeyCode.S then keys_down["S"] = true
-        elseif key == app.KeyCode.A then keys_down["A"] = true
-        elseif key == app.KeyCode.D then keys_down["D"] = true
-        elseif key == app.KeyCode.SPACE then keys_down["SPACE"] = true
-        elseif key == app.KeyCode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = true
+        elseif key == app.Keycode.W then keys_down["W"] = true
+        elseif key == app.Keycode.S then keys_down["S"] = true
+        elseif key == app.Keycode.A then keys_down["A"] = true
+        elseif key == app.Keycode.D then keys_down["D"] = true
+        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = true
+        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = true
         end
-    elseif ev:type() == app.EventType.KEY_UP then
-        local key = ev:key_code()
-        if key == app.KeyCode.W then keys_down["W"] = false
-        elseif key == app.KeyCode.S then keys_down["S"] = false
-        elseif key == app.KeyCode.A then keys_down["A"] = false
-        elseif key == app.KeyCode.D then keys_down["D"] = false
-        elseif key == app.KeyCode.SPACE then keys_down["SPACE"] = false
-        elseif key == app.KeyCode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = false
+    elseif evtype == app.EventType.KEY_UP then
+        local key = ev.key_code
+        if key == app.Keycode.W then keys_down["W"] = false
+        elseif key == app.Keycode.S then keys_down["S"] = false
+        elseif key == app.Keycode.A then keys_down["A"] = false
+        elseif key == app.Keycode.D then keys_down["D"] = false
+        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = false
+        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = false
         end
-    elseif ev:type() == app.EventType.MOUSE_DOWN then
+    elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
         app.show_mouse(false)
         app.lock_mouse(true)
-    elseif ev:type() == app.EventType.MOUSE_MOVE then
+    elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
-            local dx = ev:mouse_dx()
-            local dy = ev:mouse_dy()
+            local dx = ev.mouse_dx
+            local dy = ev.mouse_dy
             camera_yaw = camera_yaw + dx * 0.003
             camera_pitch = camera_pitch - dy * 0.003
             camera_pitch = math.max(-1.5, math.min(1.5, camera_pitch))

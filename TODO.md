@@ -51,7 +51,7 @@ Step-by-step port to mane3d.
 - [x] 11. Rim Lighting (edge glow effect)
 - [x] 12. Cel Shading (toon bands + hard specular)
 - [x] 13. Normal Mapping (examples/model.lua + mill-scene)
-- [ ] 14. Deferred Rendering
+- [x] 14. Deferred Rendering (examples/deferred.lua + G-buffer MRT)
 - [ ] 15. Fog
 - [ ] 16. Blur
 - [ ] 17. Bloom
