@@ -28,6 +28,13 @@ local blur_enabled = false
 local blur_size = 2
 local blur_separation = 1.0
 
+-- Bloom parameters
+local bloom_enabled = true
+local bloom_size = 5
+local bloom_separation = 3.0
+local bloom_threshold = 0.6
+local bloom_amount = 1.0
+
 -- Graphics resources
 local geom_shader = nil
 ---@type gfx.Pipeline
@@ -221,7 +228,7 @@ void main() {
 @program light light_vs light_fs
 ]]
 
--- Box Blur Shader
+-- Post-processing Shader (Blur + Bloom)
 local blur_shader_source = [[
 @vs blur_vs
 in vec2 pos;
@@ -244,35 +251,61 @@ layout(binding=0) uniform texture2D color_tex;
 layout(binding=0) uniform sampler color_smp;
 
 layout(binding=0) uniform fs_params {
-    vec4 params;  // x = size, y = separation, z = enabled
+    vec4 blur_params;   // x = size, y = separation, z = enabled
+    vec4 bloom_params;  // x = size, y = separation, z = threshold, w = amount
+    vec4 bloom_enabled; // x = enabled
 };
 
 void main() {
     vec2 tex_size = vec2(textureSize(sampler2D(color_tex, color_smp), 0));
+    vec4 original = texture(sampler2D(color_tex, color_smp), v_uv);
 
-    int size = int(params.x);
-    float separation = params.y;
-    float enabled = params.z;
+    // Blur pass
+    vec4 blurred = original;
+    int blur_size = int(blur_params.x);
+    float blur_separation = blur_params.y;
 
-    if (enabled < 0.5 || size <= 0) {
-        frag_color = texture(sampler2D(color_tex, color_smp), v_uv);
-        return;
-    }
+    if (blur_params.z > 0.5 && blur_size > 0) {
+        blur_separation = max(blur_separation, 1.0);
+        blurred = vec4(0.0);
+        float count = 0.0;
 
-    separation = max(separation, 1.0);
-
-    vec4 color = vec4(0.0);
-    float count = 0.0;
-
-    for (int i = -size; i <= size; ++i) {
-        for (int j = -size; j <= size; ++j) {
-            vec2 offset = vec2(float(i), float(j)) * separation / tex_size;
-            color += texture(sampler2D(color_tex, color_smp), v_uv + offset);
-            count += 1.0;
+        for (int i = -blur_size; i <= blur_size; ++i) {
+            for (int j = -blur_size; j <= blur_size; ++j) {
+                vec2 offset = vec2(float(i), float(j)) * blur_separation / tex_size;
+                blurred += texture(sampler2D(color_tex, color_smp), v_uv + offset);
+                count += 1.0;
+            }
         }
+        blurred /= count;
     }
 
-    frag_color = color / count;
+    // Bloom pass
+    vec4 bloom = vec4(0.0);
+    if (bloom_enabled.x > 0.5) {
+        int bloom_size = int(bloom_params.x);
+        float bloom_separation = max(bloom_params.y, 1.0);
+        float threshold = bloom_params.z;
+        float amount = bloom_params.w;
+
+        float count = 0.0;
+        for (int i = -bloom_size; i <= bloom_size; ++i) {
+            for (int j = -bloom_size; j <= bloom_size; ++j) {
+                vec2 offset = vec2(float(i), float(j)) * bloom_separation / tex_size;
+                vec4 sample_color = texture(sampler2D(color_tex, color_smp), v_uv + offset);
+
+                // Check if bright enough
+                float brightness = max(sample_color.r, max(sample_color.g, sample_color.b));
+                if (brightness >= threshold) {
+                    bloom += sample_color;
+                }
+                count += 1.0;
+            }
+        }
+        bloom = (bloom / count) * amount;
+    }
+
+    frag_color = blurred + bloom;
 }
 @end
 
@@ -534,14 +567,16 @@ function init()
         },
     }))
 
-    -- Blur shader
+    -- Blur shader (includes bloom)
     local blur_desc = {
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.FRAGMENT,
-                size = 16,  -- 1 vec4
+                size = 48,  -- 3 vec4
                 glsl_uniforms = {
-                    { glsl_name = "params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "blur_params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "bloom_params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "bloom_enabled", type = gfx.UniformType.FLOAT4 },
                 },
             },
         },
@@ -839,11 +874,13 @@ function frame()
         samplers = { gbuf_sampler },
     }))
 
-    -- Blur uniforms
-    local blur_uniforms = string.pack("ffff",
-        blur_size, blur_separation, blur_enabled and 1.0 or 0.0, 0.0
+    -- Post-processing uniforms (blur + bloom)
+    local post_uniforms = string.pack("ffff ffff ffff",
+        blur_size, blur_separation, blur_enabled and 1.0 or 0.0, 0.0,
+        bloom_size, bloom_separation, bloom_threshold, bloom_amount,
+        bloom_enabled and 1.0 or 0.0, 0.0, 0.0, 0.0
     )
-    gfx.apply_uniforms(0, gfx.Range(blur_uniforms))
+    gfx.apply_uniforms(0, gfx.Range(post_uniforms))
     gfx.draw(0, 6, 1)
 
     -- ImGui debug UI
@@ -866,7 +903,15 @@ function frame()
         if imgui.CollapsingHeader("Blur") then
             blur_enabled = imgui.Checkbox("Blur Enabled", blur_enabled)
             blur_size = imgui.SliderInt("Blur Size", blur_size, 0, 8)
-            blur_separation = imgui.SliderFloat("Separation", blur_separation, 1.0, 5.0)
+            blur_separation = imgui.SliderFloat("Blur Separation", blur_separation, 1.0, 5.0)
+        end
+
+        if imgui.CollapsingHeader("Bloom") then
+            bloom_enabled = imgui.Checkbox("Bloom Enabled", bloom_enabled)
+            bloom_size = imgui.SliderInt("Bloom Size", bloom_size, 1, 10)
+            bloom_separation = imgui.SliderFloat("Bloom Separation", bloom_separation, 1.0, 5.0)
+            bloom_threshold = imgui.SliderFloat("Threshold", bloom_threshold, 0.0, 1.0)
+            bloom_amount = imgui.SliderFloat("Amount", bloom_amount, 0.0, 3.0)
         end
 
         imgui.Separator()
