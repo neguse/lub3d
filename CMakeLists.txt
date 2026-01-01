@@ -9,6 +9,7 @@ endif()
 # Options
 option(MANE3D_BUILD_SHARED "Build as shared library" OFF)
 option(MANE3D_BUILD_SHDC "Build sokol-shdc library" OFF)
+option(MANE3D_BUILD_IMGUI "Build Dear ImGui integration" OFF)
 option(MANE3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
 option(MANE3D_BACKEND_GL "Use OpenGL backend" OFF)
 option(MANE3D_BACKEND_GLES3 "Use OpenGL ES3 backend" OFF)
@@ -307,6 +308,9 @@ if(MANE3D_BUILD_EXAMPLE)
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/deferred.lua
             $<TARGET_FILE_DIR:mane3d-example>/deferred.lua
             COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/imgui_test.lua
+            $<TARGET_FILE_DIR:mane3d-example>/imgui_test.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/glm.lua
             $<TARGET_FILE_DIR:mane3d-example>/glm.lua
         )
@@ -335,6 +339,9 @@ if(MANE3D_BUILD_EXAMPLE)
             ${CMAKE_CURRENT_SOURCE_DIR}/examples/deferred.lua
             $<TARGET_FILE_DIR:mane3d-example>/deferred.lua
             COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/imgui_test.lua
+            $<TARGET_FILE_DIR:mane3d-example>/imgui_test.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
             ${CMAKE_CURRENT_SOURCE_DIR}/lib/glm.lua
             $<TARGET_FILE_DIR:mane3d-example>/glm.lua
         )
@@ -350,6 +357,49 @@ install(TARGETS mane3d
 install(DIRECTORY deps/sokol/ DESTINATION include/sokol FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY deps/sokol/util/ DESTINATION include/sokol FILES_MATCHING PATTERN "*.h")
 install(DIRECTORY deps/lua/ DESTINATION include/lua FILES_MATCHING PATTERN "*.h")
+
+# Dear ImGui integration (optional)
+if(MANE3D_BUILD_IMGUI)
+    # ImGui library (C++)
+    add_library(imgui_lib STATIC
+        src/imgui_impl.cpp
+        src/imgui_lua.cpp
+    )
+    target_include_directories(imgui_lib
+        PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
+        PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
+        PRIVATE ${LUA_INCLUDE}
+    )
+    target_link_libraries(imgui_lib PUBLIC ${LUA_TARGET})
+
+    # Backend defines for ImGui
+    if(MANE3D_BACKEND_GL)
+        target_compile_definitions(imgui_lib PRIVATE SOKOL_GLCORE)
+    elseif(MANE3D_BACKEND_GLES3)
+        target_compile_definitions(imgui_lib PRIVATE SOKOL_GLES3)
+    elseif(MANE3D_BACKEND_D3D11)
+        target_compile_definitions(imgui_lib PRIVATE SOKOL_D3D11)
+    elseif(MANE3D_BACKEND_METAL)
+        target_compile_definitions(imgui_lib PRIVATE SOKOL_METAL)
+    elseif(MANE3D_BACKEND_WGPU)
+        target_compile_definitions(imgui_lib PRIVATE SOKOL_WGPU)
+    else()
+        if(EMSCRIPTEN)
+            target_compile_definitions(imgui_lib PRIVATE SOKOL_WGPU)
+        elseif(WIN32)
+            target_compile_definitions(imgui_lib PRIVATE SOKOL_D3D11)
+        elseif(APPLE)
+            target_compile_definitions(imgui_lib PRIVATE SOKOL_METAL)
+        else()
+            target_compile_definitions(imgui_lib PRIVATE SOKOL_GLCORE)
+        endif()
+    endif()
+
+    # Link ImGui to mane3d
+    target_link_libraries(mane3d PUBLIC imgui_lib)
+    target_compile_definitions(mane3d PUBLIC MANE3D_HAS_IMGUI)
+endif()
 
 # sokol-shdc library (optional)
 if(MANE3D_BUILD_SHDC)

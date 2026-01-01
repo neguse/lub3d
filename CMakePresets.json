@@ -20,7 +20,8 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "MANE3D_BACKEND_D3D11": "ON",
         "MANE3D_BUILD_EXAMPLE": "ON",
-        "MANE3D_BUILD_SHDC": "ON"
+        "MANE3D_BUILD_SHDC": "ON",
+        "MANE3D_BUILD_IMGUI": "ON"
       }
     },
     {
