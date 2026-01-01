@@ -157,7 +157,7 @@ def is_prim_type(s):
 def is_int_type(s):
     return s in ['int', 'int8_t', 'uint8_t', 'int16_t', 'uint16_t',
                  'int32_t', 'uint32_t', 'int64_t', 'uint64_t', 'size_t',
-                 'uintptr_t', 'intptr_t']
+                 'uintptr_t', 'intptr_t', 'char']
 
 def is_float_type(s):
     return s in ['float', 'double']
@@ -227,10 +227,10 @@ def get_lua_to_code(type_str, arg_index, var_name, prefix):
             return f'''sg_range {var_name}_storage;
     const sg_range* {var_name};
     if (lua_isstring(L, {arg_index})) {{
-        size_t len;
-        const char* data = lua_tolstring(L, {arg_index}, &len);
-        {var_name}_storage.ptr = data;
-        {var_name}_storage.size = len;
+        size_t {var_name}_len;
+        const char* {var_name}_str = lua_tolstring(L, {arg_index}, &{var_name}_len);
+        {var_name}_storage.ptr = {var_name}_str;
+        {var_name}_storage.size = {var_name}_len;
         {var_name} = &{var_name}_storage;
     }} else {{
         {var_name} = (const sg_range*)luaL_checkudata(L, {arg_index}, "sokol.{struct_name}");

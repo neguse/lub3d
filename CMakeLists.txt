@@ -59,7 +59,9 @@ else()
     )
     add_library(lua55 STATIC ${LUA_SRC})
     target_include_directories(lua55 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/deps/lua)
-    if(UNIX AND NOT APPLE)
+    if(EMSCRIPTEN)
+        target_compile_definitions(lua55 PRIVATE LUA_USE_POSIX)
+    elseif(UNIX AND NOT APPLE)
         target_compile_definitions(lua55 PRIVATE LUA_USE_LINUX)
         target_link_libraries(lua55 PUBLIC dl m)
     elseif(APPLE)
@@ -156,7 +158,9 @@ elseif(MANE3D_BACKEND_WGPU)
     target_compile_definitions(mane3d PRIVATE SOKOL_WGPU)
 else()
     # Auto-detect based on platform
-    if(WIN32)
+    if(EMSCRIPTEN)
+        target_compile_definitions(mane3d PRIVATE SOKOL_WGPU)
+    elseif(WIN32)
         target_compile_definitions(mane3d PRIVATE SOKOL_D3D11)
     elseif(APPLE)
         target_compile_definitions(mane3d PRIVATE SOKOL_METAL)
@@ -169,7 +173,11 @@ else()
 endif()
 
 # Platform-specific libraries
-if(WIN32)
+if(EMSCRIPTEN)
+    # WebGPU via emdawnwebgpu port
+    target_compile_options(mane3d PRIVATE --use-port=emdawnwebgpu)
+    target_link_options(mane3d PUBLIC --use-port=emdawnwebgpu)
+elseif(WIN32)
     target_link_libraries(mane3d PUBLIC
         kernel32
         user32
@@ -221,7 +229,11 @@ endif()
 # Example
 option(MANE3D_BUILD_EXAMPLE "Build example" OFF)
 if(MANE3D_BUILD_EXAMPLE)
-    add_executable(mane3d-example WIN32 examples/main.c)
+    if(EMSCRIPTEN)
+        add_executable(mane3d-example examples/main.c)
+    else()
+        add_executable(mane3d-example WIN32 examples/main.c)
+    endif()
     target_include_directories(mane3d-example PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
@@ -247,7 +259,9 @@ if(MANE3D_BUILD_EXAMPLE)
         target_compile_definitions(mane3d-example PRIVATE SOKOL_WGPU)
     else()
         # Auto-detect
-        if(WIN32)
+        if(EMSCRIPTEN)
+            target_compile_definitions(mane3d-example PRIVATE SOKOL_WGPU)
+        elseif(WIN32)
             target_compile_definitions(mane3d-example PRIVATE SOKOL_D3D11)
         elseif(APPLE)
             target_compile_definitions(mane3d-example PRIVATE SOKOL_METAL)
@@ -256,24 +270,55 @@ if(MANE3D_BUILD_EXAMPLE)
         endif()
     endif()
 
-    # Copy lua scripts
-    add_custom_command(TARGET mane3d-example POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/examples/main.lua
-        $<TARGET_FILE_DIR:mane3d-example>/main.lua
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/examples/raytracer.lua
-        $<TARGET_FILE_DIR:mane3d-example>/raytracer.lua
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/examples/breakout.lua
-        $<TARGET_FILE_DIR:mane3d-example>/breakout.lua
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/examples/util.lua
-        $<TARGET_FILE_DIR:mane3d-example>/util.lua
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/lib/glm.lua
-        $<TARGET_FILE_DIR:mane3d-example>/glm.lua
-    )
+    # Emscripten-specific settings
+    if(EMSCRIPTEN)
+        set_target_properties(mane3d-example PROPERTIES
+            SUFFIX ".html"
+        )
+        target_link_options(mane3d-example PRIVATE
+            -sASYNCIFY
+            -sALLOW_MEMORY_GROWTH=1
+            -sASSERTIONS=1
+            -sSTACK_SIZE=1048576
+        )
+        # Copy Lua files (no embedding, can edit without rebuild)
+        add_custom_command(TARGET mane3d-example POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/main.lua
+            $<TARGET_FILE_DIR:mane3d-example>/main.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/raytracer.lua
+            $<TARGET_FILE_DIR:mane3d-example>/raytracer.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/breakout.lua
+            $<TARGET_FILE_DIR:mane3d-example>/breakout.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/util.lua
+            $<TARGET_FILE_DIR:mane3d-example>/util.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/lib/glm.lua
+            $<TARGET_FILE_DIR:mane3d-example>/glm.lua
+        )
+    else()
+        # Copy lua scripts
+        add_custom_command(TARGET mane3d-example POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/main.lua
+            $<TARGET_FILE_DIR:mane3d-example>/main.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/raytracer.lua
+            $<TARGET_FILE_DIR:mane3d-example>/raytracer.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/breakout.lua
+            $<TARGET_FILE_DIR:mane3d-example>/breakout.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/examples/util.lua
+            $<TARGET_FILE_DIR:mane3d-example>/util.lua
+            COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/lib/glm.lua
+            $<TARGET_FILE_DIR:mane3d-example>/glm.lua
+        )
+    endif()
 endif()
 
 # Install

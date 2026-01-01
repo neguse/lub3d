@@ -11,6 +11,12 @@
 #include <lauxlib.h>
 #include <lualib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
 
 /* declare luaopen functions from generated bindings */
 extern int luaopen_sokol_gfx(lua_State *L);
@@ -29,6 +35,99 @@ extern void shdc_shutdown(void);
 #endif
 
 static lua_State *L = NULL;
+
+#ifdef __EMSCRIPTEN__
+/* Fetch file synchronously using XHR */
+EM_JS(char *, js_fetch_file, (const char *url, int *out_len), {
+    var xhr = new XMLHttpRequest();
+    xhr.open("GET", UTF8ToString(url), false);
+    xhr.overrideMimeType("text/plain; charset=x-user-defined");
+    try {
+        xhr.send();
+        if (xhr.status === 200) {
+            var text = xhr.responseText;
+            var len = text.length;
+            var ptr = _malloc(len);
+            for (var i = 0; i < len; i++) {
+                HEAPU8[ptr + i] = text.charCodeAt(i) & 0xff;
+            }
+            HEAP32[out_len >> 2] = len;
+            return ptr;
+        }
+    } catch (e) {
+        console.error("Fetch error:", e);
+    }
+    HEAP32[out_len >> 2] = 0;
+    return 0;
+});
+
+static char *fetch_file(const char *url, size_t *out_len)
+{
+    int len = 0;
+    char *data = js_fetch_file(url, &len);
+    *out_len = len;
+    return data;
+}
+
+static int fetch_and_dostring(lua_State *L, const char *url)
+{
+    size_t len;
+    char *data = fetch_file(url, &len);
+    if (data)
+    {
+        int result = luaL_loadbuffer(L, data, len, url);
+        free(data);
+        if (result == LUA_OK)
+        {
+            result = lua_pcall(L, 0, LUA_MULTRET, 0);
+        }
+        return result;
+    }
+    lua_pushfstring(L, "fetch failed: %s", url);
+    return LUA_ERRFILE;
+}
+
+/* Custom require searcher that uses fetch */
+static int fetch_searcher(lua_State *L)
+{
+    const char *name = luaL_checkstring(L, 1);
+    char url[256];
+    snprintf(url, sizeof(url), "%s.lua", name);
+
+    size_t len;
+    char *data = fetch_file(url, &len);
+    if (data)
+    {
+        if (luaL_loadbuffer(L, data, len, url) == LUA_OK)
+        {
+            free(data);
+            lua_pushstring(L, url);
+            return 2;
+        }
+        free(data);
+        lua_pushfstring(L, "error loading '%s'", url);
+        return 1;
+    }
+    lua_pushfstring(L, "cannot fetch '%s'", url);
+    return 1;
+}
+
+static void setup_fetch_searcher(lua_State *L)
+{
+    lua_getglobal(L, "package");
+    lua_getfield(L, -1, "searchers");
+    /* Insert at position 2 (after preload) */
+    int len = luaL_len(L, -1);
+    for (int i = len; i >= 2; i--)
+    {
+        lua_rawgeti(L, -1, i);
+        lua_rawseti(L, -2, i + 1);
+    }
+    lua_pushcfunction(L, fetch_searcher);
+    lua_rawseti(L, -2, 2);
+    lua_pop(L, 2);
+}
+#endif
 
 static void call_lua(const char *func)
 {
@@ -102,6 +201,10 @@ sapp_desc sokol_main(int argc, char *argv[])
     L = luaL_newstate();
     luaL_openlibs(L);
 
+#ifdef __EMSCRIPTEN__
+    setup_fetch_searcher(L);
+#endif
+
     /* Register generated sokol modules */
     luaL_requiref(L, "sokol.gfx", luaopen_sokol_gfx, 0);
     lua_pop(L, 1);
@@ -129,7 +232,11 @@ sapp_desc sokol_main(int argc, char *argv[])
     /* Load script */
     const char *script = (argc > 1) ? argv[1] : "main.lua";
     slog_func("lua", 1, 0, "Loading script", 0, script, 0);
+#ifdef __EMSCRIPTEN__
+    if (fetch_and_dostring(L, script) != LUA_OK)
+#else
     if (luaL_dofile(L, script) != LUA_OK)
+#endif
     {
         slog_func("lua", 0, 0, lua_tostring(L, -1), 0, script, 0);
         lua_pop(L, 1);

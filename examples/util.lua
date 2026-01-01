@@ -48,6 +48,8 @@ function M.compile_shader(source, program_name, uniform_blocks, attrs)
     local shdc = require("shdc")
     local lang = M.get_shader_lang()
 
+    M.info("Compiling shader: " .. program_name .. " for " .. lang)
+
     -- Compile using library
     local result = shdc.compile(source, program_name, lang)
     if not result.success then
@@ -55,12 +57,14 @@ function M.compile_shader(source, program_name, uniform_blocks, attrs)
         return nil
     end
 
+    M.info("Shader compiled: vs=" .. tostring(result.vs_source and #result.vs_source or "nil") .. " fs=" .. tostring(result.fs_source and #result.fs_source or "nil"))
+
     -- Create shader using generated bindings
     local backend = gfx.query_backend()
-    local is_glsl = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3)
+    local is_source = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3 or backend == gfx.Backend.WGPU)
 
     local vs_data, fs_data
-    if is_glsl then
+    if is_source then
         vs_data = result.vs_source
         fs_data = result.fs_source
     else
@@ -70,13 +74,13 @@ function M.compile_shader(source, program_name, uniform_blocks, attrs)
     end
 
     if not vs_data or not fs_data then
-        M.error("Missing shader data")
+        M.error("Missing shader data: vs=" .. tostring(vs_data) .. " fs=" .. tostring(fs_data))
         return nil
     end
 
     local desc_table = {
-        vertex_func = is_glsl and { source = vs_data } or { bytecode = vs_data },
-        fragment_func = is_glsl and { source = fs_data } or { bytecode = fs_data },
+        vertex_func = is_source and { source = vs_data } or { bytecode = vs_data },
+        fragment_func = is_source and { source = fs_data } or { bytecode = fs_data },
     }
 
     -- Add uniform blocks if specified

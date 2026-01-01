@@ -134,6 +134,28 @@
         "MANE3D_BACKEND_GLES3": "ON",
         "MANE3D_BUILD_EXAMPLE": "ON"
       }
+    },
+    {
+      "name": "wasm-release",
+      "displayName": "WebAssembly WebGPU Release",
+      "description": "Use with: emcmake cmake --preset wasm-release",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/wasm",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
+    },
+    {
+      "name": "wasm-debug",
+      "displayName": "WebAssembly WebGPU Debug",
+      "description": "Use with: emcmake cmake --preset wasm-debug",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build/wasm",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "MANE3D_BUILD_EXAMPLE": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -174,6 +196,14 @@
     {
       "name": "linux-gles3-debug",
       "configurePreset": "linux-gles3-debug"
+    },
+    {
+      "name": "wasm-release",
+      "configurePreset": "wasm-release"
+    },
+    {
+      "name": "wasm-debug",
+      "configurePreset": "wasm-debug"
     }
   ]
 }
