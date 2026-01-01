@@ -19,9 +19,11 @@ local ambient_color = glm.vec3(0.2, 0.2, 0.25)
 
 -- Fog parameters
 local fog_enabled = true
-local fog_color = { 0.5, 0.6, 0.7 }
 local fog_near = 20.0
 local fog_far = 150.0
+local fog_sun_position = 0.5  -- 0-1, affects color brightness
+local fog_bg_color0 = { 0.7, 0.8, 0.9 }  -- Horizon color
+local fog_bg_color1 = { 0.3, 0.4, 0.6 }  -- Zenith color
 
 -- Blur parameters
 local blur_enabled = false
@@ -30,16 +32,21 @@ local blur_separation = 1.0
 
 -- Bloom parameters
 local bloom_enabled = true
-local bloom_size = 5
-local bloom_separation = 3.0
+local bloom_size = 3
+local bloom_separation = 4.0
 local bloom_threshold = 0.6
-local bloom_amount = 1.0
+local bloom_amount = 0.6
 
 -- SSAO parameters
 local ssao_enabled = true
-local ssao_radius = 0.5
-local ssao_bias = 0.025
-local ssao_intensity = 1.5
+local ssao_radius = 0.6
+local ssao_bias = 0.005
+local ssao_intensity = 1.1
+
+-- Motion blur parameters
+local motion_blur_enabled = false
+local motion_blur_size = 2
+local motion_blur_separation = 1.0
 
 -- Graphics resources
 local geom_shader = nil
@@ -90,6 +97,17 @@ local ssao_shader = nil
 ---@type gfx.Pipeline
 local ssao_pipeline = nil
 
+-- Motion blur resources
+local motion_img = nil
+local motion_attach = nil
+local motion_tex = nil
+local motion_shader = nil
+---@type gfx.Pipeline
+local motion_pipeline = nil
+
+-- Previous frame view matrix for motion blur
+local prev_view = nil
+
 -- Time
 local t = 0
 
@@ -105,33 +123,35 @@ in vec3 normal;
 in vec2 uv;
 in vec3 tangent;
 
-out vec3 v_world_pos;
-out vec3 v_normal;
-out vec3 v_tangent;
-out vec3 v_bitangent;
+out vec3 v_view_pos;
+out vec3 v_view_normal;
+out vec3 v_view_tangent;
+out vec3 v_view_bitangent;
 out vec2 v_uv;
 
 layout(binding=0) uniform vs_params {
     mat4 mvp;
     mat4 model;
+    mat4 view;
 };
 
 void main() {
     gl_Position = mvp * vec4(pos, 1.0);
-    v_world_pos = (model * vec4(pos, 1.0)).xyz;
-    mat3 normal_mat = mat3(model);
-    v_normal = normalize(normal_mat * normal);
-    v_tangent = normalize(normal_mat * tangent);
-    v_bitangent = cross(v_normal, v_tangent);
+    vec4 world_pos = model * vec4(pos, 1.0);
+    v_view_pos = (view * world_pos).xyz;
+    mat3 normal_mat = mat3(view * model);
+    v_view_normal = normalize(normal_mat * normal);
+    v_view_tangent = normalize(normal_mat * tangent);
+    v_view_bitangent = cross(v_view_normal, v_view_tangent);
     v_uv = vec2(uv.x, 1.0 - uv.y);
 }
 @end
 
 @fs geom_fs
-in vec3 v_world_pos;
-in vec3 v_normal;
-in vec3 v_tangent;
-in vec3 v_bitangent;
+in vec3 v_view_pos;
+in vec3 v_view_normal;
+in vec3 v_view_tangent;
+in vec3 v_view_bitangent;
 in vec2 v_uv;
 
 layout(location=0) out vec4 out_position;
@@ -148,13 +168,13 @@ void main() {
     vec4 albedo = texture(sampler2D(diffuse_tex, diffuse_smp), v_uv);
     vec3 normal_map = texture(sampler2D(normal_tex, normal_smp), v_uv).rgb;
 
-    // Unpack and transform normal
+    // Unpack and transform normal (in view space)
     vec3 n_tangent = normalize(normal_map * 2.0 - 1.0);
-    mat3 tbn = mat3(v_tangent, v_bitangent, v_normal);
+    mat3 tbn = mat3(v_view_tangent, v_view_bitangent, v_view_normal);
     vec3 n = normalize(tbn * n_tangent);
 
-    // Output to G-Buffer
-    out_position = vec4(v_world_pos, 1.0);
+    // Output to G-Buffer (view space)
+    out_position = vec4(v_view_pos, 1.0);
     out_normal = vec4(n * 0.5 + 0.5, 1.0);  // Pack to [0,1]
     out_albedo = albedo;
 }
@@ -192,29 +212,48 @@ layout(binding=3) uniform texture2D ssao_tex;
 layout(binding=3) uniform sampler ssao_smp;
 
 layout(binding=0) uniform fs_params {
-    vec4 light_pos;
+    vec4 light_pos_view;     // Light position in view space
     vec4 light_color;
     vec4 ambient_color;
-    vec4 camera_pos;
-    vec4 fog_color;      // rgb = color, a = enabled
-    vec4 fog_params;     // x = near, y = far
+    vec4 backgroundColor0;   // Fog gradient color 0 (horizon)
+    vec4 backgroundColor1;   // Fog gradient color 1 (zenith)
+    vec4 fog_params;         // x = near, y = far, z = enabled, w = sunPosition
 };
 
+const float PI = 3.14159265359;
+const float GAMMA = 2.2;
+
 void main() {
-    // Sample G-Buffer
-    vec3 world_pos = texture(sampler2D(position_tex, position_smp), v_uv).rgb;
-    vec3 normal = texture(sampler2D(normal_tex, normal_smp), v_uv).rgb * 2.0 - 1.0;  // Unpack
+    vec2 texSize = vec2(textureSize(sampler2D(position_tex, position_smp), 0));
+    vec2 texCoord = gl_FragCoord.xy / texSize;
+
+    // Sample G-Buffer (view space)
+    vec4 position = texture(sampler2D(position_tex, position_smp), v_uv);
+    vec3 view_pos = position.rgb;
+    vec3 view_normal = texture(sampler2D(normal_tex, normal_smp), v_uv).rgb * 2.0 - 1.0;
     vec4 albedo = texture(sampler2D(albedo_tex, albedo_smp), v_uv);
 
-    // Skip if no geometry
-    if (albedo.a < 0.01) {
-        frag_color = vec4(0.1, 0.1, 0.15, 1.0);  // Background
+    // Calculate fog color (gradient sky with noise)
+    float random = fract(10000.0 * sin((gl_FragCoord.x * 104729.0 + gl_FragCoord.y * 7639.0) * PI));
+
+    vec3 bgColor0 = pow(backgroundColor0.rgb, vec3(GAMMA));
+    vec3 bgColor1 = pow(backgroundColor1.rgb, vec3(GAMMA));
+
+    float sunPos = max(0.2, -1.0 * sin(fog_params.w * PI));
+    vec3 fog_color = mix(bgColor0, bgColor1, 1.0 - clamp(random * 0.1 + texCoord.y, 0.0, 1.0));
+    fog_color *= sunPos;
+    fog_color.b = mix(fog_color.b + 0.05, fog_color.b, sunPos);
+
+    // Skip if no geometry - show sky
+    if (position.a < 0.01) {
+        frag_color = vec4(fog_color, 1.0);
         return;
     }
 
-    vec3 light_dir = normalize(light_pos.xyz - world_pos);
-    vec3 view_dir = normalize(camera_pos.xyz - world_pos);
-    vec3 n = normalize(normal);
+    // All calculations in view space (camera at origin)
+    vec3 light_dir = normalize(light_pos_view.xyz - view_pos);
+    vec3 view_dir = normalize(-view_pos);
+    vec3 n = normalize(view_normal);
 
     // Sample SSAO
     float ssao = texture(sampler2D(ssao_tex, ssao_smp), v_uv).r;
@@ -233,11 +272,11 @@ void main() {
 
     vec3 result = ambient + diffuse + specular;
 
-    // Apply fog
-    if (fog_color.a > 0.5) {
-        float dist = length(world_pos - camera_pos.xyz);
+    // Apply fog (distance from camera in view space, using z-depth)
+    if (fog_params.z > 0.5) {
+        float dist = abs(view_pos.z);  // Use z-depth for fog
         float fog_intensity = clamp((dist - fog_params.x) / (fog_params.y - fog_params.x), 0.0, 0.97);
-        result = mix(result, fog_color.rgb, fog_intensity);
+        result = mix(result, fog_color, fog_intensity);
     }
 
     frag_color = vec4(result, 1.0);
@@ -356,94 +395,183 @@ layout(binding=1) uniform texture2D normal_tex;
 layout(binding=1) uniform sampler normal_smp;
 
 layout(binding=0) uniform fs_params {
-    mat4 view_mat;
-    mat4 proj_mat;
-    vec4 params;  // x = radius, y = bias, z = intensity, w = enabled
+    mat4 lensProjection;
+    vec4 params;  // x = radius, y = bias, z = magnitude, w = enabled
 };
 
-// Simple hash function for noise
-float hash(vec2 p) {
-    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-}
+// Pre-generated hemisphere samples (similar to original)
+const int NUM_SAMPLES = 8;
+const vec3 samples[NUM_SAMPLES] = vec3[](
+    vec3( 0.039,  0.071, 0.022),
+    vec3(-0.066, -0.010, 0.038),
+    vec3( 0.075, -0.032, 0.043),
+    vec3(-0.038,  0.085, 0.065),
+    vec3( 0.095,  0.052, 0.079),
+    vec3(-0.072, -0.088, 0.091),
+    vec3( 0.112, -0.067, 0.103),
+    vec3(-0.098,  0.121, 0.117)
+);
 
-vec3 hash3(vec2 p) {
-    return vec3(
-        hash(p),
-        hash(p + vec2(37.0, 17.0)),
-        hash(p + vec2(59.0, 83.0))
-    );
-}
+// Noise patterns (2x2)
+const int NUM_NOISE = 4;
+const vec3 noise[NUM_NOISE] = vec3[](
+    vec3( 0.707,  0.707, 0.0),
+    vec3(-0.707,  0.707, 0.0),
+    vec3( 0.707, -0.707, 0.0),
+    vec3(-0.707, -0.707, 0.0)
+);
 
 void main() {
-    if (params.w < 0.5) {
-        frag_color = vec4(1.0);
-        return;
-    }
+    float radius    = params.x;
+    float bias      = params.y;
+    float magnitude = params.z;
+    float contrast  = 1.1;
 
-    float radius = params.x;
-    float bias = params.y;
-    float intensity = params.z;
+    frag_color = vec4(1.0);
 
-    // Sample G-buffer
-    vec3 world_pos = texture(sampler2D(position_tex, position_smp), v_uv).rgb;
-    vec3 world_normal = texture(sampler2D(normal_tex, normal_smp), v_uv).rgb * 2.0 - 1.0;
+    if (params.w < 0.5) { return; }
 
-    // Check for background
-    float alpha = texture(sampler2D(position_tex, position_smp), v_uv).a;
-    if (alpha < 0.01) {
-        frag_color = vec4(1.0);
-        return;
-    }
+    vec2 texSize = vec2(textureSize(sampler2D(position_tex, position_smp), 0));
+    vec2 texCoord = gl_FragCoord.xy / texSize;
 
-    // Transform to view space
-    vec3 view_pos = (view_mat * vec4(world_pos, 1.0)).xyz;
-    vec3 view_normal = normalize(mat3(view_mat) * world_normal);
+    vec4 position = texture(sampler2D(position_tex, position_smp), texCoord);
+    if (position.a <= 0.0) { return; }
 
-    // Generate TBN matrix from normal and random vector
-    vec2 noise_uv = v_uv * vec2(800.0, 600.0) * 0.25;  // tile noise
-    vec3 random_vec = normalize(hash3(noise_uv) * 2.0 - 1.0);
-    vec3 tangent = normalize(random_vec - view_normal * dot(random_vec, view_normal));
-    vec3 bitangent = cross(view_normal, tangent);
-    mat3 tbn = mat3(tangent, bitangent, view_normal);
+    vec3 normal = normalize(texture(sampler2D(normal_tex, normal_smp), texCoord).xyz * 2.0 - 1.0);
 
-    // Sample hemisphere
-    float occlusion = 0.0;
-    const int NUM_SAMPLES = 16;
+    // Get noise based on screen position
+    int noiseX = int(gl_FragCoord.x - 0.5) % 2;
+    int noiseY = int(gl_FragCoord.y - 0.5) % 2;
+    vec3 random = noise[noiseX + noiseY * 2];
+
+    // Build TBN matrix
+    vec3 tangent  = normalize(random - normal * dot(random, normal));
+    vec3 binormal = cross(normal, tangent);
+    mat3 tbn      = mat3(tangent, binormal, normal);
+
+    float occlusion = float(NUM_SAMPLES);
 
     for (int i = 0; i < NUM_SAMPLES; ++i) {
-        // Generate sample in hemisphere
-        vec3 rand = hash3(v_uv * 1000.0 + vec2(float(i) * 7.23, float(i) * 3.14));
-        vec3 sample_dir = normalize(rand * 2.0 - 1.0);
-        sample_dir.z = abs(sample_dir.z);  // hemisphere
+        vec3 samplePosition = tbn * samples[i];
+        samplePosition = position.xyz + samplePosition * radius;
 
-        // Scale sample (closer samples have more weight)
-        float scale = float(i) / float(NUM_SAMPLES);
-        scale = mix(0.1, 1.0, scale * scale);
+        vec4 offsetUV      = vec4(samplePosition, 1.0);
+        offsetUV           = lensProjection * offsetUV;
+        offsetUV.xyz      /= offsetUV.w;
+        offsetUV.xy        = offsetUV.xy * 0.5 + 0.5;
 
-        vec3 sample_pos = view_pos + tbn * sample_dir * radius * scale;
+        vec4 offsetPosition = texture(sampler2D(position_tex, position_smp), offsetUV.xy);
 
-        // Project sample to screen space
-        vec4 offset = proj_mat * vec4(sample_pos, 1.0);
-        offset.xyz /= offset.w;
-        offset.xy = offset.xy * 0.5 + 0.5;
+        // Compare depths (z-axis in our view space)
+        float occluded = 0.0;
+        if (samplePosition.z + bias <= offsetPosition.z) {
+            occluded = 0.0;
+        } else {
+            occluded = 1.0;
+        }
 
-        // Sample depth at offset
-        vec3 offset_world_pos = texture(sampler2D(position_tex, position_smp), offset.xy).rgb;
-        vec3 offset_view_pos = (view_mat * vec4(offset_world_pos, 1.0)).xyz;
-
-        // Check occlusion (compare depths in view space, z is negative looking into screen)
-        float range_check = smoothstep(0.0, 1.0, radius / abs(view_pos.z - offset_view_pos.z));
-        occlusion += (offset_view_pos.z >= sample_pos.z + bias ? 1.0 : 0.0) * range_check;
+        float intensity = smoothstep(0.0, 1.0, radius / abs(position.z - offsetPosition.z));
+        occluded  *= intensity;
+        occlusion -= occluded;
     }
 
-    occlusion = 1.0 - (occlusion / float(NUM_SAMPLES)) * intensity;
-    occlusion = clamp(occlusion, 0.0, 1.0);
+    occlusion /= float(NUM_SAMPLES);
+    occlusion  = pow(occlusion, magnitude);
+    occlusion  = contrast * (occlusion - 0.5) + 0.5;
 
-    frag_color = vec4(vec3(occlusion), 1.0);
+    frag_color = vec4(vec3(occlusion), position.a);
 }
 @end
 
 @program ssao ssao_vs ssao_fs
+]]
+
+-- Motion Blur Shader
+local motion_blur_shader_source = [[
+@vs motion_vs
+in vec2 pos;
+in vec2 uv;
+
+out vec2 v_uv;
+
+void main() {
+    gl_Position = vec4(pos, 0.0, 1.0);
+    v_uv = vec2(uv.x, 1.0 - uv.y);
+}
+@end
+
+@fs motion_fs
+in vec2 v_uv;
+
+out vec4 frag_color;
+
+layout(binding=0) uniform texture2D position_tex;
+layout(binding=0) uniform sampler position_smp;
+layout(binding=1) uniform texture2D color_tex;
+layout(binding=1) uniform sampler color_smp;
+
+layout(binding=0) uniform fs_params {
+    mat4 previousViewWorldMat;  // Previous frame view-to-world (inverse of prev view)
+    mat4 worldViewMat;          // Current frame world-to-view (current view)
+    mat4 lensProjection;        // Projection matrix
+    vec4 params;                // x = size, y = separation, z = enabled
+};
+
+void main() {
+    int size = int(params.x);
+    float separation = params.y;
+
+    frag_color = texture(sampler2D(color_tex, color_smp), v_uv);
+    vec4 position1 = texture(sampler2D(position_tex, position_smp), v_uv);
+
+    if (size <= 0 || separation <= 0.0 || params.z < 0.5 || position1.a <= 0.0) {
+        return;
+    }
+
+    // Transform current view-space position through prev inverse and current view
+    // This gives where this point would appear if camera hadn't moved
+    vec4 position0 = worldViewMat * previousViewWorldMat * position1;
+
+    // Project to screen space
+    position0 = lensProjection * position0;
+    position0.xyz /= position0.w;
+    position0.xy = position0.xy * 0.5 + 0.5;
+
+    position1 = lensProjection * position1;
+    position1.xyz /= position1.w;
+    position1.xy = position1.xy * 0.5 + 0.5;
+
+    vec2 direction = position1.xy - position0.xy;
+
+    if (length(direction) <= 0.0) {
+        return;
+    }
+
+    direction.xy *= separation;
+
+    vec2 forward = v_uv;
+    vec2 backward = v_uv;
+    float count = 1.0;
+
+    // Fixed loop count for HLSL compatibility
+    const int MAX_SAMPLES = 16;
+    for (int i = 0; i < MAX_SAMPLES; ++i) {
+        if (i >= size) break;
+
+        forward += direction;
+        backward -= direction;
+
+        frag_color += texture(sampler2D(color_tex, color_smp), forward);
+        frag_color += texture(sampler2D(color_tex, color_smp), backward);
+
+        count += 2.0;
+    }
+
+    frag_color /= count;
+}
+@end
+
+@program motion motion_vs motion_fs
 ]]
 
 -- Compute tangent vectors for a triangle
@@ -562,6 +690,20 @@ local function create_gbuffer(w, h)
     ssao_tex = gfx.make_view(gfx.ViewDesc({
         texture = { image = ssao_img },
     }))
+
+    -- Motion blur render target
+    motion_img = gfx.make_image(gfx.ImageDesc({
+        usage = { color_attachment = true },
+        width = w,
+        height = h,
+        pixel_format = gfx.PixelFormat.RGBA8,
+    }))
+    motion_attach = gfx.make_view(gfx.ViewDesc({
+        color_attachment = { image = motion_img },
+    }))
+    motion_tex = gfx.make_view(gfx.ViewDesc({
+        texture = { image = motion_img },
+    }))
 end
 
 local function create_fullscreen_quad()
@@ -598,10 +740,11 @@ function init()
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.VERTEX,
-                size = 128,  -- 2 mat4
+                size = 192,  -- 3 mat4
                 glsl_uniforms = {
                     { glsl_name = "mvp", type = gfx.UniformType.MAT4 },
                     { glsl_name = "model", type = gfx.UniformType.MAT4 },
+                    { glsl_name = "view", type = gfx.UniformType.MAT4 },
                 },
             },
         },
@@ -663,11 +806,11 @@ function init()
                 stage = gfx.ShaderStage.FRAGMENT,
                 size = 96,  -- 6 vec4
                 glsl_uniforms = {
-                    { glsl_name = "light_pos", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "light_pos_view", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "light_color", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "ambient_color", type = gfx.UniformType.FLOAT4 },
-                    { glsl_name = "camera_pos", type = gfx.UniformType.FLOAT4 },
-                    { glsl_name = "fog_color", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "backgroundColor0", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "backgroundColor1", type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "fog_params", type = gfx.UniformType.FLOAT4 },
                 },
             },
@@ -767,10 +910,9 @@ function init()
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.FRAGMENT,
-                size = 144,  -- 2 mat4 (128) + 1 vec4 (16)
+                size = 80,  -- 1 mat4 (64) + 1 vec4 (16)
                 glsl_uniforms = {
-                    { glsl_name = "view_mat", type = gfx.UniformType.MAT4 },
-                    { glsl_name = "proj_mat", type = gfx.UniformType.MAT4 },
+                    { glsl_name = "lensProjection", type = gfx.UniformType.MAT4 },
                     { glsl_name = "params", type = gfx.UniformType.FLOAT4 },
                 },
             },
@@ -809,6 +951,60 @@ function init()
         },
         colors = {
             { pixel_format = gfx.PixelFormat.R8 },
+        },
+        depth = {
+            pixel_format = gfx.PixelFormat.NONE,
+        },
+    }))
+
+    -- Motion blur shader
+    local motion_desc = {
+        uniform_blocks = {
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                size = 208,  -- 3 mat4 (192) + 1 vec4 (16)
+                glsl_uniforms = {
+                    { glsl_name = "previousViewWorldMat", type = gfx.UniformType.MAT4 },
+                    { glsl_name = "worldViewMat", type = gfx.UniformType.MAT4 },
+                    { glsl_name = "lensProjection", type = gfx.UniformType.MAT4 },
+                    { glsl_name = "params", type = gfx.UniformType.FLOAT4 },
+                },
+            },
+        },
+        views = {
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
+        },
+        samplers = {
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 1 },
+        },
+        texture_sampler_pairs = {
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "position_tex_position_smp" },
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 1, sampler_slot = 1, glsl_name = "color_tex_color_smp" },
+        },
+        attrs = {
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
+        },
+    }
+    motion_shader = util.compile_shader_full(motion_blur_shader_source, "motion", motion_desc)
+    if not motion_shader then
+        util.error("Failed to compile motion blur shader")
+        return
+    end
+
+    -- Motion blur pipeline
+    motion_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+        shader = motion_shader,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT2 },  -- pos
+                { format = gfx.VertexFormat.FLOAT2 },  -- uv
+            },
+        },
+        colors = {
+            { pixel_format = gfx.PixelFormat.RGBA8 },
         },
         depth = {
             pixel_format = gfx.PixelFormat.NONE,
@@ -1009,8 +1205,8 @@ function frame()
 
     gfx.apply_pipeline(geom_pipeline)
 
-    -- Uniform data: mvp + model
-    local uniform_data = mvp:pack() .. model_mat:pack()
+    -- Uniform data: mvp + model + view
+    local uniform_data = mvp:pack() .. model_mat:pack() .. view:pack()
 
     for _, mesh in ipairs(meshes) do
         gfx.apply_bindings(gfx.Bindings({
@@ -1046,8 +1242,8 @@ function frame()
         samplers = { gbuf_sampler, gbuf_sampler },
     }))
 
-    -- SSAO uniforms: view matrix, projection matrix, params
-    local ssao_uniforms = view:pack() .. proj:pack() .. string.pack("ffff",
+    -- SSAO uniforms: projection matrix, params
+    local ssao_uniforms = proj:pack() .. string.pack("ffff",
         ssao_radius, ssao_bias, ssao_intensity, ssao_enabled and 1.0 or 0.0
     )
     gfx.apply_uniforms(0, gfx.Range(ssao_uniforms))
@@ -1076,19 +1272,63 @@ function frame()
         samplers = { gbuf_sampler, gbuf_sampler, gbuf_sampler, gbuf_sampler },
     }))
 
+    -- Transform light position to view space
+    local light_view = view * glm.vec4(light_pos.x, light_pos.y, light_pos.z, 1.0)
+
     -- Lighting uniforms (including fog)
     local light_uniforms = string.pack("ffff ffff ffff ffff ffff ffff",
-        light_pos.x, light_pos.y, light_pos.z, 1.0,
+        light_view.x, light_view.y, light_view.z, 1.0,
         light_color.x, light_color.y, light_color.z, 1.0,
         ambient_color.x, ambient_color.y, ambient_color.z, 1.0,
-        camera_pos.x, camera_pos.y, camera_pos.z, 1.0,
-        fog_color[1], fog_color[2], fog_color[3], fog_enabled and 1.0 or 0.0,
-        fog_near, fog_far, 0.0, 0.0
+        fog_bg_color0[1], fog_bg_color0[2], fog_bg_color0[3], 1.0,
+        fog_bg_color1[1], fog_bg_color1[2], fog_bg_color1[3], 1.0,
+        fog_near, fog_far, fog_enabled and 1.0 or 0.0, fog_sun_position
     )
     gfx.apply_uniforms(0, gfx.Range(light_uniforms))
     gfx.draw(0, 6, 1)
 
     gfx.end_pass()
+
+    -- === MOTION BLUR PASS ===
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
+            colors = {{
+                load_action = gfx.LoadAction.CLEAR,
+                clear_value = { r = 0.0, g = 0.0, b = 0.0, a = 1.0 },
+            }},
+        }),
+        attachments = {
+            colors = { motion_attach },
+        },
+    }))
+
+    gfx.apply_pipeline(motion_pipeline)
+
+    gfx.apply_bindings(gfx.Bindings({
+        vertex_buffers = { quad_vbuf },
+        views = { gbuf_position_tex, scene_tex },
+        samplers = { gbuf_sampler, gbuf_sampler },
+    }))
+
+    -- Motion blur uniforms: previousViewWorldMat (inverse of prev view), worldViewMat (current view), lensProjection
+    -- Use current view as prev on first frame
+    local effective_prev_view = prev_view or view
+    local previousViewWorldMat = effective_prev_view:inverse()
+    local motion_uniforms = previousViewWorldMat:pack() .. view:pack() .. proj:pack() .. string.pack("ffff",
+        motion_blur_size, motion_blur_separation, motion_blur_enabled and 1.0 or 0.0, 0.0
+    )
+    gfx.apply_uniforms(0, gfx.Range(motion_uniforms))
+    gfx.draw(0, 6, 1)
+
+    gfx.end_pass()
+
+    -- Store current view for next frame (copy the matrix)
+    prev_view = glm.mat4(
+        view[1], view[2], view[3], view[4],
+        view[5], view[6], view[7], view[8],
+        view[9], view[10], view[11], view[12],
+        view[13], view[14], view[15], view[16]
+    )
 
     -- === BLUR PASS (to swapchain) ===
     gfx.begin_pass(gfx.Pass({
@@ -1105,7 +1345,7 @@ function frame()
 
     gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { quad_vbuf },
-        views = { scene_tex },
+        views = { motion_tex },
         samplers = { gbuf_sampler },
     }))
 
@@ -1126,11 +1366,17 @@ function frame()
         if imgui.CollapsingHeader("Fog") then
             fog_enabled = imgui.Checkbox("Fog Enabled", fog_enabled)
 
-            local r, g, b, changed = imgui.ColorEdit3("Fog Color", fog_color[1], fog_color[2], fog_color[3])
+            local r, g, b, changed = imgui.ColorEdit3("Horizon Color", fog_bg_color0[1], fog_bg_color0[2], fog_bg_color0[3])
             if changed then
-                fog_color = { r, g, b }
+                fog_bg_color0 = { r, g, b }
             end
 
+            r, g, b, changed = imgui.ColorEdit3("Zenith Color", fog_bg_color1[1], fog_bg_color1[2], fog_bg_color1[3])
+            if changed then
+                fog_bg_color1 = { r, g, b }
+            end
+
+            fog_sun_position = imgui.SliderFloat("Sun Position", fog_sun_position, 0.0, 1.0)
             fog_near = imgui.SliderFloat("Fog Near", fog_near, 0.0, 100.0)
             fog_far = imgui.SliderFloat("Fog Far", fog_far, 50.0, 300.0)
         end
@@ -1154,6 +1400,12 @@ function frame()
             ssao_radius = imgui.SliderFloat("Radius", ssao_radius, 0.1, 2.0)
             ssao_bias = imgui.SliderFloat("Bias", ssao_bias, 0.0, 0.1)
             ssao_intensity = imgui.SliderFloat("Intensity", ssao_intensity, 0.5, 3.0)
+        end
+
+        if imgui.CollapsingHeader("Motion Blur") then
+            motion_blur_enabled = imgui.Checkbox("Motion Blur Enabled", motion_blur_enabled)
+            motion_blur_size = imgui.SliderInt("Samples", motion_blur_size, 1, 16)
+            motion_blur_separation = imgui.SliderFloat("Separation", motion_blur_separation, 0.5, 3.0)
         end
 
         imgui.Separator()
