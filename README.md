@@ -42,7 +42,7 @@ end
 - D3D11 (Windows)
 - Metal (macOS)
 - OpenGL (Linux)
-- WebGPU (planned)
+- WebGPU (WASM)
 
 ## Build
 
