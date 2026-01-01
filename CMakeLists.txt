@@ -122,6 +122,7 @@ endif()
 # mane3d sources
 set(MANE3D_SOURCES
     src/sokol_impl.c
+    src/stb_image_lua.c
     ${MANE3D_GENERATED}
 )
 
@@ -140,6 +141,7 @@ target_include_directories(mane3d
     PUBLIC ${LUA_INCLUDE}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb
 )
 
 # Link Lua
