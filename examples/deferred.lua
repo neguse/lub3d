@@ -60,6 +60,13 @@ local chromatic_red_offset = 0.009
 local chromatic_green_offset = 0.006
 local chromatic_blue_offset = -0.006
 
+-- Screen Space Reflection parameters
+local ssr_enabled = true
+local ssr_max_distance = 8.0
+local ssr_resolution = 0.3
+local ssr_steps = 5
+local ssr_thickness = 0.5
+
 -- Graphics resources
 local geom_shader = nil
 ---@type gfx.Pipeline
@@ -116,6 +123,22 @@ local motion_tex = nil
 local motion_shader = nil
 ---@type gfx.Pipeline
 local motion_pipeline = nil
+
+-- SSR resources
+local ssr_uv_img = nil
+local ssr_uv_attach = nil
+local ssr_uv_tex = nil
+local ssr_uv_shader = nil
+---@type gfx.Pipeline
+local ssr_uv_pipeline = nil
+
+-- Reflection color resources
+local reflection_img = nil
+local reflection_attach = nil
+local reflection_tex = nil
+local reflection_shader = nil
+---@type gfx.Pipeline
+local reflection_pipeline = nil
 
 -- Previous frame view matrix for motion blur
 local prev_view = nil
@@ -354,6 +377,8 @@ out vec4 frag_color;
 
 layout(binding=0) uniform texture2D color_tex;
 layout(binding=0) uniform sampler color_smp;
+layout(binding=1) uniform texture2D reflection_tex;
+layout(binding=1) uniform sampler reflection_smp;
 
 layout(binding=0) uniform fs_params {
     vec4 blur_params;      // x = size, y = separation, z = enabled
@@ -427,7 +452,13 @@ void main() {
         bloom = (bloom / count) * amount;
     }
 
-    frag_color = blurred + bloom;
+    vec4 result = blurred + bloom;
+
+    // Blend reflection (SSR)
+    vec4 reflection = texture(sampler2D(reflection_tex, reflection_smp), texCoord);
+    result.rgb = mix(result.rgb, reflection.rgb, clamp(reflection.a, 0.0, 1.0));
+
+    frag_color = result;
 }
 @end
 
@@ -638,6 +669,289 @@ void main() {
 @program motion motion_vs motion_fs
 ]]
 
+-- SSR UV Shader: Ray marching to find reflection UV
+-- Based on lettier/3d-game-shaders-for-beginners screen-space-reflection.frag
+-- Key differences from original:
+--   1. Loop iterations limited to 64 (original uses dynamic delta which can be 256+)
+--      - HLSL has strict loop unrolling requirements, large dynamic loops cause compilation timeout
+--   2. No mask texture (original uses specular map to determine reflectivity)
+--      - Current model lacks specular map, so all surfaces are reflective
+--   3. Y-flip handling for render target coordinate system
+--      - Our G-buffer uses flipped UVs, so we flip when sampling and outputting
+local ssr_uv_shader_source = [[
+@vs ssr_uv_vs
+in vec2 pos;
+in vec2 uv;
+
+out vec2 v_uv;
+
+void main() {
+    gl_Position = vec4(pos, 0.0, 1.0);
+    v_uv = vec2(uv.x, 1.0 - uv.y);
+}
+@end
+
+@fs ssr_uv_fs
+in vec2 v_uv;
+
+out vec4 frag_color;
+
+layout(binding=0) uniform texture2D position_tex;
+layout(binding=0) uniform sampler position_smp;
+layout(binding=1) uniform texture2D normal_tex;
+layout(binding=1) uniform sampler normal_smp;
+
+layout(binding=0) uniform fs_params {
+    mat4 lensProjection;
+    vec4 params;      // x = enabled, y = maxDistance, z = resolution, w = thickness
+    vec4 params2;     // x = steps
+};
+
+void main() {
+    float maxDistance = params.y;
+    float resolution  = params.z;
+    float thickness   = params.w;
+    int   steps       = int(params2.x);
+
+    vec2 texSize  = vec2(textureSize(sampler2D(position_tex, position_smp), 0));
+    vec2 texCoord = v_uv;
+
+    vec4 uv = vec4(0.0);
+
+    vec4 positionFrom = texture(sampler2D(position_tex, position_smp), texCoord);
+
+    // Skip if disabled or no geometry (using fixed reflectivity since we don't have mask)
+    if (positionFrom.w <= 0.0 || params.x < 0.5) {
+        frag_color = uv;
+        return;
+    }
+
+    // Calculate reflection ray direction in view space
+    vec3 unitPositionFrom = normalize(positionFrom.xyz);
+    vec3 normal           = normalize(texture(sampler2D(normal_tex, normal_smp), texCoord).xyz * 2.0 - 1.0);
+    vec3 pivot            = normalize(reflect(unitPositionFrom, normal));  // Reflection direction
+
+    vec4 positionTo = positionFrom;
+
+    // Define ray start and end points in view space
+    vec4 startView = vec4(positionFrom.xyz + (pivot *         0.0), 1.0);
+    vec4 endView   = vec4(positionFrom.xyz + (pivot * maxDistance), 1.0);
+
+    // Project ray endpoints to screen space (pixel coordinates)
+    vec4 startFrag      = startView;
+         startFrag      = lensProjection * startFrag;
+         startFrag.xyz /= startFrag.w;
+         startFrag.xy   = startFrag.xy * 0.5 + 0.5;  // NDC to UV
+         startFrag.xy  *= texSize;                    // UV to pixels
+
+    vec4 endFrag      = endView;
+         endFrag      = lensProjection * endFrag;
+         endFrag.xyz /= endFrag.w;
+         endFrag.xy   = endFrag.xy * 0.5 + 0.5;
+         endFrag.xy  *= texSize;
+
+    vec2 frag  = startFrag.xy;
+         uv.xy = frag / texSize;
+
+    // Calculate step direction and count based on screen-space distance
+    // We step along the longer axis for better precision
+    float deltaX    = endFrag.x - startFrag.x;
+    float deltaY    = endFrag.y - startFrag.y;
+    float useX      = abs(deltaX) >= abs(deltaY) ? 1.0 : 0.0;
+    float delta     = mix(abs(deltaY), abs(deltaX), useX) * clamp(resolution, 0.0, 1.0);
+    vec2  increment = vec2(deltaX, deltaY) / max(delta, 0.001);
+
+    float search0 = 0.0;
+    float search1 = 0.0;
+
+    int hit0 = 0;
+    int hit1 = 0;
+
+    float viewDistance = startView.y;
+    float depth        = thickness;
+
+    // First pass: coarse search
+    // Original uses `for (i = 0; i < int(delta); ++i)` but HLSL requires
+    // compile-time loop bounds for unrolling. We use fixed 64 iterations
+    // with early break instead. This limits max ray length but is acceptable
+    // for most use cases (resolution 0.3 means ~200px ray = 64 steps).
+    for (int i = 0; i < 64; ++i) {
+        if (float(i) >= delta) break;
+
+        frag      += increment;
+        uv.xy      = frag / texSize;
+
+        // Flip Y for sampling (our render targets use flipped UVs)
+        vec2 sampleUV = vec2(uv.x, 1.0 - uv.y);
+        positionTo = texture(sampler2D(position_tex, position_smp), sampleUV);
+
+        search1 =
+            mix
+              ( (frag.y - startFrag.y) / deltaY
+              , (frag.x - startFrag.x) / deltaX
+              , useX
+              );
+
+        search1 = clamp(search1, 0.0, 1.0);
+
+        viewDistance = (startView.y * endView.y) / mix(endView.y, startView.y, search1);
+        depth        = viewDistance - positionTo.y;
+
+        if (depth > 0.0 && depth < thickness) {
+            hit0 = 1;
+            break;
+        } else {
+            search0 = search1;
+        }
+    }
+
+    search1 = search0 + ((search1 - search0) / 2.0);
+
+    // Second pass: binary search refinement
+    // Original uses `steps *= hit0` then loops `steps` times.
+    // We use fixed 8 iterations with early break for HLSL compatibility.
+    // Binary search quickly converges, so 8 iterations is sufficient.
+    for (int i = 0; i < 8; ++i) {
+        if (hit0 == 0) break;  // Skip if coarse search found nothing
+        if (i >= steps) break;  // User-controlled refinement depth
+
+        frag       = mix(startFrag.xy, endFrag.xy, search1);
+        uv.xy      = frag / texSize;
+
+        vec2 sampleUV = vec2(uv.x, 1.0 - uv.y);
+        positionTo = texture(sampler2D(position_tex, position_smp), sampleUV);
+
+        viewDistance = (startView.y * endView.y) / mix(endView.y, startView.y, search1);
+        depth        = viewDistance - positionTo.y;
+
+        if (depth > 0.0 && depth < thickness) {
+            hit1 = 1;
+            search1 = search0 + ((search1 - search0) / 2.0);
+        } else {
+            float temp = search1;
+            search1 = search1 + ((search1 - search0) / 2.0);
+            search0 = temp;
+        }
+    }
+
+    // Calculate visibility (alpha) based on multiple factors:
+    // - hit1: Did we find a valid intersection?
+    // - positionTo.w: Is the hit position valid geometry?
+    // - dot(-unitPositionFrom, pivot): Fade reflections pointing toward camera (self-reflection)
+    // - depth/thickness: Fade based on depth accuracy
+    // - distance falloff: Fade distant reflections
+    // - screen bounds: No reflection outside visible area
+    float visibility =
+        float(hit1)
+      * positionTo.w
+      * ( 1.0
+        - max
+           ( dot(-unitPositionFrom, pivot)
+           , 0.0
+           )
+        )
+      * ( 1.0
+        - clamp
+            ( depth / thickness
+            , 0.0
+            , 1.0
+            )
+        )
+      * ( 1.0
+        - clamp
+            (   length(positionTo.xyz - positionFrom.xyz)
+              / maxDistance
+            , 0.0
+            , 1.0
+            )
+        )
+      * (uv.x < 0.0 || uv.x > 1.0 ? 0.0 : 1.0)
+      * (uv.y < 0.0 || uv.y > 1.0 ? 0.0 : 1.0);
+
+    visibility = clamp(visibility, 0.0, 1.0);
+
+    // Output: xy = UV to sample, ba = visibility (alpha)
+    // Flip Y for our render target coordinate system
+    uv.y = 1.0 - uv.y;
+    uv.ba = vec2(visibility);
+
+    frag_color = uv;
+}
+@end
+
+@program ssr_uv ssr_uv_vs ssr_uv_fs
+]]
+
+-- Reflection Color Shader: Sample color at SSR UVs with hole filling
+-- Based on lettier/3d-game-shaders-for-beginners reflection-color.frag
+-- Two-pass approach:
+--   1. SSR UV pass outputs UV coordinates where reflection should sample from
+--   2. This pass samples the lit scene at those UVs to get actual reflection color
+-- Hole filling: Ray marching can miss pixels, leaving holes in the UV map.
+-- We blur-sample neighboring pixels to fill these holes for smoother reflections.
+local reflection_shader_source = [[
+@vs reflection_vs
+in vec2 pos;
+in vec2 uv;
+
+out vec2 v_uv;
+
+void main() {
+    gl_Position = vec4(pos, 0.0, 1.0);
+    v_uv = vec2(uv.x, 1.0 - uv.y);
+}
+@end
+
+@fs reflection_fs
+in vec2 v_uv;
+
+out vec4 frag_color;
+
+layout(binding=0) uniform texture2D uv_tex;
+layout(binding=0) uniform sampler uv_smp;
+layout(binding=1) uniform texture2D color_tex;
+layout(binding=1) uniform sampler color_smp;
+
+void main() {
+    int   size       = 6;
+    float separation = 2.0;
+
+    vec2 texSize  = vec2(textureSize(sampler2D(uv_tex, uv_smp), 0));
+    vec2 texCoord = v_uv;
+
+    vec4 uv = texture(sampler2D(uv_tex, uv_smp), texCoord);
+
+    // Removes holes in the UV map (blur-based hole fill)
+    if (uv.b <= 0.0) {
+        uv = vec4(0.0);
+        float count = 0.0;
+
+        for (int i = -size; i <= size; ++i) {
+            for (int j = -size; j <= size; ++j) {
+                vec2 offset = vec2(float(i), float(j)) * separation / texSize;
+                uv += texture(sampler2D(uv_tex, uv_smp), texCoord + offset);
+                count += 1.0;
+            }
+        }
+
+        uv.xyz /= count;
+    }
+
+    if (uv.b <= 0.0) {
+        frag_color = vec4(0.0);
+        return;
+    }
+
+    vec4  color = texture(sampler2D(color_tex, color_smp), uv.xy);
+    float alpha = clamp(uv.b, 0.0, 1.0);
+
+    frag_color = vec4(mix(vec3(0.0), color.rgb, alpha), alpha);
+}
+@end
+
+@program reflection reflection_vs reflection_fs
+]]
+
 -- Compute tangent vectors for a triangle
 local function compute_tangent(p1, p2, p3, uv1, uv2, uv3)
     local edge1 = { p2[1] - p1[1], p2[2] - p1[2], p2[3] - p1[3] }
@@ -767,6 +1081,34 @@ local function create_gbuffer(w, h)
     }))
     motion_tex = gfx.make_view(gfx.ViewDesc({
         texture = { image = motion_img },
+    }))
+
+    -- SSR UV render target (RGBA16F for UV coords + visibility)
+    ssr_uv_img = gfx.make_image(gfx.ImageDesc({
+        usage = { color_attachment = true },
+        width = w,
+        height = h,
+        pixel_format = gfx.PixelFormat.RGBA16F,
+    }))
+    ssr_uv_attach = gfx.make_view(gfx.ViewDesc({
+        color_attachment = { image = ssr_uv_img },
+    }))
+    ssr_uv_tex = gfx.make_view(gfx.ViewDesc({
+        texture = { image = ssr_uv_img },
+    }))
+
+    -- Reflection color render target
+    reflection_img = gfx.make_image(gfx.ImageDesc({
+        usage = { color_attachment = true },
+        width = w,
+        height = h,
+        pixel_format = gfx.PixelFormat.RGBA8,
+    }))
+    reflection_attach = gfx.make_view(gfx.ViewDesc({
+        color_attachment = { image = reflection_img },
+    }))
+    reflection_tex = gfx.make_view(gfx.ViewDesc({
+        texture = { image = reflection_img },
     }))
 end
 
@@ -928,7 +1270,7 @@ function init()
         },
     }))
 
-    -- Blur shader (includes bloom + chromatic aberration)
+    -- Blur shader (includes bloom + chromatic aberration + SSR blend)
     local blur_desc = {
         uniform_blocks = {
             {
@@ -944,12 +1286,15 @@ function init()
         },
         views = {
             { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
         },
         samplers = {
             { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 1 },
         },
         texture_sampler_pairs = {
             { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "color_tex_color_smp" },
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 1, sampler_slot = 1, glsl_name = "reflection_tex_reflection_smp" },
         },
         attrs = {
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
@@ -1065,6 +1410,101 @@ function init()
     -- Motion blur pipeline
     motion_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = motion_shader,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT2 },  -- pos
+                { format = gfx.VertexFormat.FLOAT2 },  -- uv
+            },
+        },
+        colors = {
+            { pixel_format = gfx.PixelFormat.RGBA8 },
+        },
+        depth = {
+            pixel_format = gfx.PixelFormat.NONE,
+        },
+    }))
+
+    -- SSR UV shader
+    local ssr_uv_desc = {
+        uniform_blocks = {
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                size = 96,  -- 1 mat4 (64) + 2 vec4 (32)
+                glsl_uniforms = {
+                    { glsl_name = "lensProjection", type = gfx.UniformType.MAT4 },
+                    { glsl_name = "params", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "params2", type = gfx.UniformType.FLOAT4 },
+                },
+            },
+        },
+        views = {
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
+        },
+        samplers = {
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 1 },
+        },
+        texture_sampler_pairs = {
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "position_tex_position_smp" },
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 1, sampler_slot = 1, glsl_name = "normal_tex_normal_smp" },
+        },
+        attrs = {
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
+        },
+    }
+    ssr_uv_shader = util.compile_shader_full(ssr_uv_shader_source, "ssr_uv", ssr_uv_desc)
+    if not ssr_uv_shader then
+        util.error("Failed to compile SSR UV shader")
+        return
+    end
+
+    -- SSR UV pipeline
+    ssr_uv_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+        shader = ssr_uv_shader,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT2 },  -- pos
+                { format = gfx.VertexFormat.FLOAT2 },  -- uv
+            },
+        },
+        colors = {
+            { pixel_format = gfx.PixelFormat.RGBA16F },
+        },
+        depth = {
+            pixel_format = gfx.PixelFormat.NONE,
+        },
+    }))
+
+    -- Reflection color shader
+    local reflection_desc = {
+        views = {
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
+        },
+        samplers = {
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
+            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 1 },
+        },
+        texture_sampler_pairs = {
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "uv_tex_uv_smp" },
+            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 1, sampler_slot = 1, glsl_name = "color_tex_color_smp" },
+        },
+        attrs = {
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
+            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
+        },
+    }
+    reflection_shader = util.compile_shader_full(reflection_shader_source, "reflection", reflection_desc)
+    if not reflection_shader then
+        util.error("Failed to compile reflection shader")
+        return
+    end
+
+    -- Reflection color pipeline
+    reflection_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+        shader = reflection_shader,
         layout = {
             attrs = {
                 { format = gfx.VertexFormat.FLOAT2 },  -- pos
@@ -1360,6 +1800,62 @@ function frame()
 
     gfx.end_pass()
 
+    -- === SSR UV PASS ===
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
+            colors = {{
+                load_action = gfx.LoadAction.CLEAR,
+                clear_value = { r = 0.0, g = 0.0, b = 0.0, a = 0.0 },
+            }},
+        }),
+        attachments = {
+            colors = { ssr_uv_attach },
+        },
+    }))
+
+    gfx.apply_pipeline(ssr_uv_pipeline)
+
+    gfx.apply_bindings(gfx.Bindings({
+        vertex_buffers = { quad_vbuf },
+        views = { gbuf_position_tex, gbuf_normal_tex },
+        samplers = { gbuf_sampler, gbuf_sampler },
+    }))
+
+    -- SSR UV uniforms: projection matrix, params
+    local ssr_uv_uniforms = proj:pack() .. string.pack("ffff ffff",
+        ssr_enabled and 1.0 or 0.0, ssr_max_distance, ssr_resolution, ssr_thickness,
+        ssr_steps, 0.0, 0.0, 0.0
+    )
+    gfx.apply_uniforms(0, gfx.Range(ssr_uv_uniforms))
+    gfx.draw(0, 6, 1)
+
+    gfx.end_pass()
+
+    -- === REFLECTION COLOR PASS ===
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
+            colors = {{
+                load_action = gfx.LoadAction.CLEAR,
+                clear_value = { r = 0.0, g = 0.0, b = 0.0, a = 0.0 },
+            }},
+        }),
+        attachments = {
+            colors = { reflection_attach },
+        },
+    }))
+
+    gfx.apply_pipeline(reflection_pipeline)
+
+    gfx.apply_bindings(gfx.Bindings({
+        vertex_buffers = { quad_vbuf },
+        views = { ssr_uv_tex, scene_tex },
+        samplers = { gbuf_sampler, gbuf_sampler },
+    }))
+
+    gfx.draw(0, 6, 1)
+
+    gfx.end_pass()
+
     -- === MOTION BLUR PASS ===
     gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
@@ -1416,8 +1912,8 @@ function frame()
 
     gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { quad_vbuf },
-        views = { motion_tex },
-        samplers = { gbuf_sampler },
+        views = { motion_tex, reflection_tex },
+        samplers = { gbuf_sampler, gbuf_sampler },
     }))
 
     -- Post-processing uniforms (blur + bloom + chromatic aberration)
@@ -1504,6 +2000,14 @@ function frame()
             chromatic_red_offset = imgui.SliderFloat("Red Offset", chromatic_red_offset, -0.02, 0.02)
             chromatic_green_offset = imgui.SliderFloat("Green Offset", chromatic_green_offset, -0.02, 0.02)
             chromatic_blue_offset = imgui.SliderFloat("Blue Offset", chromatic_blue_offset, -0.02, 0.02)
+        end
+
+        if imgui.CollapsingHeader("Screen Space Reflection") then
+            ssr_enabled = imgui.Checkbox("SSR Enabled", ssr_enabled)
+            ssr_max_distance = imgui.SliderFloat("Max Distance", ssr_max_distance, 1.0, 20.0)
+            ssr_resolution = imgui.SliderFloat("Resolution", ssr_resolution, 0.1, 1.0)
+            ssr_steps = imgui.SliderInt("Refinement Steps", ssr_steps, 1, 16)
+            ssr_thickness = imgui.SliderFloat("Thickness", ssr_thickness, 0.1, 2.0)
         end
 
         if imgui.CollapsingHeader("Lighting Effects") then
