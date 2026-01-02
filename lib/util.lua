@@ -202,6 +202,21 @@ function M.pack_floats(floats)
     return table.concat(result)
 end
 
+-- Helper to pack index data as u32 (handles large arrays)
+function M.pack_u32(ints)
+    local CHUNK_SIZE = 200
+    local result = {}
+    for i = 1, #ints, CHUNK_SIZE do
+        local chunk_end = math.min(i + CHUNK_SIZE - 1, #ints)
+        local chunk = {}
+        for j = i, chunk_end do
+            chunk[#chunk + 1] = ints[j]
+        end
+        result[#result + 1] = string.pack(string.rep("I4", #chunk), table.unpack(chunk))
+    end
+    return table.concat(result)
+end
+
 -- Load raw image data from file (handles WASM fetch)
 -- @param filename string: path to image file
 -- @return width, height, channels, pixels or nil, error_message
