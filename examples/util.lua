@@ -4,6 +4,23 @@ local slog = require("sokol.log")
 
 local M = {}
 
+-- Resolve path relative to script directory
+-- Absolute paths (starting with / or X:) are returned as-is
+---@param path string
+---@return string
+function M.resolve_path(path)
+    -- Check if absolute path
+    if path:match("^/") or path:match("^%a:") then
+        return path
+    end
+    -- Use SCRIPT_DIR if available
+    local script_dir = _G["SCRIPT_DIR"]
+    if script_dir and script_dir ~= "." then
+        return script_dir .. "/" .. path
+    end
+    return path
+end
+
 -- Logging (uses sokol_log, OutputDebugString on Windows)
 function M.info(msg)
     slog.func("lua", 3, 0, msg, 0, "", nil)
@@ -190,19 +207,20 @@ end
 -- @return width, height, channels, pixels or nil, error_message
 function M.load_image_data(filename)
     local stb = require("stb.image")
+    local resolved = M.resolve_path(filename)
 
     -- Check if running in WASM (fetch_file is defined in main.c for Emscripten)
     ---@type fun(filename: string): string?
     local fetch_file = _G["fetch_file"]
     if fetch_file then
-        local data = fetch_file(filename)
+        local data = fetch_file(resolved)
         if not data then
-            return nil, "Failed to fetch: " .. filename
+            return nil, "Failed to fetch: " .. resolved
         end
         return stb.load_from_memory(data, 4)
     else
         -- Native: load directly from filesystem
-        return stb.load(filename, 4)
+        return stb.load(resolved, 4)
     end
 end
 

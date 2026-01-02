@@ -144,7 +144,9 @@
       "binaryDir": "${sourceDir}/build/wasm",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BUILD_EXAMPLE": "ON",
+        "MANE3D_BUILD_SHDC": "ON",
+        "MANE3D_BUILD_IMGUI": "ON"
       }
     },
     {
@@ -155,7 +157,9 @@
       "binaryDir": "${sourceDir}/build/wasm",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BUILD_EXAMPLE": "ON",
+        "MANE3D_BUILD_SHDC": "ON",
+        "MANE3D_BUILD_IMGUI": "ON"
       }
     }
   ],

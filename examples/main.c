@@ -17,6 +17,13 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+
+/* Get script path from URL query parameter (?script=path/to/script.lua) */
+EM_JS(void, js_get_script_param, (char *out, int max_len), {
+    var params = new URLSearchParams(window.location.search);
+    var script = params.get("script") || "main.lua";
+    stringToUTF8(script, out, max_len);
+});
 #endif
 
 /* declare luaopen functions from generated bindings */
@@ -42,7 +49,30 @@ extern int luaopen_imgui(lua_State *L);
 
 static lua_State *L = NULL;
 static char g_script_path[512] = {0};
+static char g_script_dir[512] = {0};
 static time_t g_script_mtime = 0;
+
+/* Extract directory from path */
+static void extract_dir(const char *path, char *dir, size_t dir_size)
+{
+    strncpy(dir, path, dir_size - 1);
+    dir[dir_size - 1] = '\0';
+    /* Find last separator */
+    char *last_sep = NULL;
+    for (char *p = dir; *p; p++)
+    {
+        if (*p == '/' || *p == '\\')
+            last_sep = p;
+    }
+    if (last_sep)
+    {
+        *last_sep = '\0';
+    }
+    else
+    {
+        strcpy(dir, ".");
+    }
+}
 
 static void call_lua(const char *func);
 
@@ -93,19 +123,24 @@ EM_JS(char *, js_fetch_file, (const char *url, int *out_len), {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", UTF8ToString(url), false);
     xhr.overrideMimeType("text/plain; charset=x-user-defined");
-    try {
+    try
+    {
         xhr.send();
-        if (xhr.status === 200) {
+        if (xhr.status === 200)
+        {
             var text = xhr.responseText;
             var len = text.length;
             var ptr = _malloc(len);
-            for (var i = 0; i < len; i++) {
+            for (var i = 0; i < len; i++)
+            {
                 HEAPU8[ptr + i] = text.charCodeAt(i) & 0xff;
             }
             HEAP32[out_len >> 2] = len;
             return ptr;
         }
-    } catch (e) {
+    }
+    catch(e)
+    {
         console.error("Fetch error:", e);
     }
     HEAP32[out_len >> 2] = 0;
@@ -142,11 +177,18 @@ static int fetch_and_dostring(lua_State *L, const char *url)
 static int fetch_searcher(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
-    char url[256];
-    snprintf(url, sizeof(url), "%s.lua", name);
+    char url[512];
+    /* Try script directory first */
+    snprintf(url, sizeof(url), "%s/%s.lua", g_script_dir, name);
 
     size_t len;
     char *data = fetch_file(url, &len);
+    if (!data)
+    {
+        /* Fallback to root */
+        snprintf(url, sizeof(url), "%s.lua", name);
+        data = fetch_file(url, &len);
+    }
     if (data)
     {
         if (luaL_loadbuffer(L, data, len, url) == LUA_OK)
@@ -169,7 +211,8 @@ static int l_fetch_file(lua_State *L)
     const char *url = luaL_checkstring(L, 1);
     size_t len;
     char *data = fetch_file(url, &len);
-    if (data && len > 0) {
+    if (data && len > 0)
+    {
         lua_pushlstring(L, data, len);
         free(data);
         return 1;
@@ -254,7 +297,8 @@ static void event(const sapp_event *ev)
     if (!lua_isfunction(L, -1))
     {
         static int warn_count = 0;
-        if (warn_count++ < 1) {
+        if (warn_count++ < 1)
+        {
             char msg[64];
             snprintf(msg, sizeof(msg), "event is not a function, type=%d", lua_type(L, -1));
             slog_func("event", 2, 0, msg, 0, "", 0);
@@ -320,9 +364,36 @@ sapp_desc sokol_main(int argc, char *argv[])
 #endif
 
     /* Load script */
+#ifdef __EMSCRIPTEN__
+    js_get_script_param(g_script_path, sizeof(g_script_path));
+    const char *script = g_script_path;
+#else
     const char *script = (argc > 1) ? argv[1] : "main.lua";
     strncpy(g_script_path, script, sizeof(g_script_path) - 1);
+#endif
+    extract_dir(script, g_script_dir, sizeof(g_script_dir));
     slog_func("lua", 3, 0, "Loading script", 0, script, 0);
+    slog_func("lua", 3, 0, "Script directory", 0, g_script_dir, 0);
+
+    /* Export SCRIPT_DIR to Lua */
+    lua_pushstring(L, g_script_dir);
+    lua_setglobal(L, "SCRIPT_DIR");
+
+#ifndef __EMSCRIPTEN__
+    /* Add script directory to package.path */
+    {
+        lua_getglobal(L, "package");
+        lua_getfield(L, -1, "path");
+        const char *old_path = lua_tostring(L, -1);
+        char new_path[2048];
+        snprintf(new_path, sizeof(new_path), "%s/?.lua;%s", g_script_dir, old_path ? old_path : "");
+        lua_pop(L, 1);
+        lua_pushstring(L, new_path);
+        lua_setfield(L, -2, "path");
+        lua_pop(L, 1);
+    }
+#endif
+
 #ifdef __EMSCRIPTEN__
     if (fetch_and_dostring(L, script) != LUA_OK)
 #else
@@ -345,5 +416,6 @@ sapp_desc sokol_main(int argc, char *argv[])
         .height = 1080,
         .window_title = "Måne3D",
         .logger.func = slog_func,
+        .html5.canvas_resize = true,
     };
 }
