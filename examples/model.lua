@@ -3,8 +3,8 @@
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local util = require("util")
-local glm = require("glm")
+local util = require("lib.util")
+local glm = require("lib.glm")
 
 -- Camera
 local camera_pos = glm.vec3(0, -20, 10)

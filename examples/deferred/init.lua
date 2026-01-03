@@ -1,47 +1,62 @@
 -- examples/deferred/init.lua
 -- Simple Deferred Rendering Pipeline
 
----@type string?
-SCRIPT_DIR = SCRIPT_DIR
-
----@type fun(path: string): number
-get_mtime = get_mtime
-
--- Add lib/ and deps/ to path (CWD is project root)
-package.path = "lib/?.lua;deps/lume/?.lua;examples/deferred/?.lua;" .. package.path
-
-local hotreload = require("hotreload")
+local hotreload = require("lib.hotreload")
 local gfx = require("sokol.gfx")
+local glue = require("sokol.glue")
 local app = require("sokol.app")
-local util = require("util")
-local glm = require("glm")
+local util = require("lib.util")
+local glm = require("lib.glm")
 local imgui = require("imgui")
-local gpu = require("gpu")
+local gpu = require("lib.gpu")
+local pipeline = require("lib.render_pipeline")
 
--- Pipeline modules (relative to this directory)
-local ctx = require("ctx")
-local camera = require("camera")
-local light = require("light")
-local geometry_pass = require("geometry")
-local lighting_pass = require("lighting")
+-- Pipeline modules
+local ctx = require("examples.deferred.ctx")
+local camera = require("examples.deferred.camera")
+local light = require("examples.deferred.light")
+local geometry_pass = require("examples.deferred.geometry")
+local lighting_pass = require("examples.deferred.lighting")
 
 -- Scene data
 local meshes = {}
 local textures_cache = {}
 local default_texture = nil
 
-local function compute_tangent(p1, p2, p3, uv1, uv2, uv3)
-    local e1 = { p2[1] - p1[1], p2[2] - p1[2], p2[3] - p1[3] }
-    local e2 = { p3[1] - p1[1], p3[2] - p1[2], p3[3] - p1[3] }
-    local duv1 = { uv2[1] - uv1[1], uv2[2] - uv1[2] }
-    local duv2 = { uv3[1] - uv1[1], uv3[2] - uv1[2] }
-    local f = duv1[1] * duv2[2] - duv2[1] * duv1[2]
-    if math.abs(f) < 0.0001 then f = 1 end
-    f = 1.0 / f
-    return f * (duv2[2] * e1[1] - duv1[2] * e2[1]),
-        f * (duv2[2] * e1[2] - duv1[2] * e2[2]),
-        f * (duv2[2] * e1[3] - duv1[2] * e2[3])
-end
+-- ImGui pass (renders UI overlay)
+local imgui_pass = {
+    name = "imgui",
+    get_pass_desc = function()
+        return gfx.Pass({
+            action = gfx.PassAction({
+                colors = { { load_action = gfx.LoadAction.LOAD } },
+            }),
+            swapchain = glue.swapchain(),
+        })
+    end,
+    execute = function(_, frame_data)
+        -- ImGui window
+        if imgui.Begin("Deferred Rendering") then
+            imgui.Text("Modular Deferred Rendering Pipeline")
+            imgui.Separator()
+            imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
+            imgui.Text("WASD: Move, Mouse: Look (right-click to capture)")
+            imgui.Separator()
+
+            local lx, ly, lz, lchanged = imgui.InputFloat3("Light Pos", light.pos.x, light.pos.y, light.pos.z)
+            if lchanged then light.pos = glm.vec3(lx, ly, lz) end
+
+            local lr, lg, lb, lcchanged = imgui.ColorEdit3("Light Color", light.color.x, light.color.y, light.color.z)
+            if lcchanged then light.color = glm.vec3(lr, lg, lb) end
+
+            local ar, ag, ab, achanged = imgui.ColorEdit3("Ambient", light.ambient.x, light.ambient.y, light.ambient.z)
+            if achanged then light.ambient = glm.vec3(ar, ag, ab) end
+        end
+        imgui.End()
+
+        imgui.render()
+    end,
+}
 
 local function load_model()
     local t0 = os.clock()
@@ -231,6 +246,11 @@ function init()
     local width, height = app.width(), app.height()
     ctx.ensure_size(width, height)
 
+    -- Register passes
+    pipeline.register(geometry_pass)
+    pipeline.register(lighting_pass)
+    pipeline.register(imgui_pass)
+
     load_model()
 end
 
@@ -251,43 +271,24 @@ function frame()
     -- Reset outputs
     ctx.outputs = {}
 
-    -- Geometry Pass
-    geometry_pass.on_pass(ctx, meshes, view, proj, model_mat)
+    -- Frame data for passes
+    local frame_data = {
+        meshes = meshes,
+        view = view,
+        proj = proj,
+        model = model_mat,
+        light_uniforms = light.pack_uniforms(view),
+    }
 
-    -- Lighting Pass
-    local light_uniforms = light.pack_uniforms(view)
-    lighting_pass.on_pass(ctx, light_uniforms)
-
-    -- ImGui (still in lighting pass)
-    if imgui.Begin("Deferred Rendering") then
-        imgui.Text("Modular Deferred Rendering Pipeline")
-        imgui.Separator()
-        imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
-        imgui.Text("WASD: Move, Mouse: Look (right-click to capture)")
-        imgui.Separator()
-
-        local lx, ly, lz, lchanged = imgui.InputFloat3("Light Pos", light.pos.x, light.pos.y, light.pos.z)
-        if lchanged then light.pos = glm.vec3(lx, ly, lz) end
-
-        local lr, lg, lb, lcchanged = imgui.ColorEdit3("Light Color", light.color.x, light.color.y, light.color.z)
-        if lcchanged then light.color = glm.vec3(lr, lg, lb) end
-
-        local ar, ag, ab, achanged = imgui.ColorEdit3("Ambient", light.ambient.x, light.ambient.y, light.ambient.z)
-        if achanged then light.ambient = glm.vec3(ar, ag, ab) end
-    end
-    imgui.End()
-
-    imgui.render()
-    gfx.end_pass()
-    gfx.commit()
+    -- Execute all passes
+    pipeline.execute(ctx, frame_data)
 end
 
 function cleanup()
     imgui.shutdown()
 
-    -- Destroy pass resources
-    lighting_pass.destroy()
-    geometry_pass.destroy()
+    -- Destroy pipeline and passes
+    pipeline.destroy()
     ctx.destroy()
 
     -- Destroy mesh resources

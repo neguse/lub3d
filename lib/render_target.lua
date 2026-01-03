@@ -1,7 +1,7 @@
 -- lib/render_target.lua
 -- RenderTarget: image + view (attach + tex) bundle
 local gfx = require("sokol.gfx")
-local gpu = require("gpu")
+local gpu = require("lib.gpu")
 
 ---@class render_target
 local M = {}

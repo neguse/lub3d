@@ -1,16 +1,16 @@
 -- Simple Deferred Rendering Tutorial
 -- Minimal G-Buffer + Lighting pass with WASD camera
-local hotreload = require("hotreload")
+local hotreload = require("lib.hotreload")
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local util = require("util")
-local glm = require("glm")
+local util = require("lib.util")
+local glm = require("lib.glm")
 local imgui = require("imgui")
 
 -- Modules (hot-reloadable)
-local camera = require("rendering.camera")
-local light = require("rendering.light")
+local camera = require("examples.rendering.camera")
+local light = require("examples.rendering.light")
 
 -- Graphics resources
 ---@type gfx.Shader?

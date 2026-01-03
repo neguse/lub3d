@@ -1,7 +1,7 @@
 -- lib/gpu.lua
 -- GPU resource wrappers with GC support
 local gfx = require("sokol.gfx")
-local util = require("util")
+local util = require("lib.util")
 
 ---@class gpu
 local M = {}

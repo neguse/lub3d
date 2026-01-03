@@ -1,6 +1,6 @@
 -- examples/deferred/camera.lua
 -- Camera module for deferred rendering
-local glm = require("glm")
+local glm = require("lib.glm")
 local app = require("sokol.app")
 
 ---@class deferred.Camera

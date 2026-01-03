@@ -2,16 +2,9 @@
 -- Hot reload module using rxi/lume hotswap
 -- Tracks require'd files and reloads them when modified
 
----@type string?
-SCRIPT_DIR = SCRIPT_DIR
-
----@type fun(path: string): number?
-get_mtime = get_mtime
-
 local M = {}
 
--- deps/lume is in package.path set by caller
-local lume = require("lume")
+local lume = require("deps.lume.lume")
 
 -- Configuration
 M.interval = 0.5  -- seconds between checks

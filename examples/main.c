@@ -390,10 +390,6 @@ sapp_desc sokol_main(int argc, char *argv[])
     slog_func("lua", 3, 0, "Loading script", 0, script, 0);
     slog_func("lua", 3, 0, "Script directory", 0, g_script_dir, 0);
 
-    /* Export SCRIPT_DIR to Lua */
-    lua_pushstring(L, g_script_dir);
-    lua_setglobal(L, "SCRIPT_DIR");
-
     /* Export get_mtime to Lua for hot reload */
     lua_pushcfunction(L, l_get_mtime);
     lua_setglobal(L, "get_mtime");

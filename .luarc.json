@@ -3,5 +3,5 @@
   "workspace.library": ["gen/types", "lib"],
   "workspace.ignoreDir": ["build", "out"],
   "runtime.version": "Lua 5.5",
-  "diagnostics.globals": ["init", "frame", "cleanup", "event"]
+  "diagnostics.globals": ["init", "frame", "cleanup", "event", "get_mtime"]
 }

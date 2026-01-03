@@ -2,7 +2,7 @@
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local util = require("util")
+local util = require("lib.util")
 local licenses = require("mane3d.licenses")
 
 local t = 0

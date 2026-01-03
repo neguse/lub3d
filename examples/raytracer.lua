@@ -4,7 +4,7 @@ local app = require("sokol.app")
 local glue = require("sokol.glue")
 local stm = require("sokol.time")
 local sdtx = require("sokol.debugtext")
-local util = require("util")
+local util = require("lib.util")
 
 ---@type gfx.Shader?
 local shader = nil

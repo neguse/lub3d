@@ -3,7 +3,7 @@
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local util = require("util")
+local util = require("lib.util")
 local imgui = require("imgui")
 
 -- Triangle color (adjustable via ImGui)

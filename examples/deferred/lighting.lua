@@ -2,14 +2,19 @@
 -- Deferred lighting pass
 local gfx = require("sokol.gfx")
 local glue = require("sokol.glue")
-local gpu = require("gpu")
+local gpu = require("lib.gpu")
 
----@class deferred.LightingPass
----@field shader_source string
----@field shader_desc table
----@field on_pass fun(ctx: deferred.Context, light_uniforms: string)
----@field destroy fun()
+---@class deferred.LightingPass : RenderPass
+---@field name string Pass name
+---@field shader_source string GLSL shader source
+---@field shader_desc table Shader descriptor
+---@field resources deferred.LightingResources? Compiled shader/pipeline
+---@field get_pass_desc fun(ctx: deferred.Context): any? Get pass descriptor
+---@field execute fun(ctx: deferred.Context, frame_data: table) Execute drawing
+---@field destroy fun() Destroy resources
 local M = {}
+
+M.name = "lighting"
 
 M.shader_source = [[
 @vs light_vs
@@ -99,41 +104,64 @@ M.shader_desc = {
 ---@field shader gpu.Shader
 ---@field pipeline gpu.Pipeline
 
+-- Resources stored in module table to survive hotreload
 ---@type deferred.LightingResources?
-local resources
+M.resources = M.resources
 
----Execute lighting pass, rendering to swapchain
----@param ctx deferred.Context
----@param light_uniforms string Packed light uniform data (3x vec4)
-function M.on_pass(ctx, light_uniforms)
-    -- Lazy init
-    if not resources then
-        local shader = gpu.shader(M.shader_source, "light", M.shader_desc)
-        if not shader then return end
+-- Track if we've attempted compilation (reset on hotreload by shader_source change)
+M._last_shader_source = M._last_shader_source
 
-        local pipeline = gpu.pipeline(gfx.PipelineDesc({
-            shader = shader.handle,
-            layout = {
-                attrs = {
-                    { format = gfx.VertexFormat.FLOAT2 }, -- pos
-                    { format = gfx.VertexFormat.FLOAT2 }, -- uv
-                },
+---Lazy init resources
+---@return boolean success
+local function ensure_resources()
+    if M.resources then return true end
+
+    -- Don't retry if same shader source already failed
+    if M._last_shader_source == M.shader_source then return false end
+    M._last_shader_source = M.shader_source
+
+    local shader = gpu.shader(M.shader_source, "light", M.shader_desc)
+    if not shader then return false end
+
+    local pipeline = gpu.pipeline(gfx.PipelineDesc({
+        shader = shader.handle,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT2 }, -- pos
+                { format = gfx.VertexFormat.FLOAT2 }, -- uv
             },
-            label = "light_pipeline",
-        }))
+        },
+        label = "light_pipeline",
+    }))
 
-        resources = { shader = shader, pipeline = pipeline }
-    end
+    M.resources = { shader = shader, pipeline = pipeline }
+    return true
+end
 
-    -- Lighting pass (render to swapchain)
-    gfx.begin_pass(gfx.Pass({
+---Get pass descriptor for lighting (renders to swapchain)
+---Returns nil if shader failed or G-Buffer not ready
+---@param ctx deferred.Context
+---@return any? desc Pass descriptor, nil to skip
+function M.get_pass_desc(ctx)
+    if not ensure_resources() then return nil end
+
+    -- Check if G-Buffer outputs are available
+    if not ctx.outputs.gbuf_position then return nil end
+
+    return gfx.Pass({
         action = gfx.PassAction({
             colors = { { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 } } },
         }),
         swapchain = glue.swapchain(),
-    }))
+    })
+end
 
-    gfx.apply_pipeline(resources.pipeline.handle)
+---Execute lighting pass, rendering to swapchain
+---Called between begin_pass/end_pass by pipeline
+---@param ctx deferred.Context
+---@param frame_data {light_uniforms: string}
+function M.execute(ctx, frame_data)
+    gfx.apply_pipeline(M.resources.pipeline.handle)
     gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { ctx.quad_vbuf.handle },
         views = {
@@ -148,18 +176,16 @@ function M.on_pass(ctx, light_uniforms)
         },
     }))
 
-    gfx.apply_uniforms(0, gfx.Range(light_uniforms))
+    gfx.apply_uniforms(0, gfx.Range(frame_data.light_uniforms))
     gfx.draw(0, 6, 1)
-
-    -- Note: don't end_pass here, let init.lua handle imgui and end_pass
 end
 
 ---Destroy pass resources
 function M.destroy()
-    if resources then
-        resources.pipeline:destroy()
-        resources.shader:destroy()
-        resources = nil
+    if M.resources then
+        M.resources.pipeline:destroy()
+        M.resources.shader:destroy()
+        M.resources = nil
     end
 end
 

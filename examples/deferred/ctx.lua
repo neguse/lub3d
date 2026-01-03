@@ -2,8 +2,8 @@
 -- Shared context for deferred rendering pipeline
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
-local gpu = require("gpu")
-local rt = require("render_target")
+local gpu = require("lib.gpu")
+local rt = require("lib.render_target")
 
 ---@class deferred.TextureBundle
 ---@field image gpu.Image

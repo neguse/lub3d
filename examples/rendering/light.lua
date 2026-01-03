@@ -1,5 +1,5 @@
 -- Light module for simple deferred rendering
-local glm = require("glm")
+local glm = require("lib.glm")
 
 local M = {}
 

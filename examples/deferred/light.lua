@@ -1,6 +1,6 @@
 -- examples/deferred/light.lua
 -- Light module for deferred rendering
-local glm = require("glm")
+local glm = require("lib.glm")
 
 ---@class deferred.Light
 ---@field pos vec3 Light position in world space

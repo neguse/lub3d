@@ -2,8 +2,8 @@
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local util = require("util")
-local glm = require("glm")
+local util = require("lib.util")
+local glm = require("lib.glm")
 
 -- Game constants
 local FIELD_WIDTH = 10
