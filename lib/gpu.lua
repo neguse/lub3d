@@ -6,6 +6,20 @@ local util = require("lib.util")
 ---@class gpu
 local M = {}
 
+-- Verify table __gc support at load time (requires Lua 5.2+)
+local gc_supported = (function()
+    local test_flag = { called = false }
+    local _ = setmetatable({}, {
+        __gc = function() test_flag.called = true end
+    })
+    _ = nil  ---@diagnostic disable-line: cast-local-type
+    collectgarbage("collect")
+    if not test_flag.called then
+        util.warn("[gpu] Table __gc not supported - GPU resources may leak if not explicitly destroyed")
+    end
+    return test_flag.called
+end)()
+
 ---@class gpu.Resource
 ---@field handle any
 ---@field destroy fun(self: gpu.Resource)

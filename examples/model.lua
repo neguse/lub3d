@@ -21,7 +21,7 @@ local shader = nil
 ---@type gfx.Pipeline
 local pipeline = nil
 local meshes = {}  -- { vbuf, index_count, diffuse_img, diffuse_smp, normal_img, normal_smp, material }
----@type table<string, {img: gfx.View, smp: gfx.Sampler}>
+---@type table<string, {img: gpu.Image, view: gpu.View, smp: gpu.Sampler}>
 local textures_cache = {}
 
 -- Time
@@ -195,19 +195,20 @@ local function add_tangents(vertices)
     return result
 end
 
--- Load texture with caching
+-- Load texture with caching (returns raw handles for bindings)
 ---@return gfx.View?, gfx.Sampler?
 local function load_texture_cached(path)
     if textures_cache[path] then
-        return textures_cache[path].img, textures_cache[path].smp
+        return textures_cache[path].view.handle, textures_cache[path].smp.handle
     end
 
     local full_path = "textures/" .. path
-    local view, smp_or_err = util.load_texture(full_path)
-    if view and type(smp_or_err) ~= "string" then
-        ---@cast smp_or_err gfx.Sampler
-        textures_cache[path] = { img = view, smp = smp_or_err }
-        return view, smp_or_err
+    local img, view, smp = util.load_texture(full_path)
+    if img and view and smp then
+        ---@cast view gpu.View
+        ---@cast smp gpu.Sampler
+        textures_cache[path] = { img = img, view = view, smp = smp }
+        return view.handle, smp.handle
     end
     return nil, nil
 end
@@ -510,5 +511,13 @@ function event(ev)
 end
 
 function cleanup()
+    -- Destroy cached textures
+    for _, tex in pairs(textures_cache) do
+        tex.smp:destroy()
+        tex.view:destroy()
+        tex.img:destroy()
+    end
+    textures_cache = {}
+
     util.info("Model cleanup")
 end

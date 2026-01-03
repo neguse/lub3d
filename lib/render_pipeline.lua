@@ -5,6 +5,7 @@ local util = require("lib.util")
 
 ---@class RenderPass
 ---@field name string Pass identifier
+---@field requires string[]? Optional list of required ctx.outputs keys
 ---@field get_pass_desc fun(ctx: any): any? Returns gfx.Pass desc, nil to skip
 ---@field execute fun(ctx: any, frame_data: any) Draw commands (called inside begin/end pass)
 ---@field destroy fun()? Optional cleanup
@@ -21,11 +22,33 @@ function M.register(pass)
     table.insert(M.passes, pass)
 end
 
+---Check if all required outputs are available
+---@param pass RenderPass
+---@param ctx any
+---@return boolean ok
+---@return string? missing_key
+local function check_requirements(pass, ctx)
+    if not pass.requires then return true end
+    for _, key in ipairs(pass.requires) do
+        if not ctx.outputs[key] then
+            return false, key
+        end
+    end
+    return true
+end
+
 ---Execute all registered passes
 ---@param ctx any Render context
 ---@param frame_data any Frame-specific data (view/proj matrices, etc.)
 function M.execute(ctx, frame_data)
     for _, pass in ipairs(M.passes) do
+        -- Check required outputs before calling get_pass_desc
+        local req_ok, missing = check_requirements(pass, ctx)
+        if not req_ok then
+            -- Silently skip - dependency not available (e.g., previous pass failed)
+            goto continue
+        end
+
         local ok_desc, desc = pcall(pass.get_pass_desc, ctx)
         if not ok_desc then
             util.warn("[" .. pass.name .. "] get_pass_desc error: " .. tostring(desc))
@@ -40,6 +63,8 @@ function M.execute(ctx, frame_data)
             end
             gfx.end_pass()
         end
+
+        ::continue::
     end
     gfx.commit()
 end

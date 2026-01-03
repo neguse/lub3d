@@ -64,9 +64,15 @@ function M.update()
             for modname, path in pairs(mod_to_path) do
                 if path == filepath then
                     print(string.format("[hotreload] Reloading: %s", modname))
-                    local _, err = lume.hotswap(modname)
+                    local mod, err = lume.hotswap(modname)
                     if err then
                         print(string.format("[hotreload] Error: %s", err))
+                    elseif mod and type(mod.on_reload) == "function" then
+                        -- Call reload hook if module defines one
+                        local ok, hook_err = pcall(mod.on_reload)
+                        if not ok then
+                            print(string.format("[hotreload] on_reload error: %s", hook_err))
+                        end
                     end
                     break
                 end

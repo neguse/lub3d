@@ -235,12 +235,14 @@ function M.load_image_data(filename)
     end
 end
 
--- Load texture from file
+-- Load texture from file using gpu wrappers (GC-safe)
 ---@param filename string path to image file (PNG, JPG, etc.)
 ---@param opts? table optional settings { filter_min, filter_mag, wrap_u, wrap_v }
----@return gfx.View? view
----@return gfx.Sampler|string smp_or_error sampler on success, error message on failure
+---@return gpu.Image? img image resource (keep reference to prevent GC)
+---@return gpu.View|string view_or_error view on success, error message on failure
+---@return gpu.Sampler? smp sampler on success
 function M.load_texture(filename, opts)
+    local gpu = require("lib.gpu")
     opts = opts or {}
 
     local w, h, ch, pixels = M.load_image_data(filename)
@@ -253,32 +255,32 @@ function M.load_texture(filename, opts)
 
     M.info("Loaded texture: " .. filename .. " (" .. w .. "x" .. h .. ")")
 
-    -- Create image
-    local img = gfx.make_image(gfx.ImageDesc({
+    -- Create image with gpu wrapper (GC-safe)
+    local img = gpu.image(gfx.ImageDesc({
         width = w,
         height = h,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { pixels } },
     }))
 
-    if gfx.query_image_state(img) ~= gfx.ResourceState.VALID then
+    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create image"
     end
 
     -- Create view from image (required for binding)
-    local view = gfx.make_view(gfx.ViewDesc({
-        texture = { image = img },
+    local view = gpu.view(gfx.ViewDesc({
+        texture = { image = img.handle },
     }))
 
     -- Create sampler
-    local smp = gfx.make_sampler(gfx.SamplerDesc({
+    local smp = gpu.sampler(gfx.SamplerDesc({
         min_filter = opts.filter_min or gfx.Filter.LINEAR,
         mag_filter = opts.filter_mag or gfx.Filter.LINEAR,
         wrap_u = opts.wrap_u or gfx.Wrap.REPEAT,
         wrap_v = opts.wrap_v or gfx.Wrap.REPEAT,
     }))
 
-    return view, smp
+    return img, view, smp
 end
 
 return M

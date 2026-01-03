@@ -183,16 +183,16 @@ local function load_model()
                 local path = texture_base .. tex_info.path
                 if not textures_cache[path] then
                     util.info("Loading texture: " .. path)
-                    local view, smp = util.load_texture(path)
-                    if view then
-                        textures_cache[path] = { view = view, smp = smp }
+                    local img, view, smp = util.load_texture(path)
+                    if img then
+                        textures_cache[path] = { img = img, view = view, smp = smp }
                     else
-                        util.warn("Failed to load: " .. path)
+                        util.warn("Failed to load: " .. path .. " - " .. tostring(view))
                     end
                 end
                 if textures_cache[path] then
-                    tex_view = textures_cache[path].view
-                    tex_smp = textures_cache[path].smp
+                    tex_view = textures_cache[path].view.handle
+                    tex_smp = textures_cache[path].smp.handle
                 end
             end
         end
@@ -297,6 +297,14 @@ function cleanup()
         mesh.ibuf:destroy()
     end
     meshes = {}
+
+    -- Destroy cached textures
+    for path, tex in pairs(textures_cache) do
+        tex.smp:destroy()
+        tex.view:destroy()
+        tex.img:destroy()
+    end
+    textures_cache = {}
 
     -- Destroy default texture
     if default_texture then

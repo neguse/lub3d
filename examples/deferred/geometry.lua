@@ -1,7 +1,7 @@
 -- examples/deferred/geometry.lua
 -- G-Buffer geometry pass
 local gfx = require("sokol.gfx")
-local gpu = require("lib.gpu")
+local render_pass = require("lib.render_pass")
 
 ---@class deferred.Mesh
 ---@field vbuf gpu.Buffer Vertex buffer
@@ -10,14 +10,6 @@ local gpu = require("lib.gpu")
 ---@field tex_view any Texture view handle
 ---@field tex_smp any Sampler handle
 
----@class deferred.GeometryPass : RenderPass
----@field name string Pass name
----@field shader_source string GLSL shader source
----@field shader_desc table Shader descriptor
----@field resources deferred.GeometryResources? Compiled shader/pipeline
----@field get_pass_desc fun(ctx: deferred.Context): any? Get pass descriptor
----@field execute fun(ctx: deferred.Context, frame_data: table) Execute drawing
----@field destroy fun() Destroy resources
 local M = {}
 
 M.name = "geometry"
@@ -93,65 +85,43 @@ M.shader_desc = {
     },
 }
 
----@class deferred.GeometryResources
----@field shader gpu.Shader
----@field pipeline gpu.Pipeline
-
--- Resources stored in module table to survive hotreload
----@type deferred.GeometryResources?
-M.resources = M.resources
-
--- Track if we've attempted compilation (reset on hotreload by shader_source change)
-M._last_shader_source = M._last_shader_source
-
----Lazy init resources
----@return boolean success
-local function ensure_resources()
-    if M.resources then return true end
-
-    -- Don't retry if same shader source already failed
-    if M._last_shader_source == M.shader_source then return false end
-    M._last_shader_source = M.shader_source
-
-    local shader = gpu.shader(M.shader_source, "geom", M.shader_desc)
-    if not shader then return false end
-
-    local pipeline = gpu.pipeline(gfx.PipelineDesc({
-        shader = shader.handle,
-        layout = {
-            attrs = {
-                { format = gfx.VertexFormat.FLOAT3 }, -- pos
-                { format = gfx.VertexFormat.FLOAT3 }, -- normal
-                { format = gfx.VertexFormat.FLOAT2 }, -- uv
-                { format = gfx.VertexFormat.FLOAT3 }, -- tangent
+-- Setup common resource management (on_reload, destroy, ensure_resources)
+render_pass.setup(M, {
+    shader_name = "geom",
+    pipeline_desc = function(shader_handle)
+        return gfx.PipelineDesc({
+            shader = shader_handle,
+            layout = {
+                attrs = {
+                    { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                    { format = gfx.VertexFormat.FLOAT3 }, -- normal
+                    { format = gfx.VertexFormat.FLOAT2 }, -- uv
+                    { format = gfx.VertexFormat.FLOAT3 }, -- tangent
+                },
             },
-        },
-        depth = {
-            write_enabled = true,
-            compare = gfx.CompareFunc.LESS_EQUAL,
-            pixel_format = gfx.PixelFormat.DEPTH,
-        },
-        cull_mode = gfx.CullMode.FRONT,
-        color_count = 3,
-        colors = {
-            { pixel_format = gfx.PixelFormat.RGBA32F },
-            { pixel_format = gfx.PixelFormat.RGBA16F },
-            { pixel_format = gfx.PixelFormat.RGBA8 },
-        },
-        index_type = gfx.IndexType.UINT32,
-        label = "geom_pipeline",
-    }))
-
-    M.resources = { shader = shader, pipeline = pipeline }
-    return true
-end
+            depth = {
+                write_enabled = true,
+                compare = gfx.CompareFunc.LESS_EQUAL,
+                pixel_format = gfx.PixelFormat.DEPTH,
+            },
+            cull_mode = gfx.CullMode.FRONT,
+            color_count = 3,
+            colors = {
+                { pixel_format = gfx.PixelFormat.RGBA32F },
+                { pixel_format = gfx.PixelFormat.RGBA16F },
+                { pixel_format = gfx.PixelFormat.RGBA8 },
+            },
+            index_type = gfx.IndexType.UINT32,
+            label = "geom_pipeline",
+        })
+    end,
+})
 
 ---Get pass descriptor for G-Buffer rendering
----Returns nil if shader failed to compile, skipping this pass
 ---@param ctx deferred.Context
 ---@return any? desc Pass descriptor, nil to skip
 function M.get_pass_desc(ctx)
-    if not ensure_resources() then return nil end
+    if not M.ensure_resources() then return nil end
 
     return gfx.Pass({
         action = gfx.PassAction({
@@ -174,7 +144,6 @@ function M.get_pass_desc(ctx)
 end
 
 ---Execute geometry pass, writing to G-Buffer
----Called between begin_pass/end_pass by pipeline
 ---@param ctx deferred.Context
 ---@param frame_data {meshes: deferred.Mesh[], view: mat4, proj: mat4, model: mat4}
 function M.execute(ctx, frame_data)
@@ -203,15 +172,6 @@ function M.execute(ctx, frame_data)
     ctx.outputs.gbuf_position = ctx.targets.gbuf_position.tex
     ctx.outputs.gbuf_normal = ctx.targets.gbuf_normal.tex
     ctx.outputs.gbuf_albedo = ctx.targets.gbuf_albedo.tex
-end
-
----Destroy pass resources
-function M.destroy()
-    if M.resources then
-        M.resources.pipeline:destroy()
-        M.resources.shader:destroy()
-        M.resources = nil
-    end
 end
 
 return M
