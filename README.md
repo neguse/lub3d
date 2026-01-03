@@ -4,7 +4,7 @@ A lightweight game framework for Lua 5.5 built on the Sokol ecosystem.
 
 ## What Works Now
 
-Thin Lua bindings over Sokol libraries with runtime shader compilation.
+Thin Lua bindings over Sokol libraries with runtime shader compilation and hot reload.
 
 ```lua
 local gfx = require("sokol.gfx")
@@ -36,6 +36,10 @@ end
 | `sokol.log` | Logging |
 | `sokol.glue` | gfx/app glue |
 | `shdc` | Shader compilation |
+| `lib.hotreload` | Hot reload with file watching |
+| `lib.glm` | GLM-like math (vec2/vec3/vec4/mat4) |
+| `lib.gpu` | GC-safe GPU resource wrappers |
+| `lib.render_pipeline` | Render pass management with error recovery |
 
 ### Supported Backends
 
@@ -92,7 +96,6 @@ end
 ### Other Ideas
 
 - Fennel + sequence macros
-- Hot reload
 
 ## Design Principles
 

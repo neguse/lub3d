@@ -38,8 +38,13 @@ check.bat     # Windows (requires lua-language-server in VS Code)
 
 ### Directory Structure
 
-- `lib/` - Lua libraries
+- `lib/` - Lua libraries (use `require("lib.xxx")`)
   - `glm.lua` - Math library (vec2/vec3/vec4/mat4) with LuaCATS annotations
+  - `hotreload.lua` - Hot reload with file watching via lume.hotswap
+  - `gpu.lua` - GC-safe GPU resource wrappers (shader, pipeline, buffer, etc.)
+  - `render_pipeline.lua` - Render pass management with pcall error recovery
+  - `render_target.lua` - Render target utilities
+  - `util.lua` - Common utilities (shader compilation, texture loading, etc.)
 - `gen/` - Generated files (gitignored)
   - `bindings/` - Lua binding C implementations
   - `types/` - Lua type definitions for IDE autocomplete
@@ -102,3 +107,49 @@ Auto-selected per platform:
 - Windows: D3D11
 - macOS: Metal
 - Linux: OpenGL
+
+## Require Path Convention
+
+Use root-relative paths for all requires:
+```lua
+local util = require("lib.util")
+local glm = require("lib.glm")
+local hotreload = require("lib.hotreload")
+local camera = require("examples.deferred.camera")
+```
+
+Do NOT manipulate `package.path` in Lua code.
+
+## Hot Reload
+
+`lib/hotreload.lua` provides automatic hot reload:
+- Hooks `require()` to watch loaded files
+- Checks file mtime periodically
+- Uses `lume.hotswap()` for safe module reload
+
+Usage:
+```lua
+local hotreload = require("lib.hotreload")
+
+function frame()
+    hotreload.update()  -- Check and reload changed files
+    -- ...
+end
+```
+
+## Render Pipeline
+
+`lib/render_pipeline.lua` manages render passes with error recovery:
+- Passes implement `get_pass_desc(ctx)` and `execute(ctx, frame_data)`
+- Pipeline wraps execution in pcall to prevent shader errors from crashing
+- Shader compile errors are logged but don't panic
+
+```lua
+local pipeline = require("lib.render_pipeline")
+pipeline.register(geometry_pass)
+pipeline.register(lighting_pass)
+
+function frame()
+    pipeline.execute(ctx, frame_data)
+end
+```
