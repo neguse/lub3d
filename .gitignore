@@ -16,3 +16,4 @@ CMakeSettings.json
 *.user
 .claude/settings.local.json
 examples/mill-scene.lua
+*.luac
