@@ -2,6 +2,12 @@
 -- Hot reload module using rxi/lume hotswap
 -- Tracks require'd files and reloads them when modified
 
+---@type string?
+SCRIPT_DIR = SCRIPT_DIR
+
+---@type fun(path: string): number?
+get_mtime = get_mtime
+
 local M = {}
 
 -- Add deps/lume to package.path

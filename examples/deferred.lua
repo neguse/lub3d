@@ -105,6 +105,7 @@ local light_pipeline = nil
 local meshes = {}        -- Opaque meshes
 local water_meshes = {}  -- Water/refractive meshes
 local textures_cache = {}
+---@type {view: any, smp: any}?
 local default_mask = nil
 
 -- G-Buffer resources
@@ -2648,6 +2649,7 @@ function frame()
 
     for _, mesh in ipairs(water_meshes) do
         -- Use mask textures if available, otherwise use diffuse as fallback (white = full mask)
+        assert(default_mask, "default_mask must be initialized")
         local refl_view = mesh.reflection_mask_view or default_mask.view
         local refl_smp = mesh.reflection_mask_smp or default_mask.smp
         local refr_view = mesh.refraction_mask_view or default_mask.view

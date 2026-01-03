@@ -249,8 +249,11 @@ function M.load_texture(filename, opts)
 
     local w, h, ch, pixels = M.load_image_data(filename)
     if not w then
-        return nil, h -- h contains error message
+        return nil, h --[[@as string]] -- h contains error message
     end
+    ---@cast h integer
+    ---@cast ch integer
+    ---@cast pixels string
 
     M.info("Loaded texture: " .. filename .. " (" .. w .. "x" .. h .. ")")
 
