@@ -273,6 +273,12 @@ if(MANE3D_BUILD_EXAMPLE)
         endif()
     endif()
 
+    # Set working directory for Visual Studio debugger
+    if(WIN32)
+        set_target_properties(mane3d-example PROPERTIES
+            VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+    endif()
+
     # Emscripten-specific settings
     if(EMSCRIPTEN)
         set_target_properties(mane3d-example PROPERTIES

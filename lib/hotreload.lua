@@ -10,10 +10,7 @@ get_mtime = get_mtime
 
 local M = {}
 
--- Add deps/lume to package.path
-local script_dir = SCRIPT_DIR or "."
-package.path = script_dir .. "/../deps/lume/?.lua;" .. package.path
-
+-- deps/lume is in package.path set by caller
 local lume = require("lume")
 
 -- Configuration

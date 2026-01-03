@@ -7,10 +7,8 @@ SCRIPT_DIR = SCRIPT_DIR
 ---@type fun(path: string): number
 get_mtime = get_mtime
 
--- Add lib/ and deps/ to path (they're at project root)
-local script_dir = SCRIPT_DIR or "."
-local root = script_dir .. "/../.."
-package.path = root .. "/lib/?.lua;" .. root .. "/deps/lume/?.lua;" .. package.path
+-- Add lib/ and deps/ to path (CWD is project root)
+package.path = "lib/?.lua;deps/lume/?.lua;examples/deferred/?.lua;" .. package.path
 
 local hotreload = require("hotreload")
 local gfx = require("sokol.gfx")
@@ -50,7 +48,7 @@ local function load_model()
 
     -- Try to load precompiled bytecode if newer than source
     local model
-    local base_path = script_dir .. "/../mill-scene"
+    local base_path = "examples/mill-scene"
     local lua_path = base_path .. ".lua"
     local luac_path = base_path .. ".luac"
     local lua_mtime = get_mtime(lua_path)
@@ -162,14 +160,19 @@ local function load_model()
         -- Load texture
         t1 = os.clock()
         local tex_view, tex_smp
+        local texture_base = "assets/3d-shaders/textures/"
         if mesh_data.textures and #mesh_data.textures > 0 then
-            local tex_info = model.textures[mesh_data.textures[1]]
+            local tex_name = mesh_data.textures[1]
+            local tex_info = model.textures[tex_name]
             if tex_info then
-                local path = util.resolve_path(tex_info.path)
+                local path = texture_base .. tex_info.path
                 if not textures_cache[path] then
+                    util.info("Loading texture: " .. path)
                     local view, smp = util.load_texture(path)
                     if view then
                         textures_cache[path] = { view = view, smp = smp }
+                    else
+                        util.warn("Failed to load: " .. path)
                     end
                 end
                 if textures_cache[path] then

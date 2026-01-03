@@ -9,14 +9,10 @@ local M = {}
 ---@param path string
 ---@return string
 function M.resolve_path(path)
-    -- Check if absolute path
+    -- All paths are relative to CWD (project root)
+    -- Absolute paths are returned as-is
     if path:match("^/") or path:match("^%a:") then
         return path
-    end
-    -- Use SCRIPT_DIR if available
-    local script_dir = _G["SCRIPT_DIR"]
-    if script_dir and script_dir ~= "." then
-        return script_dir .. "/" .. path
     end
     return path
 end
