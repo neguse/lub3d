@@ -4,6 +4,9 @@
 ---@type string?
 SCRIPT_DIR = SCRIPT_DIR
 
+---@type fun(path: string): number
+get_mtime = get_mtime
+
 -- Add lib/ and deps/ to path (they're at project root)
 local script_dir = SCRIPT_DIR or "."
 local root = script_dir .. "/../.."
@@ -43,15 +46,55 @@ local function compute_tangent(p1, p2, p3, uv1, uv2, uv3)
 end
 
 local function load_model()
-    util.info("Loading mill-scene...")
-    local model = require("mill-scene")
-    util.info("Model loaded, processing meshes...")
+    local t0 = os.clock()
+
+    -- Try to load precompiled bytecode if newer than source
+    local model
+    local base_path = script_dir .. "/../mill-scene"
+    local lua_path = base_path .. ".lua"
+    local luac_path = base_path .. ".luac"
+    local lua_mtime = get_mtime(lua_path)
+    local luac_mtime = get_mtime(luac_path)
+
+    if luac_mtime > 0 and luac_mtime >= lua_mtime then
+        -- Load from cache
+        util.info("Loading cached bytecode...")
+        local chunk, err = loadfile(luac_path)
+        if chunk then
+            model = chunk()
+        else
+            util.warn("Failed to load luac: " .. tostring(err))
+        end
+    end
+
+    if not model then
+        -- Load source and cache bytecode
+        util.info("Loading source and caching bytecode...")
+        local chunk, err = loadfile(lua_path)
+        if chunk then
+            model = chunk()
+            -- Save bytecode cache
+            local bytecode = string.dump(chunk)
+            local f = io.open(luac_path, "wb")
+            if f then
+                f:write(bytecode)
+                f:close()
+                util.info("Saved bytecode cache: " .. luac_path)
+            end
+        else
+            util.error("Failed to load model: " .. tostring(err))
+        end
+    end
+    util.info(string.format("load model: %.3fs", os.clock() - t0))
+
+    local t_tangent, t_vbuf, t_texture = 0, 0, 0
 
     for mat_name, mesh_data in pairs(model.meshes) do
         local vertices = mesh_data.vertices
         local indices = mesh_data.indices
 
         -- Compute tangents
+        local t1 = os.clock()
         local in_stride = 8
         local vertex_count = #vertices / in_stride
         local tangents = {}
@@ -62,46 +105,51 @@ local function load_model()
         for i = 1, #indices, 3 do
             local i1, i2, i3 = indices[i], indices[i + 1], indices[i + 2]
             local base1, base2, base3 = i1 * in_stride, i2 * in_stride, i3 * in_stride
-            local p1 = { vertices[base1 + 1], vertices[base1 + 2], vertices[base1 + 3] }
-            local p2 = { vertices[base2 + 1], vertices[base2 + 2], vertices[base2 + 3] }
-            local p3 = { vertices[base3 + 1], vertices[base3 + 2], vertices[base3 + 3] }
-            local uv1 = { vertices[base1 + 7], vertices[base1 + 8] }
-            local uv2 = { vertices[base2 + 7], vertices[base2 + 8] }
-            local uv3 = { vertices[base3 + 7], vertices[base3 + 8] }
-            local tx, ty, tz = compute_tangent(p1, p2, p3, uv1, uv2, uv3)
-            for _, idx in ipairs({ i1, i2, i3 }) do
-                tangents[idx][1] = tangents[idx][1] + tx
-                tangents[idx][2] = tangents[idx][2] + ty
-                tangents[idx][3] = tangents[idx][3] + tz
-            end
+            -- Inline tangent computation to avoid table allocation
+            local p1x, p1y, p1z = vertices[base1 + 1], vertices[base1 + 2], vertices[base1 + 3]
+            local p2x, p2y, p2z = vertices[base2 + 1], vertices[base2 + 2], vertices[base2 + 3]
+            local p3x, p3y, p3z = vertices[base3 + 1], vertices[base3 + 2], vertices[base3 + 3]
+            local uv1u, uv1v = vertices[base1 + 7], vertices[base1 + 8]
+            local uv2u, uv2v = vertices[base2 + 7], vertices[base2 + 8]
+            local uv3u, uv3v = vertices[base3 + 7], vertices[base3 + 8]
+            local e1x, e1y, e1z = p2x - p1x, p2y - p1y, p2z - p1z
+            local e2x, e2y, e2z = p3x - p1x, p3y - p1y, p3z - p1z
+            local duv1u, duv1v = uv2u - uv1u, uv2v - uv1v
+            local duv2u, duv2v = uv3u - uv1u, uv3v - uv1v
+            local f = duv1u * duv2v - duv2u * duv1v
+            if math.abs(f) < 0.0001 then f = 1 end
+            f = 1.0 / f
+            local tx = f * (duv2v * e1x - duv1v * e2x)
+            local ty = f * (duv2v * e1y - duv1v * e2y)
+            local tz = f * (duv2v * e1z - duv1v * e2z)
+            local t1, t2, t3 = tangents[i1], tangents[i2], tangents[i3]
+            t1[1], t1[2], t1[3] = t1[1] + tx, t1[2] + ty, t1[3] + tz
+            t2[1], t2[2], t2[3] = t2[1] + tx, t2[2] + ty, t2[3] + tz
+            t3[1], t3[2], t3[3] = t3[1] + tx, t3[2] + ty, t3[3] + tz
         end
+        t_tangent = t_tangent + (os.clock() - t1)
 
         -- Build vertex buffer with tangents
-        local verts = {}
+        t1 = os.clock()
+        local vparts = {}
         for i = 0, vertex_count - 1 do
             local base = i * in_stride
             local t = tangents[i]
             local len = math.sqrt(t[1] * t[1] + t[2] * t[2] + t[3] * t[3])
+            local tx, ty, tz
             if len > 0.0001 then
-                t[1], t[2], t[3] = t[1] / len, t[2] / len, t[3] / len
+                tx, ty, tz = t[1] / len, t[2] / len, t[3] / len
             else
-                t[1], t[2], t[3] = 1, 0, 0
+                tx, ty, tz = 1, 0, 0
             end
             -- pos(3) + normal(3) + uv(2) + tangent(3) = 11 floats
-            table.insert(verts, vertices[base + 1])
-            table.insert(verts, vertices[base + 2])
-            table.insert(verts, vertices[base + 3])
-            table.insert(verts, vertices[base + 4])
-            table.insert(verts, vertices[base + 5])
-            table.insert(verts, vertices[base + 6])
-            table.insert(verts, vertices[base + 7])
-            table.insert(verts, vertices[base + 8])
-            table.insert(verts, t[1])
-            table.insert(verts, t[2])
-            table.insert(verts, t[3])
+            vparts[i + 1] = string.pack("fffffffffff",
+                vertices[base + 1], vertices[base + 2], vertices[base + 3],
+                vertices[base + 4], vertices[base + 5], vertices[base + 6],
+                vertices[base + 7], vertices[base + 8],
+                tx, ty, tz)
         end
-
-        local vdata = util.pack_floats(verts)
+        local vdata = table.concat(vparts)
         local vbuf = gpu.buffer(gfx.BufferDesc({ data = gfx.Range(vdata) }))
 
         local idata = util.pack_u32(indices)
@@ -109,8 +157,10 @@ local function load_model()
             usage = { index_buffer = true },
             data = gfx.Range(idata),
         }))
+        t_vbuf = t_vbuf + (os.clock() - t1)
 
         -- Load texture
+        t1 = os.clock()
         local tex_view, tex_smp
         if mesh_data.textures and #mesh_data.textures > 0 then
             local tex_info = model.textures[mesh_data.textures[1]]
@@ -128,6 +178,7 @@ local function load_model()
                 end
             end
         end
+        t_texture = t_texture + (os.clock() - t1)
 
         -- Create default white texture if needed
         if not tex_view then
@@ -164,6 +215,7 @@ local function load_model()
         end
     end
 
+    util.info(string.format("tangent: %.3fs, vbuf: %.3fs, texture: %.3fs", t_tangent, t_vbuf, t_texture))
     util.info("Loaded " .. #meshes .. " meshes")
 end
 
