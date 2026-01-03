@@ -437,14 +437,14 @@ function init()
             if tex_info then
                 local path = util.resolve_path(tex_info.path)
                 if not textures_cache[path] then
-                    local view, smp = util.load_texture(path)
-                    if view then
-                        textures_cache[path] = { view = view, smp = smp }
+                    local img, view, smp = util.load_texture(path)
+                    if img then
+                        textures_cache[path] = { img = img, view = view, smp = smp }
                     end
                 end
                 if textures_cache[path] then
-                    tex_view = textures_cache[path].view
-                    tex_smp = textures_cache[path].smp
+                    tex_view = textures_cache[path].view.handle
+                    tex_smp = textures_cache[path].smp.handle
                 end
             end
         end

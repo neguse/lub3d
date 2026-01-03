@@ -55,6 +55,7 @@ function M.setup(pass, opts)
             pass.resources.shader:destroy()
             pass.resources = nil
         end
+        pass._compile_attempted = false
     end
 end
 

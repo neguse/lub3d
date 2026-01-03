@@ -2422,15 +2422,15 @@ function init()
             if tex_info and tex_info.path then
                 local path = "textures/" .. tex_info.path
                 if not textures_cache[path] then
-                    local view, smp = util.load_texture(path)
-                    if view then
-                        textures_cache[path] = { view = view, smp = smp }
+                    local img, view, smp = util.load_texture(path)
+                    if img then
+                        textures_cache[path] = { img = img, view = view, smp = smp }
                         util.info("Loaded diffuse: " .. path)
                     end
                 end
                 if textures_cache[path] then
-                    diffuse_view = textures_cache[path].view
-                    diffuse_smp = textures_cache[path].smp
+                    diffuse_view = textures_cache[path].view.handle
+                    diffuse_smp = textures_cache[path].smp.handle
                 end
             end
 
@@ -2439,15 +2439,15 @@ function init()
                 if nrm_info and nrm_info.path then
                     local path = "textures/" .. nrm_info.path
                     if not textures_cache[path] then
-                        local view, smp = util.load_texture(path)
-                        if view then
-                            textures_cache[path] = { view = view, smp = smp }
+                        local img, view, smp = util.load_texture(path)
+                        if img then
+                            textures_cache[path] = { img = img, view = view, smp = smp }
                             util.info("Loaded normal: " .. path)
                         end
                     end
                     if textures_cache[path] then
-                        normal_view = textures_cache[path].view
-                        normal_smp = textures_cache[path].smp
+                        normal_view = textures_cache[path].view.handle
+                        normal_smp = textures_cache[path].smp.handle
                     end
                 end
             end
@@ -2507,15 +2507,15 @@ function init()
                     if mask_info and mask_info.path then
                         local path = "textures/" .. mask_info.path
                         if not textures_cache[path] then
-                            local view, smp = util.load_texture(path)
-                            if view then
-                                textures_cache[path] = { view = view, smp = smp }
+                            local img, view, smp = util.load_texture(path)
+                            if img then
+                                textures_cache[path] = { img = img, view = view, smp = smp }
                                 util.info("Loaded reflection mask: " .. path)
                             end
                         end
                         if textures_cache[path] then
-                            mesh_entry.reflection_mask_view = textures_cache[path].view
-                            mesh_entry.reflection_mask_smp = textures_cache[path].smp
+                            mesh_entry.reflection_mask_view = textures_cache[path].view.handle
+                            mesh_entry.reflection_mask_smp = textures_cache[path].smp.handle
                         end
                     end
                 end
@@ -2528,15 +2528,15 @@ function init()
                     if mask_info and mask_info.path then
                         local path = "textures/" .. mask_info.path
                         if not textures_cache[path] then
-                            local view, smp = util.load_texture(path)
-                            if view then
-                                textures_cache[path] = { view = view, smp = smp }
+                            local img, view, smp = util.load_texture(path)
+                            if img then
+                                textures_cache[path] = { img = img, view = view, smp = smp }
                                 util.info("Loaded refraction mask: " .. path)
                             end
                         end
                         if textures_cache[path] then
-                            mesh_entry.refraction_mask_view = textures_cache[path].view
-                            mesh_entry.refraction_mask_smp = textures_cache[path].smp
+                            mesh_entry.refraction_mask_view = textures_cache[path].view.handle
+                            mesh_entry.refraction_mask_smp = textures_cache[path].smp.handle
                         end
                     end
                 end
