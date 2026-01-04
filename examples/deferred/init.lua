@@ -35,32 +35,33 @@ local imgui_pass = {
             swapchain = glue.swapchain(),
         })
     end,
-    execute = function(_, frame_data)
-        -- ImGui window
-        if imgui.Begin("Deferred Rendering") then
-            imgui.Text("Modular Deferred Rendering Pipeline")
-            imgui.Separator()
-            imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
-            imgui.Text("WASD: Move, Mouse: Look (right-click to capture)")
-            imgui.Separator()
-
-            local lx, ly, lz, lchanged = imgui.InputFloat3("Light Pos", light.pos.x, light.pos.y, light.pos.z)
-            if lchanged then light.pos = glm.vec3(lx, ly, lz) end
-
-            local lr, lg, lb, lcchanged = imgui.ColorEdit3("Light Color", light.color.x, light.color.y, light.color.z)
-            if lcchanged then light.color = glm.vec3(lr, lg, lb) end
-
-            local ar, ag, ab, achanged = imgui.ColorEdit3("Ambient", light.ambient.x, light.ambient.y, light.ambient.z)
-            if achanged then light.ambient = glm.vec3(ar, ag, ab) end
-        end
-        imgui.End()
-
+    execute = function()
         imgui.render()
-
-        -- Draw toast notifications
-        notify.draw(app.width(), app.height())
     end,
 }
+
+-- Update UI (called before pipeline.execute)
+local function update_ui()
+    if imgui.Begin("Deferred Rendering") then
+        imgui.Text("Modular Deferred Rendering Pipeline")
+        imgui.Separator()
+        imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
+        imgui.Text("WASD: Move, Mouse: Look (right-click to capture)")
+        imgui.Separator()
+
+        local lx, ly, lz, lchanged = imgui.InputFloat3("Light Pos", light.pos.x, light.pos.y, light.pos.z)
+        if lchanged then light.pos = glm.vec3(lx, ly, lz) end
+
+        local lr, lg, lb, lcchanged = imgui.ColorEdit3("Light Color", light.color.x, light.color.y, light.color.z)
+        if lcchanged then light.color = glm.vec3(lr, lg, lb) end
+
+        local ar, ag, ab, achanged = imgui.ColorEdit3("Ambient", light.ambient.x, light.ambient.y, light.ambient.z)
+        if achanged then light.ambient = glm.vec3(ar, ag, ab) end
+    end
+    imgui.End()
+
+    notify.draw(app.width(), app.height())
+end
 
 local function load_model()
     local t0 = os.clock()
@@ -272,6 +273,7 @@ function frame()
     local model_mat = glm.mat4()
 
     imgui.new_frame()
+    update_ui()
 
     -- Reset outputs
     ctx.outputs = {}
