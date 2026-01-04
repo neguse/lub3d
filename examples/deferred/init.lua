@@ -36,6 +36,7 @@ local imgui_pass = {
         })
     end,
     execute = function()
+        notify.draw(app.width(), app.height())
         imgui.render()
     end,
 }
@@ -59,8 +60,6 @@ local function update_ui()
         if achanged then light.ambient = glm.vec3(ar, ag, ab) end
     end
     imgui.End()
-
-    notify.draw(app.width(), app.height())
 end
 
 local function load_model()
