@@ -8,9 +8,11 @@ import os, shutil, sys
 
 # Parse arguments first to get bindgen path
 parser = argparse.ArgumentParser(description='Generate Lua bindings for sokol')
-parser.add_argument('--bindgen', default=os.path.join(os.path.dirname(__file__), 'deps/sokol/bindgen'),
+script_dir = os.path.dirname(__file__)
+root_dir = os.path.abspath(os.path.join(script_dir, '..'))
+parser.add_argument('--bindgen', default=os.path.join(root_dir, 'deps/sokol/bindgen'),
                     help='Path to sokol/bindgen directory')
-parser.add_argument('--sokol', default=os.path.join(os.path.dirname(__file__), 'deps/sokol'),
+parser.add_argument('--sokol', default=os.path.join(root_dir, 'deps/sokol'),
                     help='Path to sokol directory (for headers)')
 args = parser.parse_args()
 
@@ -21,7 +23,7 @@ import gen_util as util
 
 sokol_root = args.sokol
 
-bindings_root = '.'
+bindings_root = root_dir
 stubs_root = f'{bindings_root}/gen/stubs'
 module_root = f'{bindings_root}/gen/bindings'
 
