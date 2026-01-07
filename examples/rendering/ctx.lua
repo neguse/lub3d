@@ -1,34 +1,36 @@
--- examples/deferred/ctx.lua
--- Shared context for deferred rendering pipeline
+-- examples/rendering/ctx.lua
+-- Shared context for rendering pipeline
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local gpu = require("lib.gpu")
 local rt = require("lib.render_target")
 
----@class deferred.TextureBundle
+---@class rendering.TextureBundle
 ---@field image gpu.Image
 ---@field view gpu.View
 ---@field sampler gpu.Sampler
 
----@class deferred.Targets
+---@class rendering.Targets
 ---@field gbuf_position render_target.ColorTarget?
 ---@field gbuf_normal render_target.ColorTarget?
 ---@field gbuf_albedo render_target.ColorTarget?
+---@field gbuf_specular render_target.ColorTarget?
 ---@field depth render_target.DepthTarget?
 
----@class deferred.Outputs
+---@class rendering.Outputs
 ---@field gbuf_position gpu.View?
 ---@field gbuf_normal gpu.View?
 ---@field gbuf_albedo gpu.View?
+---@field gbuf_specular gpu.View?
 
----@class deferred.Context
+---@class rendering.Context
 ---@field width integer Screen width
 ---@field height integer Screen height
----@field targets deferred.Targets G-Buffer render targets
+---@field targets rendering.Targets G-Buffer render targets
 ---@field quad_vbuf gpu.Buffer? Full-screen quad vertex buffer
 ---@field gbuf_sampler gpu.Sampler? Sampler for reading G-Buffer
----@field outputs deferred.Outputs Output views from passes
----@field textures table<string, deferred.TextureBundle> Fallback textures
+---@field outputs rendering.Outputs Output views from passes
+---@field textures table<string, rendering.TextureBundle> Fallback textures
 local M = {}
 
 M.width = 0
@@ -100,6 +102,7 @@ function M.ensure_size(w, h)
     M.targets.gbuf_position = rt.color(w, h, gfx.PixelFormat.RGBA32F)
     M.targets.gbuf_normal = rt.color(w, h, gfx.PixelFormat.RGBA16F)
     M.targets.gbuf_albedo = rt.color(w, h, gfx.PixelFormat.RGBA8)
+    M.targets.gbuf_specular = rt.color(w, h, gfx.PixelFormat.RGBA8)
     M.targets.depth = rt.depth(w, h)
 
     return true

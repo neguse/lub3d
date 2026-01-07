@@ -1,10 +1,17 @@
--- Camera module for simple deferred rendering
+-- examples/rendering/camera.lua
+-- Camera module for rendering
 local glm = require("lib.glm")
 local app = require("sokol.app")
 
+---@class rendering.Camera
+---@field pos vec3 Camera position
+---@field yaw number Yaw angle in radians
+---@field pitch number Pitch angle in radians
+---@field move_speed number Movement speed
+---@field mouse_sensitivity number Mouse sensitivity
+---@field mouse_captured boolean Whether mouse is captured
 local M = {}
 
--- Camera state
 M.pos = glm.vec3(0, -20, 10)
 M.yaw = 0
 M.pitch = 0.3
@@ -12,10 +19,11 @@ M.move_speed = 0.5
 M.mouse_sensitivity = 0.003
 M.mouse_captured = false
 
--- Key states
+---@type table<string, boolean>
 local keys_down = {}
 
--- Get forward vector
+---Get forward direction vector
+---@return vec3
 function M.forward()
     return glm.vec3(
         math.sin(M.yaw) * math.cos(M.pitch),
@@ -24,17 +32,19 @@ function M.forward()
     )
 end
 
--- Get right vector
+---Get right direction vector
+---@return vec3
 function M.right()
     return M.forward():cross(glm.vec3(0, 0, 1)):normalize()
 end
 
--- Get up vector
+---Get up direction vector
+---@return vec3
 function M.up()
     return glm.vec3(0, 0, 1)
 end
 
--- Update camera position based on input
+---Update camera position based on input
 function M.update()
     local fwd = M.forward()
     local right = M.right()
@@ -49,13 +59,20 @@ function M.update()
     if keys_down["Q"] or keys_down["LEFT_SHIFT"] then M.pos = M.pos - up * speed end
 end
 
--- Get view matrix
+---Get view matrix
+---@return mat4
 function M.view_matrix()
     local target = M.pos + M.forward()
     return glm.lookat(M.pos, target, M.up())
 end
 
--- Get projection matrix
+---Get projection matrix
+---@param width number Screen width
+---@param height number Screen height
+---@param fov number? Field of view in degrees (default: 60)
+---@param near number? Near plane (default: 0.1)
+---@param far number? Far plane (default: 1000.0)
+---@return mat4
 function M.projection_matrix(width, height, fov, near, far)
     fov = fov or 60
     near = near or 0.1
@@ -63,7 +80,9 @@ function M.projection_matrix(width, height, fov, near, far)
     return glm.perspective(glm.radians(fov), width / height, near, far)
 end
 
--- Handle input event
+---Handle input event
+---@param ev table Event from sokol.app
+---@return boolean handled True if event was handled
 function M.handle_event(ev)
     local evtype = ev.type
     local key = ev.key_code
