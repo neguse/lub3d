@@ -8,7 +8,7 @@ endif()
 
 # Options
 option(MANE3D_BUILD_SHARED "Build as shared library" OFF)
-option(MANE3D_BUILD_SHDC "Build sokol-shdc library" OFF)
+option(MANE3D_BUILD_SHDC "Build sokol-shdc library" ON)
 option(MANE3D_BUILD_IMGUI "Build Dear ImGui integration" ON)
 option(MANE3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
 option(MANE3D_BACKEND_GL "Use OpenGL backend" OFF)
@@ -220,7 +220,7 @@ elseif(UNIX)
 endif()
 
 # Lua interpreter (optional)
-option(MANE3D_BUILD_INTERPRETER "Build Lua interpreter" OFF)
+option(MANE3D_BUILD_INTERPRETER "Build Lua interpreter" ON)
 if(MANE3D_BUILD_INTERPRETER AND NOT MANE3D_USE_SYSTEM_LUA)
     add_executable(lua deps/lua/lua.c)
     target_link_libraries(lua lua55)
@@ -230,7 +230,7 @@ if(MANE3D_BUILD_INTERPRETER AND NOT MANE3D_USE_SYSTEM_LUA)
 endif()
 
 # Example
-option(MANE3D_BUILD_EXAMPLE "Build example" OFF)
+option(MANE3D_BUILD_EXAMPLE "Build example" ON)
 if(MANE3D_BUILD_EXAMPLE)
     if(EMSCRIPTEN)
         add_executable(mane3d-example examples/main.c)

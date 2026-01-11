@@ -18,10 +18,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_D3D11": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON"
+        "MANE3D_BACKEND_D3D11": "ON"
       }
     },
     {
@@ -36,8 +33,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_D3D11": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BACKEND_D3D11": "ON"
       }
     },
     {
@@ -68,8 +64,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GL": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BACKEND_GL": "ON"
       }
     },
     {
@@ -84,8 +79,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_METAL": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BACKEND_METAL": "ON"
       }
     },
     {
@@ -100,8 +94,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GL": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BACKEND_GL": "ON"
       }
     },
     {
@@ -116,8 +109,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GL": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BACKEND_GL": "ON"
       }
     },
     {
@@ -132,8 +124,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GLES3": "ON",
-        "MANE3D_BUILD_EXAMPLE": "ON"
+        "MANE3D_BACKEND_GLES3": "ON"
       }
     },
     {
@@ -143,10 +134,7 @@
       "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build/wasm",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BUILD_EXAMPLE": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
     {
@@ -156,10 +144,7 @@
       "generator": "Unix Makefiles",
       "binaryDir": "${sourceDir}/build/wasm",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BUILD_EXAMPLE": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],

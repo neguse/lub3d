@@ -48,8 +48,7 @@ log "Emscripten setup complete (clang: $(clang --version | head -1))"
 # Build WASM
 log "Configuring WASM build..."
 emcmake cmake -G Ninja -B build/wasm-release \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DMANE3D_BUILD_EXAMPLE=ON
+    -DCMAKE_BUILD_TYPE=Release
 log "Building WASM..."
 cmake --build build/wasm-release
 log "WASM build complete"
