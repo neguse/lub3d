@@ -205,9 +205,9 @@ void main() {
     float camDist = 6.0;
     float camAngle = time * 0.2;
     vec3 ro = vec3(sin(camAngle) * camDist, 2.0 + sin(time * 0.3), cos(camAngle) * camDist);
-    vec3 target = vec3(0.0, 0.0, 0.0);
+    vec3 look_at = vec3(0.0, 0.0, 0.0);
 
-    vec3 forward = normalize(target - ro);
+    vec3 forward = normalize(look_at - ro);
     vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), forward));
     vec3 up = cross(forward, right);
 

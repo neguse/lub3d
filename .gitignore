@@ -20,3 +20,16 @@ CMakeSettings.json
 .claude/settings.local.json
 examples/mill-scene.lua
 *.luac
+
+# Node.js
+node_modules/
+
+# Vite
+dist/
+
+# Logs
+*.log
+
+# WASM build artifacts in public/
+public/*.wasm
+public/*.js

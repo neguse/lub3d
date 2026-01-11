@@ -8,7 +8,7 @@ endif()
 
 # Options
 option(MANE3D_BUILD_SHARED "Build as shared library" OFF)
-option(MANE3D_BUILD_SHDC "Build sokol-shdc library" OFF)
+option(MANE3D_BUILD_SHDC "Build sokol-shdc library" ON)
 option(MANE3D_BUILD_IMGUI "Build Dear ImGui integration" ON)
 option(MANE3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
 option(MANE3D_BACKEND_GL "Use OpenGL backend" OFF)
@@ -224,13 +224,13 @@ option(MANE3D_BUILD_INTERPRETER "Build Lua interpreter" OFF)
 if(MANE3D_BUILD_INTERPRETER AND NOT MANE3D_USE_SYSTEM_LUA)
     add_executable(lua deps/lua/lua.c)
     target_link_libraries(lua lua55)
-    if(UNIX)
+    if(UNIX AND NOT EMSCRIPTEN)
         target_link_libraries(lua readline)
     endif()
 endif()
 
 # Example
-option(MANE3D_BUILD_EXAMPLE "Build example" OFF)
+option(MANE3D_BUILD_EXAMPLE "Build example" ON)
 if(MANE3D_BUILD_EXAMPLE)
     if(EMSCRIPTEN)
         add_executable(mane3d-example examples/main.c)
@@ -435,7 +435,4 @@ if(MANE3D_BUILD_SHDC)
     target_compile_definitions(mane3d PRIVATE MANE3D_HAS_SHDC)
     target_link_libraries(mane3d PUBLIC shdc_wrapper)
 
-    # Test executable
-    add_executable(test_shdc tests/test_shdc.cc)
-    target_link_libraries(test_shdc sokol_shdc_lib)
 endif()

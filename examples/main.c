@@ -24,6 +24,33 @@ EM_JS(void, js_get_script_param, (char *out, int max_len), {
     var script = params.get("script") || "main.lua";
     stringToUTF8(script, out, max_len);
 });
+/* Check if running in playground mode */
+EM_JS(int, js_is_playground_mode, (void), {
+    return typeof window.getEditorCode === 'function' ? 1 : 0;
+});
+
+/* Get editor code via callback (for playground mode) */
+EM_JS(char *, js_get_editor_code, (int *out_len), {
+    if (typeof window.getEditorCode === 'function') {
+        var code = window.getEditorCode();
+        if (code) {
+            var len = lengthBytesUTF8(code) + 1;
+            var ptr = _malloc(len);
+            stringToUTF8(code, ptr, len);
+            HEAP32[out_len >> 2] = len - 1;
+            return ptr;
+        }
+    }
+    HEAP32[out_len >> 2] = 0;
+    return 0;
+});
+
+/* Notify JS that WASM is ready */
+EM_JS(void, js_notify_ready, (void), {
+    if (typeof window.onWasmReady === 'function') {
+        window.onWasmReady();
+    }
+});
 #endif
 
 /* declare luaopen functions from generated bindings */
@@ -187,25 +214,38 @@ static int fetch_and_dostring(lua_State *L, const char *url)
 }
 
 /* Custom require searcher that uses fetch */
+/* Convert module name dots to path slashes */
+static void name_to_path(const char *name, char *path, size_t path_size)
+{
+    size_t i = 0;
+    for (; *name && i < path_size - 1; name++, i++)
+    {
+        path[i] = (*name == '.') ? '/' : *name;
+    }
+    path[i] = '\0';
+}
+
 static int fetch_searcher(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
+    char modpath[256];
+    name_to_path(name, modpath, sizeof(modpath));
     char url[512];
     /* Try script directory first */
-    snprintf(url, sizeof(url), "%s/%s.lua", g_script_dir, name);
+    snprintf(url, sizeof(url), "%s/%s.lua", g_script_dir, modpath);
 
     size_t len;
     char *data = fetch_file(url, &len);
     if (!data)
     {
         /* Try lib directory (sibling to script dir) */
-        snprintf(url, sizeof(url), "%s/../lib/%s.lua", g_script_dir, name);
+        snprintf(url, sizeof(url), "%s/../lib/%s.lua", g_script_dir, modpath);
         data = fetch_file(url, &len);
     }
     if (!data)
     {
         /* Fallback to root */
-        snprintf(url, sizeof(url), "%s.lua", name);
+        snprintf(url, sizeof(url), "%s.lua", modpath);
         data = fetch_file(url, &len);
     }
     if (data)
@@ -418,18 +458,49 @@ sapp_desc sokol_main(int argc, char *argv[])
     }
 #endif
 
+
 #ifdef __EMSCRIPTEN__
-    if (fetch_and_dostring(L, script) != LUA_OK)
+    if (js_is_playground_mode())
+    {
+        int len = 0;
+        char *code = js_get_editor_code(&len);
+        if (code && len > 0)
+        {
+            if (luaL_loadbuffer(L, code, len, "editor") == LUA_OK)
+            {
+                if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK)
+                {
+                    const char *err = lua_tostring(L, -1);
+                    slog_func("lua", 0, 0, err ? err : "(no message)", 0, "editor", 0);
+                    lua_pop(L, 1);
+                }
+            }
+            else
+            {
+                const char *err = lua_tostring(L, -1);
+                slog_func("lua", 0, 0, err ? err : "(no message)", 0, "editor", 0);
+                lua_pop(L, 1);
+            }
+            free(code);
+        }
+        js_notify_ready();
+    }
+    else if (fetch_and_dostring(L, script) != LUA_OK)
+    {
+        const char *err = lua_tostring(L, -1);
+        slog_func("lua", 0, 0, err ? err : "(no message)", 0, script, 0);
+        lua_pop(L, 1);
+    }
 #else
     g_script_mtime = get_file_mtime(script);
     if (luaL_dofile(L, script) != LUA_OK)
-#endif
     {
         const char *err = lua_tostring(L, -1);
         fprintf(stderr, "Lua error: %s\n", err ? err : "(no message)");
         slog_func("lua", 0, 0, err ? err : "(no message)", 0, script, 0);
         lua_pop(L, 1);
     }
+#endif
 
     return (sapp_desc){
         .init_cb = init,

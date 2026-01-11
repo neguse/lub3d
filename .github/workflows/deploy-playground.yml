@@ -1,0 +1,60 @@
+name: Deploy Playground
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Cache build
+        uses: actions/cache@v4
+        with:
+          path: build
+          key: build-${{ runner.os }}-${{ hashFiles('deps/**', 'CMakeLists.txt', 'cmake/**') }}
+          restore-keys: |
+            build-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup cmake and ninja
+        uses: lukka/get-cmake@latest
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v14
+
+      - name: Add clang to PATH
+        run: echo "$EMSDK/upstream/bin" >> $GITHUB_PATH
+
+      - name: Configure
+        run: |
+          rm -rf build/wasm-release/CMakeCache.txt build/wasm-release/CMakeFiles
+          emcmake cmake -G Ninja -B build/wasm-release -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build WASM
+        run: cmake --build build/wasm-release
+
+      - name: Copy WASM to public
+        run: |
+          mkdir -p public
+          cp build/wasm-release/*.wasm public/
+          cp build/wasm-release/*.js public/
+
+      - name: Build Vite
+        run: npm run build
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}

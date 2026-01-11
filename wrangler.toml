@@ -1,0 +1,5 @@
+name = "mane3d"
+compatibility_date = "2026-01-20"
+
+[assets]
+directory = "./dist"
