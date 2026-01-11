@@ -39,6 +39,30 @@ export function initWasm(canvas: HTMLCanvasElement): Promise<void> {
     },
   }
 
+  // Prevent WASM from capturing keyboard events when editor is focused
+  const isEditorFocused = () => {
+    const active = document.activeElement
+    return active?.closest('.cm-editor') ||
+           active?.tagName === 'INPUT' ||
+           active?.tagName === 'TEXTAREA'
+  }
+
+  // Block on canvas directly
+  canvas.addEventListener('keydown', (e) => {
+    if (isEditorFocused()) e.stopImmediatePropagation()
+  }, true)
+  canvas.addEventListener('keyup', (e) => {
+    if (isEditorFocused()) e.stopImmediatePropagation()
+  }, true)
+
+  // Also block on window level
+  window.addEventListener('keydown', (e) => {
+    if (isEditorFocused()) e.stopImmediatePropagation()
+  }, true)
+  window.addEventListener('keyup', (e) => {
+    if (isEditorFocused()) e.stopImmediatePropagation()
+  }, true)
+
   // Load the WASM JS file
   const script = document.createElement('script')
   script.src = '/mane3d-example.js'

@@ -210,25 +210,38 @@ static int fetch_and_dostring(lua_State *L, const char *url)
 }
 
 /* Custom require searcher that uses fetch */
+/* Convert module name dots to path slashes */
+static void name_to_path(const char *name, char *path, size_t path_size)
+{
+    size_t i = 0;
+    for (; *name && i < path_size - 1; name++, i++)
+    {
+        path[i] = (*name == '.') ? '/' : *name;
+    }
+    path[i] = '\0';
+}
+
 static int fetch_searcher(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
+    char modpath[256];
+    name_to_path(name, modpath, sizeof(modpath));
     char url[512];
     /* Try script directory first */
-    snprintf(url, sizeof(url), "%s/%s.lua", g_script_dir, name);
+    snprintf(url, sizeof(url), "%s/%s.lua", g_script_dir, modpath);
 
     size_t len;
     char *data = fetch_file(url, &len);
     if (!data)
     {
         /* Try lib directory (sibling to script dir) */
-        snprintf(url, sizeof(url), "%s/../lib/%s.lua", g_script_dir, name);
+        snprintf(url, sizeof(url), "%s/../lib/%s.lua", g_script_dir, modpath);
         data = fetch_file(url, &len);
     }
     if (!data)
     {
         /* Fallback to root */
-        snprintf(url, sizeof(url), "%s.lua", name);
+        snprintf(url, sizeof(url), "%s.lua", modpath);
         data = fetch_file(url, &len);
     }
     if (data)
