@@ -11,12 +11,11 @@ end
 
 local M = {}
 
--- Profiling support
+-- Profiling support: log slow operations immediately
 M.profile = {
     enabled = true,
-    entries = {},  -- { category = { { name, time_ms }, ... } }
-    totals = {},   -- { category = total_ms }
-    pending = {},  -- { key = start_time }
+    threshold_ms = 10,  -- Log if exceeds this
+    pending = {},       -- { key = start_time }
 }
 
 --- Start a profiling measurement
@@ -28,7 +27,7 @@ function M.profile_begin(category, name)
     M.profile.pending[key] = stm.now()
 end
 
---- End a profiling measurement
+--- End a profiling measurement, log if slow
 ---@param category string category (e.g., "shader", "texture")
 ---@param name string specific item name
 function M.profile_end(category, name)
@@ -40,61 +39,9 @@ function M.profile_end(category, name)
     local elapsed_ms = stm.ms(stm.since(start))
     M.profile.pending[key] = nil
 
-    if not M.profile.entries[category] then
-        M.profile.entries[category] = {}
-        M.profile.totals[category] = 0
+    if elapsed_ms >= M.profile.threshold_ms then
+        M.warn(string.format("[%s] %.1fms - %s", category, elapsed_ms, name))
     end
-
-    table.insert(M.profile.entries[category], { name = name, time_ms = elapsed_ms })
-    M.profile.totals[category] = M.profile.totals[category] + elapsed_ms
-end
-
---- Print profiling report
-function M.profile_report()
-    if not M.profile.enabled then return end
-
-    local total_all = 0
-    for _, total in pairs(M.profile.totals) do
-        total_all = total_all + total
-    end
-
-    M.info("=== Profile Report ===")
-    M.info(string.format("Total init time: %.2f ms", total_all))
-    M.info("")
-
-    -- Sort categories by total time (descending)
-    local cats = {}
-    for cat in pairs(M.profile.entries) do
-        table.insert(cats, cat)
-    end
-    table.sort(cats, function(a, b)
-        return M.profile.totals[a] > M.profile.totals[b]
-    end)
-
-    for _, category in ipairs(cats) do
-        local entries = M.profile.entries[category]
-        local total = M.profile.totals[category]
-        M.info(string.format("[%s] %.2f ms (%d items)", category, total, #entries))
-
-        -- Sort entries by time (descending) and show top 10
-        table.sort(entries, function(a, b) return a.time_ms > b.time_ms end)
-        local show_count = math.min(#entries, 10)
-        for i = 1, show_count do
-            local e = entries[i]
-            M.info(string.format("  %.2f ms - %s", e.time_ms, e.name))
-        end
-        if #entries > 10 then
-            M.info(string.format("  ... and %d more", #entries - 10))
-        end
-        M.info("")
-    end
-end
-
---- Clear profiling data
-function M.profile_clear()
-    M.profile.entries = {}
-    M.profile.totals = {}
-    M.profile.pending = {}
 end
 
 -- Resolve path relative to script directory

@@ -2554,9 +2554,6 @@ function init()
 
     util.info("Loaded " .. #meshes .. " opaque meshes, " .. #water_meshes .. " water meshes")
     util.info("init() complete")
-
-    -- Print profiling report
-    util.profile_report()
 end
 
 function frame()
