@@ -9,6 +9,11 @@ set(SHDC_SRC ${SHDC_DIR}/src/shdc)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# MSVC parallel compilation and UTF-8 for shdc dependencies
+if(MSVC)
+    add_compile_options(/MP /utf-8)
+endif()
+
 # Include fips compatibility
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/fips_compat.cmake)
 
