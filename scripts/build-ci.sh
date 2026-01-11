@@ -54,20 +54,15 @@ log "Building WASM..."
 cmake --build build/wasm-release
 log "WASM build complete"
 
+# Copy WASM files to public/ (Vite will copy to dist/)
+log "Copying WASM files to public/..."
+mkdir -p public
+cp build/wasm-release/*.wasm public/
+cp build/wasm-release/*.js public/
+
 # Build Playground (Vite)
-log "Installing npm dependencies..."
-cd playground
-npm install
 log "Building Vite project..."
 npm run build
-cd ..
-log "Playground build complete"
-
-# Copy to dist/
-log "Copying to dist/..."
-mkdir -p dist
-cp -r playground/dist/* dist/
-cp build/wasm-release/*.wasm dist/
-cp build/wasm-release/*.js dist/
+log "Vite build complete"
 
 log "Build finished"
