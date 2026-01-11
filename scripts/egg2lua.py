@@ -13,25 +13,37 @@ import os
 class EggParser:
     """Parser for Panda3D .egg files"""
 
+    # Pre-compiled regex patterns
+    RE_SCALAR = re.compile(r"<Scalar>\s*(\w+)\s*{\s*(\S+)\s*}")
+    RE_VERTEX = re.compile(r"<Vertex>\s*(\d+)\s*{")
+    RE_UV = re.compile(r"<UV>\s*{\s*([\d.e+-]+)\s+([\d.e+-]+)\s*}")
+    RE_NORMAL = re.compile(r"<Normal>\s*{\s*([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)\s*}")
+    RE_RGBA = re.compile(r"<RGBA>\s*{\s*([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)\s*}")
+    RE_POLYGON = re.compile(r"<Polygon>\s*{")
+    RE_GROUP = re.compile(r"<Group>\s*(\S+)\s*{")
+    RE_TREF = re.compile(r"<TRef>\s*{\s*(\S+)\s*}")
+    RE_MREF = re.compile(r"<MRef>\s*{\s*(\S+)\s*}")
+    RE_VREF = re.compile(r"<VertexRef>\s*{([^}]+)}")
+    RE_VREF_REF = re.compile(r"<Ref>")
+
     def __init__(self):
-        self.textures = {}  # name -> {path, wrap_u, wrap_v, filter, envtype}
-        self.materials = {}  # name -> {diffuse, ambient, specular, emission, shininess}
-        self.vertex_pools = {}  # name -> [{pos, uv, normal, rgba}]
-        self.groups = []  # [{name, polygons: [{texture_refs, material_ref, vertices}]}]
+        self.textures = {}
+        self.materials = {}
+        self.vertex_pools = {}
+        self.groups = []
         self.coordinate_system = "Z-Up"
 
     def parse(self, content):
         """Parse egg file content"""
-        # Remove comments
         content = re.sub(r"//.*$", "", content, flags=re.MULTILINE)
+        content_len = len(content)
 
         pos = 0
-        while pos < len(content):
-            pos = self._skip_whitespace(content, pos)
-            if pos >= len(content):
+        while pos < content_len:
+            pos = self._skip_whitespace(content, pos, content_len)
+            if pos >= content_len:
                 break
 
-            # Parse top-level elements: <Tag> name { ... }
             if content[pos] == "<":
                 end = content.find(">", pos)
                 if end == -1:
@@ -39,20 +51,16 @@ class EggParser:
                 tag = content[pos + 1 : end].strip()
                 pos = end + 1
 
-                # Skip whitespace to get optional name
-                pos = self._skip_whitespace(content, pos)
+                pos = self._skip_whitespace(content, pos, content_len)
 
-                # Get name (everything before {)
-                name = ""
                 name_start = pos
-                while pos < len(content) and content[pos] not in "{\n":
+                while pos < content_len and content[pos] not in "{\n":
                     pos += 1
                 name = content[name_start:pos].strip()
 
-                # Skip whitespace and find block
-                pos = self._skip_whitespace(content, pos)
-                if pos < len(content) and content[pos] == "{":
-                    block_end = self._find_block_end(content, pos)
+                pos = self._skip_whitespace(content, pos, content_len)
+                if pos < content_len and content[pos] == "{":
+                    block_end = self._find_block_end(content, pos, content_len)
                     block_content = content[pos + 1 : block_end]
 
                     if tag == "CoordinateSystem":
@@ -70,37 +78,45 @@ class EggParser:
             else:
                 pos += 1
 
-    def _skip_whitespace(self, content, pos):
-        while pos < len(content) and content[pos] in " \t\n\r":
+    def _skip_whitespace(self, content, pos, content_len):
+        while pos < content_len and content[pos] in " \t\n\r":
             pos += 1
         return pos
 
-    def _find_block_end(self, content, start):
-        """Find matching closing brace"""
-        depth = 0
-        pos = start
-        while pos < len(content):
-            if content[pos] == "{":
-                depth += 1
-            elif content[pos] == "}":
+    def _find_block_end(self, content, start, content_len):
+        """Find matching closing brace - optimized"""
+        depth = 1
+        pos = start + 1
+        while pos < content_len:
+            # Find next brace of either type
+            next_open = content.find("{", pos)
+            next_close = content.find("}", pos)
+
+            if next_close == -1:
+                return content_len
+
+            if next_open == -1 or next_close < next_open:
                 depth -= 1
                 if depth == 0:
-                    return pos
-            pos += 1
-        return len(content)
+                    return next_close
+                pos = next_close + 1
+            else:
+                depth += 1
+                pos = next_open + 1
+
+        return content_len
 
     def _parse_texture(self, name, content):
         """Parse texture block"""
         tex = {"path": "", "wrap_u": "repeat", "wrap_v": "repeat", "envtype": "modulate"}
 
-        # First line is usually the path
         lines = content.strip().split("\n")
         for line in lines:
             line = line.strip()
             if line.startswith('"') and line.endswith('"'):
                 tex["path"] = os.path.basename(line[1:-1])
             elif "<Scalar>" in line:
-                m = re.search(r"<Scalar>\s*(\w+)\s*{\s*(\S+)\s*}", line)
+                m = self.RE_SCALAR.search(line)
                 if m:
                     key, val = m.group(1), m.group(2)
                     if key == "wrapu":
@@ -122,63 +138,53 @@ class EggParser:
             "shininess": 10,
         }
 
-        for line in content.split("\n"):
-            m = re.search(r"<Scalar>\s*(\w+)\s*{\s*([\d.+-]+)\s*}", line)
-            if m:
-                key, val = m.group(1), float(m.group(2))
-                if key == "diffr":
-                    mat["diffuse"][0] = val
-                elif key == "diffg":
-                    mat["diffuse"][1] = val
-                elif key == "diffb":
-                    mat["diffuse"][2] = val
-                elif key == "ambr":
-                    mat["ambient"][0] = val
-                elif key == "ambg":
-                    mat["ambient"][1] = val
-                elif key == "ambb":
-                    mat["ambient"][2] = val
-                elif key == "specr":
-                    mat["specular"][0] = val
-                elif key == "specg":
-                    mat["specular"][1] = val
-                elif key == "specb":
-                    mat["specular"][2] = val
-                elif key == "emitr":
-                    mat["emission"][0] = val
-                elif key == "emitg":
-                    mat["emission"][1] = val
-                elif key == "emitb":
-                    mat["emission"][2] = val
-                elif key == "shininess":
-                    mat["shininess"] = val
+        for m in self.RE_SCALAR.finditer(content):
+            key, val = m.group(1), float(m.group(2))
+            if key == "diffr":
+                mat["diffuse"][0] = val
+            elif key == "diffg":
+                mat["diffuse"][1] = val
+            elif key == "diffb":
+                mat["diffuse"][2] = val
+            elif key == "ambr":
+                mat["ambient"][0] = val
+            elif key == "ambg":
+                mat["ambient"][1] = val
+            elif key == "ambb":
+                mat["ambient"][2] = val
+            elif key == "specr":
+                mat["specular"][0] = val
+            elif key == "specg":
+                mat["specular"][1] = val
+            elif key == "specb":
+                mat["specular"][2] = val
+            elif key == "emitr":
+                mat["emission"][0] = val
+            elif key == "emitg":
+                mat["emission"][1] = val
+            elif key == "emitb":
+                mat["emission"][2] = val
+            elif key == "shininess":
+                mat["shininess"] = val
 
         self.materials[name] = mat
 
     def _parse_vertex_pool(self, name, content):
         """Parse vertex pool block"""
         vertices = []
+        content_len = len(content)
 
-        # Find all <Vertex> blocks
-        pos = 0
-        while True:
-            m = re.search(r"<Vertex>\s*(\d+)\s*{", content[pos:])
-            if not m:
-                break
-
+        for m in self.RE_VERTEX.finditer(content):
             idx = int(m.group(1))
-            start = pos + m.end()
-            end = self._find_block_end(content, start - 1)
+            start = m.end()
+            end = self._find_block_end(content, start - 1, content_len)
             vertex_content = content[start:end]
 
             vertex = self._parse_vertex(vertex_content)
 
-            # Expand list if needed
             while len(vertices) <= idx:
                 vertices.append(None)
             vertices[idx] = vertex
-
-            pos = end + 1
 
         self.vertex_pools[name] = vertices
 
@@ -193,79 +199,55 @@ class EggParser:
 
         lines = content.strip().split("\n")
         if lines:
-            # First line is position
             parts = lines[0].strip().split()
             if len(parts) >= 3:
                 vertex["pos"] = [float(parts[0]), float(parts[1]), float(parts[2])]
 
-        # Parse sub-elements
-        for line in lines[1:]:
-            line = line.strip()
-            m = re.search(r"<UV>\s*{\s*([\d.e+-]+)\s+([\d.e+-]+)\s*}", line)
-            if m:
-                vertex["uv"] = [float(m.group(1)), float(m.group(2))]
-                continue
+        # Search in full content for sub-elements
+        m = self.RE_UV.search(content)
+        if m:
+            vertex["uv"] = [float(m.group(1)), float(m.group(2))]
 
-            m = re.search(
-                r"<Normal>\s*{\s*([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)\s*}", line
-            )
-            if m:
-                # Normalize the normal
-                nx, ny, nz = float(m.group(1)), float(m.group(2)), float(m.group(3))
-                length = (nx * nx + ny * ny + nz * nz) ** 0.5
-                if length > 0.0001:
-                    vertex["normal"] = [nx / length, ny / length, nz / length]
-                continue
+        m = self.RE_NORMAL.search(content)
+        if m:
+            nx, ny, nz = float(m.group(1)), float(m.group(2)), float(m.group(3))
+            length = (nx * nx + ny * ny + nz * nz) ** 0.5
+            if length > 0.0001:
+                vertex["normal"] = [nx / length, ny / length, nz / length]
 
-            m = re.search(
-                r"<RGBA>\s*{\s*([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)\s+([\d.e+-]+)\s*}",
-                line,
-            )
-            if m:
-                vertex["rgba"] = [
-                    float(m.group(1)),
-                    float(m.group(2)),
-                    float(m.group(3)),
-                    float(m.group(4)),
-                ]
+        m = self.RE_RGBA.search(content)
+        if m:
+            vertex["rgba"] = [
+                float(m.group(1)),
+                float(m.group(2)),
+                float(m.group(3)),
+                float(m.group(4)),
+            ]
 
         return vertex
 
     def _parse_group(self, name, content):
         """Parse group block (contains polygons)"""
         group = {"name": name, "polygons": []}
+        content_len = len(content)
 
-        # Find all <Polygon> blocks
-        pos = 0
-        while True:
-            m = re.search(r"<Polygon>\s*{", content[pos:])
-            if not m:
-                break
-
-            start = pos + m.end()
-            end = self._find_block_end(content, start - 1)
+        # Find all polygons
+        for m in self.RE_POLYGON.finditer(content):
+            start = m.end()
+            end = self._find_block_end(content, start - 1, content_len)
             polygon_content = content[start:end]
 
             polygon = self._parse_polygon(polygon_content)
             group["polygons"].append(polygon)
 
-            pos = end + 1
-
-        # Also recursively parse nested groups
-        pos = 0
-        while True:
-            m = re.search(r"<Group>\s*(\S+)\s*{", content[pos:])
-            if not m:
-                break
-
+        # Recursively parse nested groups
+        for m in self.RE_GROUP.finditer(content):
             nested_name = m.group(1)
-            start = pos + m.end()
-            end = self._find_block_end(content, start - 1)
+            start = m.end()
+            end = self._find_block_end(content, start - 1, content_len)
             nested_content = content[start:end]
 
             self._parse_group(f"{name}/{nested_name}", nested_content)
-
-            pos = end + 1
 
         if group["polygons"]:
             self.groups.append(group)
@@ -274,33 +256,23 @@ class EggParser:
         """Parse polygon block"""
         polygon = {"texture_refs": [], "material_ref": None, "vertex_refs": []}
 
-        for line in content.split("\n"):
-            line = line.strip()
+        for m in self.RE_TREF.finditer(content):
+            polygon["texture_refs"].append(m.group(1))
 
-            # Texture reference
-            m = re.search(r"<TRef>\s*{\s*(\S+)\s*}", line)
-            if m:
-                polygon["texture_refs"].append(m.group(1))
-                continue
+        m = self.RE_MREF.search(content)
+        if m:
+            polygon["material_ref"] = m.group(1)
 
-            # Material reference
-            m = re.search(r"<MRef>\s*{\s*(\S+)\s*}", line)
-            if m:
-                polygon["material_ref"] = m.group(1)
-                continue
-
-            # Vertex reference
-            m = re.search(r"<VertexRef>\s*{([^}]+)}", line)
-            if m:
-                ref_content = m.group(1)
-                # Extract vertex indices (before <Ref>)
-                ref_m = re.search(r"<Ref>", ref_content)
-                if ref_m:
-                    indices_str = ref_content[: ref_m.start()]
-                else:
-                    indices_str = ref_content
-                indices = [int(x) for x in indices_str.split() if x.isdigit()]
-                polygon["vertex_refs"] = indices
+        m = self.RE_VREF.search(content)
+        if m:
+            ref_content = m.group(1)
+            ref_m = self.RE_VREF_REF.search(ref_content)
+            if ref_m:
+                indices_str = ref_content[: ref_m.start()]
+            else:
+                indices_str = ref_content
+            indices = [int(x) for x in indices_str.split() if x.isdigit()]
+            polygon["vertex_refs"] = indices
 
         return polygon
 
@@ -345,7 +317,6 @@ def generate_lua(parser, output_path):
     lines.append("")
 
     # Build meshes by material
-    # For each group, collect polygons by material
     meshes_by_material = {}
 
     for group in parser.groups:
@@ -359,25 +330,19 @@ def generate_lua(parser, output_path):
                 }
             mesh = meshes_by_material[mat_name]
 
-            # Get vertex pool (use first one for now)
             pool_name = list(parser.vertex_pools.keys())[0] if parser.vertex_pools else None
             if not pool_name:
                 continue
             pool = parser.vertex_pools[pool_name]
 
-            # Store texture refs (use first polygon's textures)
             if not mesh["textures"] and polygon["texture_refs"]:
                 mesh["textures"] = polygon["texture_refs"]
 
-            # Add vertices (may have duplicates, but simpler)
             base_idx = len(mesh["vertices"])
             for vi in polygon["vertex_refs"]:
                 if vi < len(pool) and pool[vi]:
                     mesh["vertices"].append(pool[vi])
 
-            # Add triangle indices
-            # Polygons with 3 vertices are triangles
-            # Polygons with more vertices need triangulation
             n = len(polygon["vertex_refs"])
             for i in range(1, n - 1):
                 mesh["indices"].extend([base_idx, base_idx + i, base_idx + i + 1])
@@ -389,12 +354,9 @@ def generate_lua(parser, output_path):
         safe_name = mat_name.replace("-", "_")
         lines.append(f'  ["{safe_name}"] = {{')
 
-        # Texture references
         tex_refs = ", ".join(f'"{t.replace("-", "_")}"' for t in mesh["textures"])
         lines.append(f"    textures = {{{tex_refs}}},")
 
-        # Vertices - pack as flat array for sokol
-        # Format: pos(3) + normal(3) + uv(2) = 8 floats per vertex
         lines.append("    -- Format: x, y, z, nx, ny, nz, u, v")
         lines.append("    vertices = {")
         for v in mesh["vertices"]:
@@ -404,7 +366,6 @@ def generate_lua(parser, output_path):
             lines.append(f"      {p[0]}, {p[1]}, {p[2]}, {n[0]}, {n[1]}, {n[2]}, {uv[0]}, {uv[1]},")
         lines.append("    },")
 
-        # Indices
         lines.append("    indices = {")
         for i in range(0, len(mesh["indices"]), 12):
             chunk = mesh["indices"][i : i + 12]
