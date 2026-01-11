@@ -1,7 +1,7 @@
 name: Deploy Playground
 on:
   push:
-    branches: [web]
+    branches: [master]
 
 jobs:
   deploy:
