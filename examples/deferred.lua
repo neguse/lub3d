@@ -2965,126 +2965,163 @@ function frame()
     end
 
     -- ImGui debug UI
-    if imgui.Begin("Debug") then
+    if imgui.begin("Debug") then
         -- Debug buffer selector at top
-        if imgui.CollapsingHeader("Debug Buffer", true) then
-            debug_buffer = imgui.SliderInt("Buffer", debug_buffer, 0, #debug_buffer_names - 1)
-            imgui.Text("Current: " .. debug_buffer_names[debug_buffer + 1])
+        if imgui.collapsing_header("Debug Buffer") then
+            local db_changed, db_new = imgui.slider_int("Buffer", debug_buffer, 0, #debug_buffer_names - 1)
+            if db_changed then debug_buffer = db_new end
+            imgui.text_unformatted("Current: " .. debug_buffer_names[debug_buffer + 1])
         end
 
-        imgui.Text("Deferred Rendering + Fog + Blur")
-        imgui.Separator()
+        imgui.text_unformatted("Deferred Rendering + Fog + Blur")
+        imgui.separator()
 
-        if imgui.CollapsingHeader("Light") then
-            local lx, ly, lz, changed = imgui.InputFloat3("Light Position", light_pos.x, light_pos.y, light_pos.z)
+        if imgui.collapsing_header("Light") then
+            local changed, new_pos = imgui.input_float3("Light Position", {light_pos.x, light_pos.y, light_pos.z})
             if changed then
-                light_pos = glm.vec3(lx, ly, lz)
+                light_pos = glm.vec3(new_pos[1], new_pos[2], new_pos[3])
             end
 
-            local lr, lg, lb
-            lr, lg, lb, changed = imgui.ColorEdit3("Light Color", light_color.x, light_color.y, light_color.z)
-            if changed then
-                light_color = glm.vec3(lr, lg, lb)
+            local lc_changed, new_lc = imgui.color_edit3("Light Color", {light_color.x, light_color.y, light_color.z})
+            if lc_changed then
+                light_color = glm.vec3(new_lc[1], new_lc[2], new_lc[3])
             end
 
-            local ar, ag, ab
-            ar, ag, ab, changed = imgui.ColorEdit3("Ambient Color", ambient_color.x, ambient_color.y, ambient_color.z)
-            if changed then
-                ambient_color = glm.vec3(ar, ag, ab)
+            local ac_changed, new_ac = imgui.color_edit3("Ambient Color", {ambient_color.x, ambient_color.y, ambient_color.z})
+            if ac_changed then
+                ambient_color = glm.vec3(new_ac[1], new_ac[2], new_ac[3])
             end
         end
 
-        if imgui.CollapsingHeader("Fog") then
-            fog_enabled = imgui.Checkbox("Fog Enabled", fog_enabled)
+        if imgui.collapsing_header("Fog") then
+            local fe_changed, fe_new = imgui.checkbox("Fog Enabled", fog_enabled)
+            if fe_changed then fog_enabled = fe_new end
 
-            local r, g, b, changed = imgui.ColorEdit3("Horizon Color", fog_bg_color0[1], fog_bg_color0[2], fog_bg_color0[3])
-            if changed then
-                fog_bg_color0 = { r, g, b }
-            end
+            local hc_changed, new_hc = imgui.color_edit3("Horizon Color", fog_bg_color0)
+            if hc_changed then fog_bg_color0 = new_hc end
 
-            r, g, b, changed = imgui.ColorEdit3("Zenith Color", fog_bg_color1[1], fog_bg_color1[2], fog_bg_color1[3])
-            if changed then
-                fog_bg_color1 = { r, g, b }
-            end
+            local zc_changed, new_zc = imgui.color_edit3("Zenith Color", fog_bg_color1)
+            if zc_changed then fog_bg_color1 = new_zc end
 
-            fog_sun_position = imgui.SliderFloat("Sun Position", fog_sun_position, 0.0, 1.0)
-            fog_near = imgui.SliderFloat("Fog Near", fog_near, 0.0, 100.0)
-            fog_far = imgui.SliderFloat("Fog Far", fog_far, 50.0, 300.0)
+            local sp_changed, sp_new = imgui.slider_float("Sun Position", fog_sun_position, 0.0, 1.0)
+            if sp_changed then fog_sun_position = sp_new end
+            local fn_changed, fn_new = imgui.slider_float("Fog Near", fog_near, 0.0, 100.0)
+            if fn_changed then fog_near = fn_new end
+            local ff_changed, ff_new = imgui.slider_float("Fog Far", fog_far, 50.0, 300.0)
+            if ff_changed then fog_far = ff_new end
         end
 
-        if imgui.CollapsingHeader("Blur") then
-            blur_enabled = imgui.Checkbox("Blur Enabled", blur_enabled)
-            blur_size = imgui.SliderInt("Blur Size", blur_size, 0, 8)
-            blur_separation = imgui.SliderFloat("Blur Separation", blur_separation, 1.0, 5.0)
+        if imgui.collapsing_header("Blur") then
+            local be_changed, be_new = imgui.checkbox("Blur Enabled", blur_enabled)
+            if be_changed then blur_enabled = be_new end
+            local bs_changed, bs_new = imgui.slider_int("Blur Size", blur_size, 0, 8)
+            if bs_changed then blur_size = bs_new end
+            local bsep_changed, bsep_new = imgui.slider_float("Blur Separation", blur_separation, 1.0, 5.0)
+            if bsep_changed then blur_separation = bsep_new end
         end
 
-        if imgui.CollapsingHeader("Bloom") then
-            bloom_enabled = imgui.Checkbox("Bloom Enabled", bloom_enabled)
-            bloom_size = imgui.SliderInt("Bloom Size", bloom_size, 1, 10)
-            bloom_separation = imgui.SliderFloat("Bloom Separation", bloom_separation, 1.0, 5.0)
-            bloom_threshold = imgui.SliderFloat("Threshold", bloom_threshold, 0.0, 1.0)
-            bloom_amount = imgui.SliderFloat("Amount", bloom_amount, 0.0, 3.0)
+        if imgui.collapsing_header("Bloom") then
+            local ble_changed, ble_new = imgui.checkbox("Bloom Enabled", bloom_enabled)
+            if ble_changed then bloom_enabled = ble_new end
+            local bls_changed, bls_new = imgui.slider_int("Bloom Size", bloom_size, 1, 10)
+            if bls_changed then bloom_size = bls_new end
+            local blsep_changed, blsep_new = imgui.slider_float("Bloom Separation", bloom_separation, 1.0, 5.0)
+            if blsep_changed then bloom_separation = blsep_new end
+            local blt_changed, blt_new = imgui.slider_float("Threshold", bloom_threshold, 0.0, 1.0)
+            if blt_changed then bloom_threshold = blt_new end
+            local bla_changed, bla_new = imgui.slider_float("Amount", bloom_amount, 0.0, 3.0)
+            if bla_changed then bloom_amount = bla_new end
         end
 
-        if imgui.CollapsingHeader("SSAO") then
-            ssao_enabled = imgui.Checkbox("SSAO Enabled", ssao_enabled)
-            ssao_radius = imgui.SliderFloat("Radius", ssao_radius, 0.1, 2.0)
-            ssao_bias = imgui.SliderFloat("Bias", ssao_bias, 0.0, 0.1)
-            ssao_intensity = imgui.SliderFloat("Intensity", ssao_intensity, 0.5, 3.0)
+        if imgui.collapsing_header("SSAO") then
+            local sse_changed, sse_new = imgui.checkbox("SSAO Enabled", ssao_enabled)
+            if sse_changed then ssao_enabled = sse_new end
+            local ssr_changed, ssr_new = imgui.slider_float("Radius", ssao_radius, 0.1, 2.0)
+            if ssr_changed then ssao_radius = ssr_new end
+            local ssb_changed, ssb_new = imgui.slider_float("Bias", ssao_bias, 0.0, 0.1)
+            if ssb_changed then ssao_bias = ssb_new end
+            local ssi_changed, ssi_new = imgui.slider_float("Intensity", ssao_intensity, 0.5, 3.0)
+            if ssi_changed then ssao_intensity = ssi_new end
         end
 
-        if imgui.CollapsingHeader("Motion Blur") then
-            motion_blur_enabled = imgui.Checkbox("Motion Blur Enabled", motion_blur_enabled)
-            motion_blur_size = imgui.SliderInt("Samples", motion_blur_size, 1, 16)
-            motion_blur_separation = imgui.SliderFloat("Separation", motion_blur_separation, 0.5, 3.0)
+        if imgui.collapsing_header("Motion Blur") then
+            local mbe_changed, mbe_new = imgui.checkbox("Motion Blur Enabled", motion_blur_enabled)
+            if mbe_changed then motion_blur_enabled = mbe_new end
+            local mbs_changed, mbs_new = imgui.slider_int("Samples", motion_blur_size, 1, 16)
+            if mbs_changed then motion_blur_size = mbs_new end
+            local mbsep_changed, mbsep_new = imgui.slider_float("Separation", motion_blur_separation, 0.5, 3.0)
+            if mbsep_changed then motion_blur_separation = mbsep_new end
         end
 
-        if imgui.CollapsingHeader("Chromatic Aberration") then
-            chromatic_enabled = imgui.Checkbox("Enabled", chromatic_enabled)
-            chromatic_red_offset = imgui.SliderFloat("Red Offset", chromatic_red_offset, -0.02, 0.02)
-            chromatic_green_offset = imgui.SliderFloat("Green Offset", chromatic_green_offset, -0.02, 0.02)
-            chromatic_blue_offset = imgui.SliderFloat("Blue Offset", chromatic_blue_offset, -0.02, 0.02)
+        if imgui.collapsing_header("Chromatic Aberration") then
+            local ce_changed, ce_new = imgui.checkbox("Enabled", chromatic_enabled)
+            if ce_changed then chromatic_enabled = ce_new end
+            local cr_changed, cr_new = imgui.slider_float("Red Offset", chromatic_red_offset, -0.02, 0.02)
+            if cr_changed then chromatic_red_offset = cr_new end
+            local cg_changed, cg_new = imgui.slider_float("Green Offset", chromatic_green_offset, -0.02, 0.02)
+            if cg_changed then chromatic_green_offset = cg_new end
+            local cb_changed, cb_new = imgui.slider_float("Blue Offset", chromatic_blue_offset, -0.02, 0.02)
+            if cb_changed then chromatic_blue_offset = cb_new end
         end
 
-        if imgui.CollapsingHeader("Screen Space Reflection") then
-            ssr_enabled = imgui.Checkbox("SSR Enabled", ssr_enabled)
-            ssr_max_distance = imgui.SliderFloat("Max Distance", ssr_max_distance, 1.0, 20.0)
-            ssr_resolution = imgui.SliderFloat("Resolution", ssr_resolution, 0.1, 1.0)
-            ssr_steps = imgui.SliderInt("Refinement Steps", ssr_steps, 1, 16)
-            ssr_thickness = imgui.SliderFloat("Thickness", ssr_thickness, 0.1, 2.0)
-            ssr_debug = imgui.SliderInt("Debug (0=off,1=mask,2=water)", ssr_debug, 0, 3)
+        if imgui.collapsing_header("Screen Space Reflection") then
+            local ssre_changed, ssre_new = imgui.checkbox("SSR Enabled", ssr_enabled)
+            if ssre_changed then ssr_enabled = ssre_new end
+            local ssrmd_changed, ssrmd_new = imgui.slider_float("Max Distance", ssr_max_distance, 1.0, 20.0)
+            if ssrmd_changed then ssr_max_distance = ssrmd_new end
+            local ssrr_changed, ssrr_new = imgui.slider_float("Resolution", ssr_resolution, 0.1, 1.0)
+            if ssrr_changed then ssr_resolution = ssrr_new end
+            local ssrs_changed, ssrs_new = imgui.slider_int("Refinement Steps", ssr_steps, 1, 16)
+            if ssrs_changed then ssr_steps = ssrs_new end
+            local ssrt_changed, ssrt_new = imgui.slider_float("Thickness", ssr_thickness, 0.1, 2.0)
+            if ssrt_changed then ssr_thickness = ssrt_new end
+            local ssrd_changed, ssrd_new = imgui.slider_int("Debug (0=off,1=mask,2=water)", ssr_debug, 0, 3)
+            if ssrd_changed then ssr_debug = ssrd_new end
         end
 
-        if imgui.CollapsingHeader("Screen Space Refraction") then
-            refraction_enabled = imgui.Checkbox("Refraction Enabled", refraction_enabled)
-            refraction_debug = imgui.Checkbox("Debug Visibility##refr", refraction_debug)
-            refraction_ior = imgui.SliderFloat("IOR##refr", refraction_ior, 1.0, 2.0)
-            refraction_max_distance = imgui.SliderFloat("Max Distance##refr", refraction_max_distance, 1.0, 20.0)
-            refraction_resolution = imgui.SliderFloat("Resolution##refr", refraction_resolution, 0.1, 1.0)
-            refraction_steps = imgui.SliderInt("Refinement Steps##refr", refraction_steps, 1, 16)
-            refraction_thickness = imgui.SliderFloat("Thickness##refr", refraction_thickness, 0.1, 2.0)
-            imgui.Separator()
-            imgui.Text("Water Tint Color")
-            local r, g, b, changed = imgui.ColorEdit3("Tint##refr", refraction_tint_r, refraction_tint_g, refraction_tint_b)
-            if changed then refraction_tint_r, refraction_tint_g, refraction_tint_b = r, g, b end
-            refraction_tint_a = imgui.SliderFloat("Tint Intensity##refr", refraction_tint_a, 0.0, 1.0)
-            refraction_depth_max = imgui.SliderFloat("Depth Max##refr", refraction_depth_max, 0.5, 10.0)
-            imgui.Text(string.format("Water meshes: %d", #water_meshes))
+        if imgui.collapsing_header("Screen Space Refraction") then
+            local re_changed, re_new = imgui.checkbox("Refraction Enabled", refraction_enabled)
+            if re_changed then refraction_enabled = re_new end
+            local rd_changed, rd_new = imgui.checkbox("Debug Visibility##refr", refraction_debug)
+            if rd_changed then refraction_debug = rd_new end
+            local ri_changed, ri_new = imgui.slider_float("IOR##refr", refraction_ior, 1.0, 2.0)
+            if ri_changed then refraction_ior = ri_new end
+            local rmd_changed, rmd_new = imgui.slider_float("Max Distance##refr", refraction_max_distance, 1.0, 20.0)
+            if rmd_changed then refraction_max_distance = rmd_new end
+            local rr_changed, rr_new = imgui.slider_float("Resolution##refr", refraction_resolution, 0.1, 1.0)
+            if rr_changed then refraction_resolution = rr_new end
+            local rs_changed, rs_new = imgui.slider_int("Refinement Steps##refr", refraction_steps, 1, 16)
+            if rs_changed then refraction_steps = rs_new end
+            local rt_changed, rt_new = imgui.slider_float("Thickness##refr", refraction_thickness, 0.1, 2.0)
+            if rt_changed then refraction_thickness = rt_new end
+            imgui.separator()
+            imgui.text_unformatted("Water Tint Color")
+            local tc_changed, new_tc = imgui.color_edit3("Tint##refr", {refraction_tint_r, refraction_tint_g, refraction_tint_b})
+            if tc_changed then refraction_tint_r, refraction_tint_g, refraction_tint_b = new_tc[1], new_tc[2], new_tc[3] end
+            local rta_changed, rta_new = imgui.slider_float("Tint Intensity##refr", refraction_tint_a, 0.0, 1.0)
+            if rta_changed then refraction_tint_a = rta_new end
+            local rdm_changed, rdm_new = imgui.slider_float("Depth Max##refr", refraction_depth_max, 0.5, 10.0)
+            if rdm_changed then refraction_depth_max = rdm_new end
+            imgui.text_unformatted(string.format("Water meshes: %d", #water_meshes))
         end
 
-        if imgui.CollapsingHeader("Lighting Effects") then
-            fresnel_enabled = imgui.Checkbox("Fresnel Enabled", fresnel_enabled)
-            fresnel_power = imgui.SliderFloat("Fresnel Power", fresnel_power, 1.0, 5.0)
+        if imgui.collapsing_header("Lighting Effects") then
+            local fe_changed, fe_new = imgui.checkbox("Fresnel Enabled", fresnel_enabled)
+            if fe_changed then fresnel_enabled = fe_new end
+            local fp_changed, fp_new = imgui.slider_float("Fresnel Power", fresnel_power, 1.0, 5.0)
+            if fp_changed then fresnel_power = fp_new end
 
-            rim_light_enabled = imgui.Checkbox("Rim Light Enabled", rim_light_enabled)
+            local rle_changed, rle_new = imgui.checkbox("Rim Light Enabled", rim_light_enabled)
+            if rle_changed then rim_light_enabled = rle_new end
 
-            cel_shading_enabled = imgui.Checkbox("Cel Shading Enabled", cel_shading_enabled)
+            local cse_changed, cse_new = imgui.checkbox("Cel Shading Enabled", cel_shading_enabled)
+            if cse_changed then cel_shading_enabled = cse_new end
         end
 
-        imgui.Separator()
-        imgui.Text(string.format("Camera: %.1f, %.1f, %.1f", camera_pos.x, camera_pos.y, camera_pos.z))
+        imgui.separator()
+        imgui.text_unformatted(string.format("Camera: %.1f, %.1f, %.1f", camera_pos.x, camera_pos.y, camera_pos.z))
     end
-    imgui.End()
+    imgui.end_()
 
     imgui.render()
 

@@ -9,7 +9,7 @@ endif()
 # Options
 option(MANE3D_BUILD_SHARED "Build as shared library" OFF)
 option(MANE3D_BUILD_SHDC "Build sokol-shdc library" OFF)
-option(MANE3D_BUILD_IMGUI "Build Dear ImGui integration" OFF)
+option(MANE3D_BUILD_IMGUI "Build Dear ImGui integration" ON)
 option(MANE3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
 option(MANE3D_BACKEND_GL "Use OpenGL backend" OFF)
 option(MANE3D_BACKEND_GLES3 "Use OpenGL ES3 backend" OFF)
@@ -305,10 +305,38 @@ install(DIRECTORY deps/lua/ DESTINATION include/lua FILES_MATCHING PATTERN "*.h"
 
 # Dear ImGui integration (optional)
 if(MANE3D_BUILD_IMGUI)
+    # ImGui auto-generated bindings (requires clang++)
+    option(MANE3D_GEN_IMGUI "Generate ImGui bindings (requires clang++)" ON)
+    if(MANE3D_GEN_IMGUI AND Python3_FOUND)
+        find_program(CLANGPP_EXECUTABLE NAMES clang++ clang++.exe clang++-18 clang++-17 clang++-16 clang++-15
+            HINTS "C:/Program Files/LLVM/bin" "C:/Program Files (x86)/LLVM/bin"
+        )
+        message(STATUS "CLANGPP_EXECUTABLE: ${CLANGPP_EXECUTABLE}")
+        if(CLANGPP_EXECUTABLE)
+            add_custom_command(
+                OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp
+                COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+                    ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_imgui.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
+                    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp
+                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+                DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_imgui.py
+                        ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_ir_imgui.py
+                        ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_util_imgui.py
+                        ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
+                COMMENT "Generating ImGui Lua bindings..."
+            )
+            set(IMGUI_GEN_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp)
+        else()
+            message(WARNING "clang++ not found, skipping ImGui binding generation")
+        endif()
+    endif()
+
     # ImGui library (C++)
     add_library(imgui_lib STATIC
         src/imgui_impl.cpp
-        src/imgui_lua.cpp
+        src/imgui_sokol.cpp
+        ${IMGUI_GEN_SOURCE}
     )
     target_include_directories(imgui_lib
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui
@@ -344,6 +372,11 @@ if(MANE3D_BUILD_IMGUI)
     # Link ImGui to mane3d
     target_link_libraries(mane3d PUBLIC imgui_lib)
     target_compile_definitions(mane3d PUBLIC MANE3D_HAS_IMGUI)
+
+    # Add define if using auto-generated bindings
+    if(IMGUI_GEN_SOURCE)
+        target_compile_definitions(imgui_lib PRIVATE MANE3D_GEN_IMGUI)
+    endif()
 endif()
 
 # sokol-shdc library (optional)

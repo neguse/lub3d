@@ -9,6 +9,9 @@ gen/
 # External assets (not licensed for redistribution)
 assets/
 
+# Python
+__pycache__/
+
 # IDE
 .vs/
 .vscode/

@@ -1,4 +1,4 @@
--- ImGui test example
+-- ImGui test example (using auto-generated snake_case API)
 local gfx = require("sokol.gfx")
 local glue = require("sokol.glue")
 local imgui = require("imgui")
@@ -17,27 +17,29 @@ function frame()
     imgui.new_frame()
 
     -- Main debug window
-    if imgui.Begin("Debug Menu") then
-        imgui.Text("Mane3D ImGui Test")
-        imgui.Separator()
+    if imgui.begin("Debug Menu") then
+        imgui.text_unformatted("Mane3D ImGui Test")
+        imgui.separator()
 
-        checkbox_val = imgui.Checkbox("Enable Feature", checkbox_val)
-        slider_val = imgui.SliderFloat("Value", slider_val, 0.0, 1.0)
+        local clicked, new_val = imgui.checkbox("Enable Feature", checkbox_val)
+        if clicked then checkbox_val = new_val end
 
-        local r, g, b, changed = imgui.ColorEdit3("Color", color[1], color[2], color[3])
-        if changed then
-            color = { r, g, b }
-        end
+        local changed, new_slider = imgui.slider_float("Value", slider_val, 0.0, 1.0)
+        if changed then slider_val = new_slider end
 
-        imgui.Separator()
-        if imgui.Button("Show Demo Window") then
+        local col_changed, new_col = imgui.color_edit3("Color", color)
+        if col_changed then color = new_col end
+
+        imgui.separator()
+        if imgui.button("Show Demo Window") then
             show_demo = not show_demo
         end
     end
-    imgui.End()
+    imgui.end_()
 
     if show_demo then
-        show_demo = imgui.ShowDemoWindow(show_demo)
+        local open = imgui.show_demo_window(show_demo)
+        show_demo = open
     end
 
     -- Render

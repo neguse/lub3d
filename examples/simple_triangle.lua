@@ -148,28 +148,32 @@ function frame()
     gfx.draw(0, 3, 1)
 
     -- ImGui UI
-    if imgui.Begin("Triangle Controls") then
-        imgui.Text("Simple Triangle Example")
-        imgui.Separator()
+    if imgui.begin("Triangle Controls") then
+        imgui.text_unformatted("Simple Triangle Example")
+        imgui.separator()
 
-        auto_rotate = imgui.Checkbox("Auto Rotate", auto_rotate)
-        rotation_speed = imgui.SliderFloat("Rotation Speed", rotation_speed, 0.0, 5.0)
+        local clicked, new_val = imgui.checkbox("Auto Rotate", auto_rotate)
+        if clicked then auto_rotate = new_val end
+
+        local changed, new_speed = imgui.slider_float("Rotation Speed", rotation_speed, 0.0, 5.0)
+        if changed then rotation_speed = new_speed end
 
         if not auto_rotate then
-            rotation = imgui.SliderFloat("Rotation", rotation, 0.0, 6.28318)
+            local rot_changed, new_rot = imgui.slider_float("Rotation", rotation, 0.0, 6.28318)
+            if rot_changed then rotation = new_rot end
         end
 
-        imgui.Separator()
+        imgui.separator()
 
-        local r, g, b, changed = imgui.ColorEdit3("Tint Color", triangle_color[1], triangle_color[2], triangle_color[3])
-        if changed then
-            triangle_color = { r, g, b }
+        local col_changed, new_col = imgui.color_edit3("Tint Color", triangle_color)
+        if col_changed then
+            triangle_color = new_col
         end
 
-        imgui.Separator()
-        imgui.Text(string.format("Rotation: %.2f rad", rotation))
+        imgui.separator()
+        imgui.text_unformatted(string.format("Rotation: %.2f rad", rotation))
     end
-    imgui.End()
+    imgui.end_()
 
     imgui.render()
 
