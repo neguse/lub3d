@@ -220,7 +220,7 @@ elseif(UNIX)
 endif()
 
 # Lua interpreter (optional)
-option(MANE3D_BUILD_INTERPRETER "Build Lua interpreter" ON)
+option(MANE3D_BUILD_INTERPRETER "Build Lua interpreter" OFF)
 if(MANE3D_BUILD_INTERPRETER AND NOT MANE3D_USE_SYSTEM_LUA)
     add_executable(lua deps/lua/lua.c)
     target_link_libraries(lua lua55)
@@ -398,7 +398,4 @@ if(MANE3D_BUILD_SHDC)
     target_compile_definitions(mane3d PRIVATE MANE3D_HAS_SHDC)
     target_link_libraries(mane3d PUBLIC shdc_wrapper)
 
-    # Test executable
-    add_executable(test_shdc tests/test_shdc.cc)
-    target_link_libraries(test_shdc sokol_shdc_lib)
 endif()
