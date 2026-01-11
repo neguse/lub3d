@@ -17,12 +17,6 @@ jobs:
           node-version: '22'
           cache: 'npm'
 
-      - name: Cache emsdk
-        uses: actions/cache@v4
-        with:
-          path: emsdk
-          key: emsdk-${{ runner.os }}-latest
-
       - name: Cache build
         uses: actions/cache@v4
         with:
@@ -44,7 +38,9 @@ jobs:
         run: echo "$EMSDK/upstream/bin" >> $GITHUB_PATH
 
       - name: Configure
-        run: emcmake cmake -G Ninja -B build/wasm-release -DCMAKE_BUILD_TYPE=Release
+        run: |
+          rm -rf build/wasm-release/CMakeCache.txt build/wasm-release/CMakeFiles
+          emcmake cmake -G Ninja -B build/wasm-release -DCMAKE_BUILD_TYPE=Release
 
       - name: Build WASM
         run: cmake --build build/wasm-release
