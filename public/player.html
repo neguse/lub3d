@@ -19,15 +19,12 @@
       max-height: 100vh;
     }
     #canvas-wrapper {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
       width: 100%;
       flex-shrink: 0;
+      overflow: hidden;
     }
     canvas {
       image-rendering: pixelated;
-      transform-origin: top center;
     }
     #log-panel {
       width: 100%;
@@ -105,36 +102,44 @@
       const canvas = document.getElementById('canvas')
       const wrapper = document.getElementById('canvas-wrapper')
 
-      if (width === 0 && height === 0) {
-        // Native resolution - use window size
-        window._canvasWidth = window.innerWidth
-        window._canvasHeight = window.innerHeight
-      } else {
-        window._canvasWidth = width
-        window._canvasHeight = height
-      }
-
-      // Set both canvas buffer and CSS size to render resolution
-      canvas.width = window._canvasWidth
-      canvas.height = window._canvasHeight
-      canvas.style.width = window._canvasWidth + 'px'
-      canvas.style.height = window._canvasHeight + 'px'
-
-      // Calculate scale to fit in viewport while maintaining aspect ratio
-      const logPanel = document.getElementById('log-panel')
+      // Calculate display scale to fit in viewport while maintaining aspect ratio
       const minLogHeight = 50
       const viewW = wrapper.clientWidth
       const maxCanvasH = window.innerHeight - minLogHeight
-      const scaleX = viewW / window._canvasWidth
-      const scaleY = maxCanvasH / window._canvasHeight
+
+      let baseWidth = width
+      let baseHeight = height
+      if (width === 0 && height === 0) {
+        // Native resolution - use window size
+        baseWidth = viewW
+        baseHeight = maxCanvasH
+      }
+
+      const scaleX = viewW / baseWidth
+      const scaleY = maxCanvasH / baseHeight
       const displayScale = Math.min(scaleX, scaleY)
+
+      // Buffer size = base resolution (keeps rendering fast)
+      window._canvasWidth = baseWidth
+      window._canvasHeight = baseHeight
+      canvas.width = baseWidth
+      canvas.height = baseHeight
+
+      // Store display scale for Lua to read via C binding
+      window._displayScaleX = displayScale
+      window._displayScaleY = displayScale
+
+      // CSS size matches buffer - transform handles visual scaling
+      canvas.style.width = baseWidth + 'px'
+      canvas.style.height = baseHeight + 'px'
       canvas.style.transform = `scale(${displayScale})`
+      canvas.style.transformOrigin = 'top left'
 
       // Set wrapper height to match scaled canvas
-      const scaledHeight = window._canvasHeight * displayScale
-      wrapper.style.height = Math.floor(scaledHeight) + 'px'
+      const scaledHeight = Math.floor(baseHeight * displayScale)
+      wrapper.style.height = scaledHeight + 'px'
 
-      console.log(`Resolution: ${window._canvasWidth}x${window._canvasHeight}, scale: ${displayScale.toFixed(2)}`)
+      console.log(`Resolution: ${baseWidth}x${baseHeight}, display scale: ${displayScale.toFixed(2)}`)
     }
 
     // Wait for messages from parent

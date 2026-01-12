@@ -61,6 +61,13 @@ EM_JS(int, js_get_canvas_width, (void), {
 EM_JS(int, js_get_canvas_height, (void), {
     return window._canvasHeight || 360;
 });
+/* Get display scale for CSS transform scaling */
+EM_JS(double, js_get_display_scale_x, (void), {
+    return window._displayScaleX || 1.0;
+});
+EM_JS(double, js_get_display_scale_y, (void), {
+    return window._displayScaleY || 1.0;
+});
 #endif
 
 /* declare luaopen functions from generated bindings */
@@ -292,6 +299,14 @@ static int l_fetch_file(lua_State *L)
     return 1;
 }
 
+/* Lua wrapper for display scale (for CSS transform scaling) */
+static int l_get_display_scale(lua_State *L)
+{
+    lua_pushnumber(L, js_get_display_scale_x());
+    lua_pushnumber(L, js_get_display_scale_y());
+    return 2;
+}
+
 static void setup_fetch_searcher(lua_State *L)
 {
     lua_getglobal(L, "package");
@@ -389,6 +404,17 @@ static void event(const sapp_event *ev)
     /* Push event as userdata with generated binding */
     sapp_event *ud = (sapp_event *)lua_newuserdatauv(L, sizeof(sapp_event), 0);
     *ud = *ev;
+
+#ifdef __EMSCRIPTEN__
+    /* Scale mouse coordinates for CSS transform scaling */
+    double scale_x = js_get_display_scale_x();
+    double scale_y = js_get_display_scale_y();
+    if (scale_x > 0.0 && scale_y > 0.0)
+    {
+        ud->mouse_x /= (float)scale_x;
+        ud->mouse_y /= (float)scale_y;
+    }
+#endif
     luaL_setmetatable(L, "sokol.Event");
 
     if (lua_pcall(L, 1, 0, 0) != LUA_OK)
@@ -410,6 +436,10 @@ sapp_desc sokol_main(int argc, char *argv[])
     /* Expose fetch_file to Lua for texture loading etc. */
     lua_pushcfunction(L, (lua_CFunction)l_fetch_file);
     lua_setglobal(L, "fetch_file");
+
+    /* Expose display scale for CSS transform scaling */
+    lua_pushcfunction(L, (lua_CFunction)l_get_display_scale);
+    lua_setglobal(L, "get_display_scale");
 #endif
 
     /* Register generated sokol modules */

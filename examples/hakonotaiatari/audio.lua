@@ -49,16 +49,29 @@ local BUFFER_FRAMES = 2048
 local PACKET_FRAMES = 512  -- Max frames per push
 local MAX_PLAYING = 8
 
--- Simple WAV loader (mono/stereo, 16-bit PCM only)
-local function load_wav(filepath)
+-- Read file contents (supports both native io.open and WASM fetch_file)
+local function read_file(filepath)
+    -- WASM environment: use fetch_file global
+    if fetch_file then
+        return fetch_file(filepath)
+    end
+    -- Native environment: use io.open
     local file = io.open(filepath, "rb")
     if not file then
+        return nil
+    end
+    local data = file:read("*a")
+    file:close()
+    return data
+end
+
+-- Simple WAV loader (mono/stereo, 16-bit PCM only)
+local function load_wav(filepath)
+    local data = read_file(filepath)
+    if not data then
         log.warn("Failed to open WAV file: " .. filepath)
         return nil
     end
-
-    local data = file:read("*a")
-    file:close()
 
     if #data < 44 then
         log.warn("WAV file too small: " .. filepath)
@@ -212,6 +225,13 @@ end
 
 -- Initialize audio system
 function M.init()
+    -- Disable audio on WASM (fetch_file exists in WASM environment)
+    if fetch_file then
+        initialized = false
+        log.info("Audio system disabled (WASM)")
+        return false
+    end
+
     if not audio then
         initialized = false
         log.info("Audio system disabled (sokol.audio not available)")
@@ -226,13 +246,22 @@ function M.init()
 
     -- Load sound files
     local base_path = "examples/hakonotaiatari/assets/sounds/"
+    local loaded_count = 0
     for index, filename in pairs(SOUND_FILES) do
         local filepath = base_path .. filename
         local snd = load_wav(filepath)
         if snd then
             sounds[index] = snd
             log.info(string.format("Loaded sound %d: %s (%d samples)", index, filename, snd.sample_count))
+            loaded_count = loaded_count + 1
         end
+    end
+
+    -- If no sounds loaded (e.g., WASM without preloaded files), disable audio
+    if loaded_count == 0 then
+        log.warn("No sound files loaded, audio disabled")
+        initialized = false
+        return false
     end
 
     initialized = true

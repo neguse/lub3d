@@ -3,10 +3,11 @@
 -- https://github.com/neguse/hakonotaiatari
 
 -- Window configuration (read before init)
-config = {
-    width = 240,
-    height = 240,
-}
+-- Note: Disabled for WASM compatibility (uses canvas size instead)
+-- config = {
+--     width = 240,
+--     height = 240,
+-- }
 
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")

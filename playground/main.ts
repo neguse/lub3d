@@ -14,6 +14,7 @@ app.innerHTML = `
         <option value="triangle">Triangle</option>
         <option value="raytracer">Raytracer</option>
         <option value="breakout">Breakout</option>
+        <option value="hakonotaiatari/init">Hakonotaiatari</option>
       </select>
       <select id="resolution-select">
         <option value="320x240">320x240</option>
