@@ -28,7 +28,7 @@ jobs:
 
       - name: Setup Lua Language Server
         run: |
-          curl -L https://github.com/LuaLS/lua-language-server/releases/download/3.13.6/lua-language-server-3.13.6-linux-x64.tar.gz | tar xz -C /tmp
+          curl -L https://github.com/LuaLS/lua-language-server/releases/download/3.16.4/lua-language-server-3.16.4-linux-x64.tar.gz | tar xz -C /tmp
 
       - name: Run Lua check
         run: /tmp/bin/lua-language-server --configpath .luarc.json --check .
