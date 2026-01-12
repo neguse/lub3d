@@ -30,10 +30,14 @@ app.innerHTML = `
       <div id="right-panel">
         <div class="panel-tabs">
           <button class="panel-tab active" data-panel="player">Player</button>
+          <button class="panel-tab" data-panel="log">Log</button>
           <button class="panel-tab" data-panel="docs">Docs</button>
         </div>
         <div id="player-panel" class="panel-content active">
           <iframe id="player-frame" src="about:blank"></iframe>
+        </div>
+        <div id="log-panel" class="panel-content">
+          <div id="log-container"></div>
         </div>
         <div id="docs-panel" class="panel-content">
           <div id="docs-container"></div>
@@ -74,7 +78,8 @@ function runCode() {
   }
   window.addEventListener('message', handleMessage)
 
-  // Load player
+  // Clear logs and load player
+  clearLogs()
   iframe.src = '/player.html'
   console.log('Starting WASM in iframe...')
 }
@@ -141,6 +146,32 @@ if (gistId) {
     })
     .catch(() => setCode('-- Failed to load default example'))
 }
+
+// Log handling
+const logContainer = document.getElementById('log-container')!
+function addLog(msg: string, level: string = 'log') {
+  const line = document.createElement('div')
+  line.textContent = msg
+  line.className = `log-${level}`
+  logContainer.appendChild(line)
+  logContainer.scrollTop = logContainer.scrollHeight
+  // Keep max 500 lines
+  while (logContainer.children.length > 500) {
+    logContainer.removeChild(logContainer.firstChild!)
+  }
+}
+
+// Clear logs on run
+function clearLogs() {
+  logContainer.innerHTML = ''
+}
+
+// Listen for log messages from iframe
+window.addEventListener('message', (e) => {
+  if (e.data.type === 'log') {
+    addLog(e.data.msg, e.data.level || 'log')
+  }
+})
 
 // Tab switching
 let docsInitialized = false

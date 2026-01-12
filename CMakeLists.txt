@@ -120,7 +120,7 @@ if(Python3_FOUND)
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gl.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_debugtext.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_shape.c
-        COMMAND ${CMAKE_COMMAND} -E env "PYTHONUTF8=1" "CLANGPP=${CLANGPP_EXECUTABLE}" "PATH=$ENV{EMSDK}/upstream/bin;$ENV{PATH}"
+        COMMAND ${CMAKE_COMMAND} -E env "PYTHONUTF8=1" "CLANGPP=${CLANGPP_EXECUTABLE}"
             ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
             --sokol ${SOKOL_DIR}
             --bindgen ${BINDGEN_DIR}

@@ -13,28 +13,72 @@
       background: #000;
       display: flex;
       flex-direction: column;
-      justify-content: flex-start;
-      align-items: flex-start;
+      box-sizing: border-box;
+    }
+    body {
+      max-height: 100vh;
     }
     #canvas-wrapper {
       display: flex;
       justify-content: center;
       align-items: flex-start;
       width: 100%;
-      height: 100%;
+      flex-shrink: 0;
     }
     canvas {
-      /* CSS size = render resolution (sokol reads this) */
       image-rendering: pixelated;
       transform-origin: top center;
     }
+    #log-panel {
+      width: 100%;
+      flex: 1;
+      min-height: 50px;
+      background: #111;
+      color: #0f0;
+      font-family: monospace;
+      font-size: 12px;
+      overflow-y: auto;
+      box-sizing: border-box;
+      padding: 4px;
+    }
+    #log-panel .log-error { color: #f44; }
+    #log-panel .log-warn { color: #fa0; }
+    #log-panel .log-info { color: #0af; }
   </style>
 </head>
 <body>
   <div id="canvas-wrapper">
     <canvas id="canvas" width="480" height="360" tabindex="0"></canvas>
   </div>
+  <div id="log-panel"></div>
   <script>
+    // Log panel
+    const logPanel = document.getElementById('log-panel')
+
+    function addLog(msg, level = 'log') {
+      const line = document.createElement('div')
+      line.textContent = msg
+      if (level !== 'log') line.className = 'log-' + level
+      logPanel.appendChild(line)
+      logPanel.scrollTop = logPanel.scrollHeight
+      // Keep max 200 lines
+      while (logPanel.children.length > 200) {
+        logPanel.removeChild(logPanel.firstChild)
+      }
+      // Send to parent
+      window.parent.postMessage({ type: 'log', msg, level }, '*')
+    }
+
+    // Intercept console
+    const origLog = console.log
+    const origError = console.error
+    const origWarn = console.warn
+    const origInfo = console.info
+    console.log = (...args) => { origLog(...args); addLog(args.join(' '), 'log') }
+    console.error = (...args) => { origError(...args); addLog(args.join(' '), 'error') }
+    console.warn = (...args) => { origWarn(...args); addLog(args.join(' '), 'warn') }
+    console.info = (...args) => { origInfo(...args); addLog(args.join(' '), 'info') }
+
     // Focus canvas on click for keyboard input
     document.getElementById('canvas').addEventListener('click', function() {
       this.focus()
@@ -51,7 +95,9 @@
 
     window.Module = {
       canvas: document.getElementById('canvas'),
-      onRuntimeInitialized: () => console.log('WASM runtime initialized')
+      onRuntimeInitialized: () => console.log('WASM runtime initialized'),
+      print: (text) => { origLog(text); addLog(text) },
+      printErr: (text) => { origError(text); addLog(text, 'log-error') }
     }
 
     // Update canvas resolution and scale display
@@ -75,17 +121,20 @@
       canvas.style.height = window._canvasHeight + 'px'
 
       // Calculate scale to fit in viewport while maintaining aspect ratio
+      const logPanel = document.getElementById('log-panel')
+      const minLogHeight = 50
       const viewW = wrapper.clientWidth
-      const viewH = wrapper.clientHeight
+      const maxCanvasH = window.innerHeight - minLogHeight
       const scaleX = viewW / window._canvasWidth
-      const scaleY = viewH / window._canvasHeight
-      const scale = Math.min(scaleX, scaleY, 1) // Don't scale up beyond 1x for now, or remove ", 1" to allow upscale
-
-      // Actually let's allow upscale for better display
+      const scaleY = maxCanvasH / window._canvasHeight
       const displayScale = Math.min(scaleX, scaleY)
       canvas.style.transform = `scale(${displayScale})`
 
-      console.log(`Canvas resolution: ${window._canvasWidth}x${window._canvasHeight}, display scale: ${displayScale.toFixed(2)}`)
+      // Set wrapper height to match scaled canvas
+      const scaledHeight = window._canvasHeight * displayScale
+      wrapper.style.height = Math.floor(scaledHeight) + 'px'
+
+      console.log(`Resolution: ${window._canvasWidth}x${window._canvasHeight}, scale: ${displayScale.toFixed(2)}`)
     }
 
     // Wait for messages from parent
