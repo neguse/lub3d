@@ -1,9 +1,24 @@
 cmake_minimum_required(VERSION 3.20)
 project(mane3d C CXX)
 
+# Auto-detect sccache (use if available)
+find_program(CCACHE_PROGRAM sccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using compiler cache: ${CCACHE_PROGRAM}")
+    set(CMAKE_C_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+endif()
+
 # MSVC parallel compilation and UTF-8 source encoding
 if(MSVC)
     add_compile_options(/MP /utf-8)
+    # Use /Z7 instead of /Zi to embed debug info in object files (required for ccache)
+    if(CCACHE_PROGRAM)
+        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+        string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+        string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+    endif()
 endif()
 
 # Options
