@@ -55,6 +55,12 @@ jobs:
           cp build/wasm-release/*.wasm public/
           cp build/wasm-release/*.js public/
 
+      - name: Generate API documentation
+        run: |
+          LUA_LS_VERSION="3.16.4"
+          curl -sL "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LS_VERSION}/lua-language-server-${LUA_LS_VERSION}-linux-x64.tar.gz" | tar xz -C /tmp
+          /tmp/bin/lua-language-server --doc .
+
       - name: Build Vite
         run: npm run build
 
