@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
-  "workspace.library": ["gen/types", "lib"],
+  "workspace.library": ["gen/types", "types", "lib"],
   "workspace.ignoreDir": ["build", "out"],
   "runtime.version": "Lua 5.5",
   "diagnostics.globals": ["init", "frame", "cleanup", "event", "get_mtime"]

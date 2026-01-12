@@ -3,7 +3,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shader = require("lib.shader")
+local shaderMod = require("lib.shader")
 local util = require("lib.util")
 local glm = require("lib.glm")
 
@@ -177,7 +177,7 @@ function init()
     log.info("3D Block Breaker starting...")
 
     -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
-    shader = shader.compile(shader_source, "breakout", {
+    shader = shaderMod.compile(shader_source, "breakout", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 144,

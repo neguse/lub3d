@@ -206,12 +206,10 @@ local function load_texture_cached(path)
     end
 
     local full_path = "textures/" .. path
-    local img, view, smp = texture.load(full_path)
-    if img and view and smp then
-        ---@cast view gpu.View
-        ---@cast smp gpu.Sampler
-        textures_cache[path] = { img = img, view = view, smp = smp }
-        return view.handle, smp.handle
+    local tex = texture.load(full_path)
+    if tex then
+        textures_cache[path] = tex
+        return tex.view.handle, tex.smp.handle
     end
     return nil, nil
 end

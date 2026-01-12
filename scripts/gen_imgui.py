@@ -715,7 +715,7 @@ class LuaCATSGenerator:
     def emit(self, line=''):
         self.out_lines.append(line)
 
-    def lua_type(self, c_type):
+    def lua_type(self, c_type, func_name='', param_name=''):
         """Convert C type to Lua type annotation."""
         c_type = c_type.strip()
         # Basic types
@@ -734,10 +734,15 @@ class LuaCATSGenerator:
             return 'number[]'  # {x, y}
         if 'ImVec4' in c_type:
             return 'number[]'  # {x, y, z, w}
-        # Output pointers
+        # Output pointers - check if it's a float array first
+        if c_type == 'float *':
+            array_size = get_float_array_size(func_name, param_name, c_type)
+            if array_size > 0:
+                return 'number[]'
+            return 'number'
         if c_type == 'bool *':
             return 'boolean'
-        if c_type in ('int *', 'float *', 'double *', 'unsigned int *'):
+        if c_type in ('int *', 'double *', 'unsigned int *'):
             return 'number'
         # Float arrays
         if c_type.startswith('float') and '[' in c_type:
@@ -755,6 +760,7 @@ class LuaCATSGenerator:
         lines = []
         params = func.get('params', [])
         return_type = self.binding_gen.get_return_type(func)
+        func_name = func['name']
 
         # Collect output params
         out_params = []
@@ -766,16 +772,17 @@ class LuaCATSGenerator:
         # @param annotations
         for param in params:
             pname = param['name'] or 'arg'
-            ptype = self.lua_type(param['type'])
+            ptype = self.lua_type(param['type'], func_name, pname)
             optional = '?' if param.get('has_default') else ''
             lines.append(f'---@param {pname}{optional} {ptype}')
 
         # @return annotations
         returns = []
         if return_type != 'void':
-            returns.append(self.lua_type(return_type))
+            returns.append(self.lua_type(return_type, func_name, ''))
         for out_param in out_params:
-            returns.append(self.lua_type(out_param['type']))
+            out_pname = out_param['name'] or 'out'
+            returns.append(self.lua_type(out_param['type'], func_name, out_pname))
 
         if returns:
             lines.append(f'---@return {", ".join(returns)}')

@@ -51,9 +51,21 @@ local function get_mtime(path)
     return stb.mtime(path)
 end
 
+---@class texture.ImageData
+---@field w integer
+---@field h integer
+---@field ch integer
+---@field pixels string
+
+---@class texture.LoadResult
+---@field img gpu.Image
+---@field view gpu.View
+---@field smp gpu.Sampler
+
 -- Load raw image data from file (handles WASM fetch)
--- @param filename string: path to image file
--- @return width, height, channels, pixels or nil, error_message
+---@param filename string path to image file
+---@return texture.ImageData?
+---@return string? err
 function M.load_image_data(filename)
     local resolved = resolve_path(filename)
 
@@ -71,34 +83,33 @@ function M.load_image_data(filename)
         -- Native: load directly from filesystem
         w, h, ch, pixels = stb.load(resolved, 4)
     end
-    return w, h, ch, pixels
+    if not w then
+        return nil, "Failed to load: " .. resolved
+    end
+    return { w = w, h = h, ch = ch, pixels = pixels }, nil
 end
 
 -- Load texture from file using gpu wrappers (GC-safe)
 ---@param filename string path to image file (PNG, JPG, etc.)
 ---@param opts? table optional settings { filter_min, filter_mag, wrap_u, wrap_v }
----@return gpu.Image? img image resource (keep reference to prevent GC)
----@return gpu.View|string view_or_error view on success, error message on failure
----@return gpu.Sampler? smp sampler on success
+---@return texture.LoadResult?
+---@return string? err
 function M.load(filename, opts)
     opts = opts or {}
 
-    local w, h, ch, pixels = M.load_image_data(filename)
-    if not w then
-        return nil, h --[[@as string]] -- h contains error message
+    local data, err = M.load_image_data(filename)
+    if not data then
+        return nil, err or "Failed to load image"
     end
-    ---@cast h integer
-    ---@cast ch integer
-    ---@cast pixels string
 
-    log.info("Loaded texture: " .. filename .. " (" .. w .. "x" .. h .. ")")
+    log.info("Loaded texture: " .. filename .. " (" .. data.w .. "x" .. data.h .. ")")
 
     -- Create image with gpu wrapper (GC-safe)
     local img = gpu.image(gfx.ImageDesc({
-        width = w,
-        height = h,
+        width = data.w,
+        height = data.h,
         pixel_format = gfx.PixelFormat.RGBA8,
-        data = { mip_levels = { pixels } },
+        data = { mip_levels = { data.pixels } },
     }))
 
     if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
@@ -118,16 +129,15 @@ function M.load(filename, opts)
         wrap_v = opts.wrap_v or gfx.Wrap.REPEAT,
     }))
 
-    return img, view, smp
+    return { img = img, view = view, smp = smp }, nil
 end
 
 -- Load texture with BC7 compression support
 -- If .bc7 file exists, use it directly. Otherwise, load PNG and convert to BC7.
 ---@param filename string path to image file (PNG, JPG, etc.)
 ---@param opts? table optional settings { filter_min, filter_mag, wrap_u, wrap_v, srgb, rdo_quality }
----@return gpu.Image? img image resource (keep reference to prevent GC)
----@return gpu.View|string view_or_error view on success, error message on failure
----@return gpu.Sampler? smp sampler on success
+---@return texture.LoadResult?
+---@return string? err
 function M.load_bc7(filename, opts)
     opts = opts or {}
 
@@ -150,26 +160,24 @@ function M.load_bc7(filename, opts)
 
     -- Try to load existing BC7 file if cache is valid
     if use_cache then
-        local data = read_file(resolved_bc7)
-        if data and #data >= 8 then
+        local cache_data = read_file(resolved_bc7)
+        if cache_data and #cache_data >= 8 then
             -- BC7 file format: 4 bytes width, 4 bytes height, then compressed data
-            w, h = string.unpack("<I4I4", data)
-            compressed = data:sub(9)
+            w, h = string.unpack("<I4I4", cache_data)
+            compressed = cache_data:sub(9)
             log.info("Loaded BC7 cache: " .. bc7_path .. " (" .. w .. "x" .. h .. ")")
         end
     end
 
     -- If no valid cache, load source and encode to BC7
     if not compressed then
-        local ch, pixels
-        w, h, ch, pixels = M.load_image_data(filename)
-        if not w then
-            return nil, h --[[@as string]]
+        local img_data, err = M.load_image_data(filename)
+        if not img_data then
+            return nil, err or "Failed to load image"
         end
-        ---@cast h integer
-        ---@cast pixels string
+        w, h = img_data.w, img_data.h
 
-        compressed = bc7enc.encode(pixels, w, h, {
+        compressed = bc7enc.encode(img_data.pixels, w, h, {
             quality = 5,
             srgb = opts.srgb or false,
             rdo_quality = opts.rdo_quality or 0,
@@ -183,6 +191,10 @@ function M.load_bc7(filename, opts)
         local header = string.pack("<I4I4", w, h)
         write_file(resolved_bc7, header .. compressed)
         log.info("Saved BC7 cache: " .. bc7_path .. " (" .. w .. "x" .. h .. ")")
+    end
+
+    if not w or not h or not compressed then
+        return nil, "Invalid image data"
     end
 
     -- Upload BC7 to GPU
@@ -209,7 +221,7 @@ function M.load_bc7(filename, opts)
         wrap_v = opts.wrap_v or gfx.Wrap.REPEAT,
     }))
 
-    return img, view, smp
+    return { img = img, view = view, smp = smp }, nil
 end
 
 return M

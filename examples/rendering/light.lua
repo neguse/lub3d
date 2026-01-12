@@ -110,7 +110,7 @@ end
 ---@param direction? vec3 Light direction (default: from node transform)
 ---@return rendering.LightSourceParameters
 function M.directional_light(color, direction)
-    local c = color.w and color or glm.vec4(color.x, color.y, color.z, 1)
+    local c = glm.vec4(color.x, color.y, color.z, color.w or 1)
     local dir = direction and direction:normalize() or glm.vec3(0, 0, -1)
 
     local params = default_params()
@@ -129,7 +129,7 @@ end
 ---@param attenuation? vec3 (constant, linear, quadratic), default (1,0,0)
 ---@return rendering.LightSourceParameters
 function M.point_light(color, position, attenuation)
-    local c = color.w and color or glm.vec4(color.x, color.y, color.z, 1)
+    local c = glm.vec4(color.x, color.y, color.z, color.w or 1)
     local atten = attenuation or glm.vec3(1, 0, 0)
 
     local params = default_params()
@@ -151,7 +151,7 @@ end
 ---@param attenuation? vec3 (constant, linear, quadratic), default (1,0,0)
 ---@return rendering.LightSourceParameters
 function M.spotlight(color, position, direction, exponent, cutoff, attenuation)
-    local c = color.w and color or glm.vec4(color.x, color.y, color.z, 1)
+    local c = glm.vec4(color.x, color.y, color.z, color.w or 1)
     local dir = direction:normalize()
     local atten = attenuation or glm.vec3(1, 0, 0)
 

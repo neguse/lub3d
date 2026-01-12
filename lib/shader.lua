@@ -3,8 +3,10 @@ local gfx = require("sokol.gfx")
 local log = require("lib.log")
 
 -- Optional shdc module (requires MANE3D_BUILD_SHDC=ON)
-local shdc_ok, shdc = pcall(require, "shdc")
-if not shdc_ok then shdc = nil end
+---@type shdc?
+local shdc
+local shdc_ok, shdc_mod = pcall(require, "shdc")
+if shdc_ok then shdc = shdc_mod end
 
 local M = {}
 
@@ -170,12 +172,12 @@ function M.get_lang()
 end
 
 -- Compile shader using sokol-shdc library
--- @param source string: shader source code
--- @param program_name string: program name in shader
--- @param uniform_blocks table|nil: optional uniform block descriptors
--- @param attrs table|nil: optional vertex attribute semantics for D3D11
--- @param texture_sampler_pairs table|nil: optional texture-sampler pair descriptors
--- @return shader handle or nil on failure
+---@param source string shader source code
+---@param program_name string program name in shader
+---@param uniform_blocks? table uniform block descriptors
+---@param attrs? table vertex attribute semantics for D3D11
+---@param texture_sampler_pairs? table texture-sampler pair descriptors
+---@return gfx.Shader? shader shader handle or nil on failure
 function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
     if not shdc then
         log.error("shdc module not available (requires MANE3D_BUILD_SHDC=ON)")
@@ -266,10 +268,10 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
 end
 
 -- Compile shader with full descriptor control
--- @param source string: shader source code
--- @param program_name string: program name in shader
--- @param shader_desc table: full shader descriptor (uniform_blocks, views, samplers, texture_sampler_pairs, attrs)
--- @return shader handle or nil on failure
+---@param source string shader source code
+---@param program_name string program name in shader
+---@param shader_desc table full shader descriptor (uniform_blocks, views, samplers, texture_sampler_pairs, attrs)
+---@return gfx.Shader? shader shader handle or nil on failure
 function M.compile_full(source, program_name, shader_desc)
     if not shdc then
         log.error("shdc module not available (requires MANE3D_BUILD_SHDC=ON)")
