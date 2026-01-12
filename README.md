@@ -26,19 +26,19 @@ end
 
 ### Available Modules
 
-| Module | Description |
-| --- | --- |
-| `sokol.gfx` | Graphics API |
-| `sokol.app` | Window/events |
-| `sokol.gl` | Immediate mode rendering |
-| `sokol.debugtext` | Debug text |
-| `sokol.time` | Timing |
-| `sokol.log` | Logging |
-| `sokol.glue` | gfx/app glue |
-| `shdc` | Shader compilation |
-| `lib.hotreload` | Hot reload with file watching |
-| `lib.glm` | GLM-like math (vec2/vec3/vec4/mat4) |
-| `lib.gpu` | GC-safe GPU resource wrappers |
+| Module                | Description                                |
+| --------------------- | ------------------------------------------ |
+| `sokol.gfx`           | Graphics API                               |
+| `sokol.app`           | Window/events                              |
+| `sokol.gl`            | Immediate mode rendering                   |
+| `sokol.debugtext`     | Debug text                                 |
+| `sokol.time`          | Timing                                     |
+| `sokol.log`           | Logging                                    |
+| `sokol.glue`          | gfx/app glue                               |
+| `shdc`                | Shader compilation                         |
+| `lib.hotreload`       | Hot reload with file watching              |
+| `lib.glm`             | GLM-like math (vec2/vec3/vec4/mat4)        |
+| `lib.gpu`             | GC-safe GPU resource wrappers              |
 | `lib.render_pipeline` | Render pass management with error recovery |
 
 ### Supported Backends
@@ -65,9 +65,12 @@ cmake --build --preset linux-gl-debug
 ```
 
 Run the example:
+
 ```bash
 ./build/win-d3d11-debug/example.exe examples/main.lua
 ```
+
+See [docs/building.md](docs/building.md) for more options.
 
 ## Ideas
 
