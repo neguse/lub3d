@@ -69,6 +69,9 @@ jobs:
 
       - name: Configure
         run: cmake --preset ${{ matrix.preset }}
+        env:
+          CC: ${{ runner.os == 'Linux' && 'clang' || '' }}
+          CXX: ${{ runner.os == 'Linux' && 'clang++' || '' }}
 
       - name: Build
         run: cmake --build build/dummy-release
