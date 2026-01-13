@@ -36,9 +36,11 @@ for %%s in (
         echo ----------------------------------------
         echo Testing: %%s
         "%TEST_RUNNER%" "%%s" %NUM_FRAMES%
-        if !errorlevel! equ 0 (
+        set EC=!errorlevel!
+        if !EC! equ 0 (
             set /a PASSED+=1
         ) else (
+            echo FAILED with exit code: !EC!
             set /a FAILED+=1
         )
     ) else (
