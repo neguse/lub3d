@@ -78,18 +78,5 @@ jobs:
           SCCACHE_GHA_ENABLED: "true"
 
       - name: Test examples
+        run: ./scripts/run_tests.sh build/dummy-release 10
         shell: bash
-        run: |
-          set -e
-          # Note: rendering/init.lua excluded - requires assets/mill-scene which is gitignored
-          if [ -f "./build/dummy-release/mane3d-test.exe" ]; then
-            TEST_RUNNER="./build/dummy-release/mane3d-test.exe"
-          else
-            TEST_RUNNER="./build/dummy-release/mane3d-test"
-          fi
-          for script in examples/main.lua examples/breakout.lua examples/raytracer.lua examples/lighting.lua examples/triangle.lua examples/hakonotaiatari/init.lua; do
-            if [ -f "$script" ]; then
-              echo "Testing $script"
-              "$TEST_RUNNER" "$script" 10
-            fi
-          done
