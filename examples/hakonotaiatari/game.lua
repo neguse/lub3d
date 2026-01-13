@@ -28,6 +28,7 @@ function M.init(camera, audio)
     enemies = {}
 
     -- Initialize player
+    ---@diagnostic disable-next-line: cast-local-type
     player = Player.new()
     player:init()
 
