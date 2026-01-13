@@ -109,6 +109,13 @@ end
 - **Asset freedom** - No proprietary formats. Generate and modify anything from Lua at runtime.
 - **As fast as you type** - Hot reload code, shaders, assets. The tools never slow you down.
 
+## Generative AI Usage Disclosure
+
+- **Source code and documentation**: Developed with Claude Code
+- **Logo image**: Generated using Nano Banana (Gemini image generation)
+
+All AI-generated outputs are reviewed and modified before inclusion.
+
 ## License
 
 MIT
