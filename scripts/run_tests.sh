@@ -40,14 +40,15 @@ for script in "${EXAMPLES[@]}"; do
     if [ -f "$script" ]; then
         echo "----------------------------------------"
         echo "Testing: $script"
-        if "$TEST_RUNNER" "$script" "$NUM_FRAMES"; then
-            ((PASSED++))
+        if "./$TEST_RUNNER" "$script" "$NUM_FRAMES"; then
+            ((PASSED++)) || true
         else
-            ((FAILED++))
+            echo "FAILED with exit code: $?"
+            ((FAILED++)) || true
         fi
     else
         echo "Skipped (not found): $script"
-        ((SKIPPED++))
+        ((SKIPPED++)) || true
     fi
 done
 
