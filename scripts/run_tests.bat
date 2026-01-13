@@ -23,6 +23,7 @@ echo.
 set PASSED=0
 set FAILED=0
 
+REM Note: rendering\init.lua excluded - requires assets\mill-scene which is gitignored
 for %%s in (
     examples\main.lua
     examples\breakout.lua
@@ -30,7 +31,6 @@ for %%s in (
     examples\lighting.lua
     examples\triangle.lua
     examples\hakonotaiatari\init.lua
-    examples\rendering\init.lua
 ) do (
     if exist "%%s" (
         echo ----------------------------------------

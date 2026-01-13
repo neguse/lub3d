@@ -26,6 +26,7 @@ FAILED=0
 SKIPPED=0
 
 # Examples to test (add more as needed)
+# Note: rendering/init.lua excluded - requires assets/mill-scene which is gitignored
 EXAMPLES=(
     "examples/main.lua"
     "examples/breakout.lua"
@@ -33,7 +34,6 @@ EXAMPLES=(
     "examples/lighting.lua"
     "examples/triangle.lua"
     "examples/hakonotaiatari/init.lua"
-    "examples/rendering/init.lua"
 )
 
 for script in "${EXAMPLES[@]}"; do

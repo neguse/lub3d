@@ -81,7 +81,8 @@ jobs:
         shell: bash
         run: |
           set -e
-          for script in examples/main.lua examples/breakout.lua examples/raytracer.lua examples/lighting.lua examples/triangle.lua examples/hakonotaiatari/init.lua examples/rendering/init.lua; do
+          # Note: rendering/init.lua excluded - requires assets/mill-scene which is gitignored
+          for script in examples/main.lua examples/breakout.lua examples/raytracer.lua examples/lighting.lua examples/triangle.lua examples/hakonotaiatari/init.lua; do
             if [ -f "$script" ]; then
               echo "Testing $script"
               ./build/dummy-release/mane3d-test "$script" 10
