@@ -31,4 +31,13 @@ jobs:
           curl -L https://github.com/LuaLS/lua-language-server/releases/download/3.16.4/lua-language-server-3.16.4-linux-x64.tar.gz | tar xz -C /tmp
 
       - name: Run Lua check
-        run: /tmp/bin/lua-language-server --configpath .luarc.json --check .
+        run: |
+          set -o pipefail
+          /tmp/bin/lua-language-server --configpath .luarc.json --check . 2>&1 | tee /tmp/luals-output.txt
+          # Filter out Lua 5.5 locale-loader bug noise and check for actual warnings
+          grep -v "locale-loader.lua\|stack traceback\|in upvalue\|in metamethod\|in main chunk\|in function\|in global\|\[C\]:\|script/library.lua\|script/workspace" /tmp/luals-output.txt | tee /tmp/luals-filtered.txt
+          # Fail if any warnings found
+          if grep -q "\[Warning\]\|\[Error\]" /tmp/luals-filtered.txt; then
+            echo "Lint errors found!"
+            exit 1
+          fi
