@@ -5,6 +5,13 @@ local app = require("sokol.app")
 local glm = require("lib.glm")
 local const = require("examples.hakonotaiatari.const")
 
+---@class Camera
+---@field eye vec3
+---@field lookat vec3
+---@field behind_high number
+---@field behind_back number
+---@field rot number
+---@field does_rotate boolean
 local Camera = {}
 Camera.__index = Camera
 

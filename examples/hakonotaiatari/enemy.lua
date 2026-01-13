@@ -342,6 +342,11 @@ end
 -- EnemyGenerator class
 --------------------------------------------------------------------------------
 
+---@class EnemyGenerator
+---@field level integer
+---@field level_tick integer
+---@field commands table
+---@field command_index integer
 local EnemyGenerator = {}
 EnemyGenerator.__index = EnemyGenerator
 

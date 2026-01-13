@@ -13,9 +13,11 @@ local Cube = require("examples.hakonotaiatari.cube")
 local M = {}
 
 -- Game state
-local player = nil
+---@type Player
+local player
 local enemies = {}
-local generator = nil
+---@type EnemyGenerator
+local generator
 local score = 0
 local tick = 0
 

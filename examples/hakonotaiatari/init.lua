@@ -33,7 +33,8 @@ local record = require("examples.hakonotaiatari.record")
 
 -- Game state
 local current_state = const.GAME_STATE_TITLE
-local camera = nil
+---@type Camera
+local camera
 local last_score = 0
 local time_accumulator = 0 -- For fixed timestep
 
