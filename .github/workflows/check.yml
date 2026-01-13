@@ -67,14 +67,20 @@ jobs:
         if: runner.os == 'Linux'
         run: sudo apt-get install -y clang
 
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.9
+
       - name: Configure
-        run: cmake --preset ${{ matrix.preset }}
+        run: cmake --preset ${{ matrix.preset }} -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
         env:
           CC: ${{ runner.os == 'Linux' && 'clang' || '' }}
           CXX: ${{ runner.os == 'Linux' && 'clang++' || '' }}
+          SCCACHE_GHA_ENABLED: "true"
 
       - name: Build
         run: cmake --build build/dummy-release
+        env:
+          SCCACHE_GHA_ENABLED: "true"
 
       - name: Test examples
         shell: bash
