@@ -1,6 +1,10 @@
 -- hakonotaiatari audio module
 -- Sound effects and BGM using sokol.audio
 
+---@type fun(path: string): string?
+---@diagnostic disable-next-line: undefined-global
+local fetch_file = fetch_file
+
 local log = require("lib.log")
 
 local M = {}
@@ -12,6 +16,7 @@ if not audio_ok then
 end
 if not audio_ok then
     log.warn("sokol.audio not available, audio disabled")
+    ---@diagnostic disable-next-line: cast-local-type
     audio = nil
 end
 
@@ -155,7 +160,7 @@ local mix_buffer = {}
 
 -- Audio callback (called by sokol.audio)
 local function audio_callback()
-    if not initialized then return end
+    if not initialized or not audio then return end
 
     local num_frames = audio.expect()
     if num_frames <= 0 then return end

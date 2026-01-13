@@ -6,6 +6,11 @@ local const = require("examples.hakonotaiatari.const")
 local Cube = require("examples.hakonotaiatari.cube")
 local input = require("examples.hakonotaiatari.input")
 
+---@class Player : Cube
+---@field tick integer
+---@field dash_len number
+---@field dash_f number
+---@field power number
 local Player = setmetatable({}, { __index = Cube })
 Player.__index = Player
 

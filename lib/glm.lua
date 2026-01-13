@@ -882,8 +882,10 @@ function glm.length(v)
 end
 
 ---Normalize a vector
----@param v vec_base
----@return vec_base
+---@param v vec2
+---@return vec2
+---@overload fun(v: vec3): vec3
+---@overload fun(v: vec4): vec4
 function glm.normalize(v)
     return v:normalize()
 end

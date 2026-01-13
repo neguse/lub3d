@@ -19,12 +19,17 @@ M.MODE_SHADED = 2
 local current_mode = M.MODE_WIREFRAME
 
 -- Graphics resources for shaded mode
+---@type gfx.Shader?
 local shaded_shader = nil
+---@type gfx.Pipeline?
 local shaded_pipeline = nil
+---@type gfx.Buffer?
 local shaded_vbuf = nil
+---@type gfx.Buffer?
 local shaded_ibuf = nil
 
 -- Graphics resources for wireframe mode (using sokol.gl)
+---@type gl.Pipeline?
 local wireframe_pipeline = nil
 
 -- Gakugaku (wobble) state
@@ -367,7 +372,7 @@ function M.begin_frame(clear_r, clear_g, clear_b)
     -- Set scissor to full window (allow drawing outside viewport)
     gfx.apply_scissor_rect(0, 0, math.floor(app.widthf()), math.floor(app.heightf()), true)
 
-    if current_mode == M.MODE_SHADED then
+    if current_mode == M.MODE_SHADED and shaded_pipeline then
         gfx.apply_pipeline(shaded_pipeline)
         gfx.apply_bindings(gfx.Bindings({
             vertex_buffers = { shaded_vbuf },
@@ -388,7 +393,7 @@ end
 function M.set_camera_lookat(eye, lookat, aspect)
     -- Always set up sokol.gl matrices (used for field, particles, UI in both modes)
     gl.defaults()
-    gl.load_pipeline(wireframe_pipeline)
+    if wireframe_pipeline then gl.load_pipeline(wireframe_pipeline) end
     gl.matrix_mode_projection()
     gl.perspective(math.rad(45), aspect, 1.0, 5000.0)
     gl.matrix_mode_modelview()
@@ -398,7 +403,7 @@ end
 -- Set up 2D orthographic projection for UI rendering
 function M.setup_ui_projection()
     gl.defaults()
-    gl.load_pipeline(wireframe_pipeline)
+    if wireframe_pipeline then gl.load_pipeline(wireframe_pipeline) end
     gl.matrix_mode_projection()
     gl.ortho(-1, 1, -1, 1, -1, 1)
     gl.matrix_mode_modelview()
