@@ -90,8 +90,7 @@ function M.screen_to_world(proj, view, cam_eye)
 
     -- Ray in world space
     local ray_world = inv_view * ray_eye
-    ---@diagnostic disable-next-line: assign-type-mismatch
-    local ray_dir = glm.normalize(glm.vec3(ray_world.x, ray_world.y, ray_world.z))  ---@type vec3
+    local ray_dir = glm.normalize(glm.vec3(ray_world.x, ray_world.y, ray_world.z))
 
     -- Intersect with ground plane (Y = 0)
     -- eye + t * dir = point on plane where point.y = 0
