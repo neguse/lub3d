@@ -5,6 +5,18 @@ local glm = require("lib.glm")
 local const = require("examples.hakonotaiatari.const")
 local renderer = require("examples.hakonotaiatari.renderer")
 
+---@class Cube
+---@field type integer
+---@field pos vec2
+---@field velo number
+---@field angle number
+---@field color integer
+---@field length number
+---@field force vec2
+---@field stat integer
+---@field life integer
+---@field coll_enable boolean
+---@field combo integer
 local Cube = {}
 Cube.__index = Cube
 

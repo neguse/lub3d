@@ -30,6 +30,8 @@ end
 -- Base Enemy class
 --------------------------------------------------------------------------------
 
+---@class Enemy : Cube
+---@field tick integer
 local Enemy = setmetatable({}, { __index = Cube })
 Enemy.__index = Enemy
 
@@ -86,6 +88,8 @@ end
 -- NormalEnemy class
 --------------------------------------------------------------------------------
 
+---@class NormalEnemy : Enemy
+---@field velo_max number
 local NormalEnemy = setmetatable({}, { __index = Enemy })
 NormalEnemy.__index = NormalEnemy
 
@@ -186,6 +190,10 @@ end
 -- DashEnemy class
 --------------------------------------------------------------------------------
 
+---@class DashEnemy : Enemy
+---@field init_len number
+---@field dash_v number
+---@field dash_len number
 local DashEnemy = setmetatable({}, { __index = Enemy })
 DashEnemy.__index = DashEnemy
 

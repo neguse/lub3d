@@ -31,14 +31,10 @@ local t = 0
 local keys_down = {}
 
 -- Graphics resources
----@type gfx.Shader?
-local shader = nil
----@type gfx.Pipeline?
-local pipeline = nil
----@type gfx.Buffer?
-local vbuf = nil
----@type gfx.Buffer?
-local ibuf = nil
+local shader = nil  ---@type any
+local pipeline = nil  ---@type any
+local vbuf = nil  ---@type any
+local ibuf = nil  ---@type any
 
 -- Shader with MVP matrix and color uniform
 local shader_source = [[
