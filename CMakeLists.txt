@@ -266,6 +266,7 @@ if(MANE3D_BUILD_EXAMPLE)
     target_include_directories(mane3d-example PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${LUA_INCLUDE}
     )
     target_link_libraries(mane3d-example mane3d)
