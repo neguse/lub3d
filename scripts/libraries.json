@@ -16,5 +16,6 @@
   {"module": "sokol_log", "headers": ["deps/sokol/sokol_log.h"], "prefix": "slog_"},
   {"module": "sokol_fetch", "headers": ["deps/sokol/sokol_fetch.h"], "prefix": "sfetch_"},
   {"module": "sokol_args", "headers": ["deps/sokol/sokol_args.h"], "prefix": "sargs_"},
-  {"module": "sokol_glue", "headers": ["deps/sokol/sokol_gfx.h", "deps/sokol/sokol_app.h", "deps/sokol/sokol_glue.h"], "prefix": "sglue_"}
+  {"module": "sokol_glue", "headers": ["deps/sokol/sokol_gfx.h", "deps/sokol/sokol_app.h", "deps/sokol/sokol_glue.h"], "prefix": "sglue_"},
+  {"module": "jolt", "headers": ["deps/JoltPhysics/Jolt/Jolt.h"], "prefix": "JPH", "options": ["--cpp", "-I", "deps/JoltPhysics"]}
 ]

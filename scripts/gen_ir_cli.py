@@ -77,24 +77,73 @@ def get_dep_prefix(decl, dep_prefixes):
     return None
 
 
-def parse_struct(decl, source):
-    """Parse a struct declaration."""
+def parse_struct(decl, source, cpp_mode=False):
+    """Parse a struct/class declaration."""
     outp = {
-        'kind': 'struct',
+        'kind': 'class' if cpp_mode and decl.get('tagUsed') == 'class' else 'struct',
         'name': decl['name'],
         'fields': [],
+        'methods': [],
     }
     for item_decl in decl.get('inner', []):
-        if item_decl['kind'] == 'FullComment':
+        kind = item_decl['kind']
+        if kind == 'FullComment':
             outp['comment'] = extract_comment(item_decl, source)
-            continue
-        if item_decl['kind'] != 'FieldDecl':
-            raise ValueError(f"Structs must only contain simple fields ({decl['name']})")
-        item = {}
-        if 'name' in item_decl:
-            item['name'] = item_decl['name']
-        item['type'] = filter_types(item_decl['type']['qualType'])
-        outp['fields'].append(item)
+        elif kind == 'FieldDecl':
+            item = {}
+            if 'name' in item_decl:
+                item['name'] = item_decl['name']
+            item['type'] = filter_types(item_decl['type']['qualType'])
+            outp['fields'].append(item)
+        elif kind == 'CXXMethodDecl':
+            method = parse_cxx_method(item_decl, source)
+            if method:
+                outp['methods'].append(method)
+        elif kind in ('AccessSpecDecl', 'CXXConstructorDecl', 'CXXDestructorDecl',
+                      'CXXRecordDecl', 'TypedefDecl', 'UsingDecl', 'FriendDecl',
+                      'StaticAssertDecl', 'VarDecl', 'EnumDecl', 'TypeAliasDecl'):
+            # Skip these C++ constructs silently
+            pass
+        elif VERBOSE:
+            print(f"  >> note: {decl['name']}: skipping member {kind}")
+    # Remove empty methods list if no methods
+    if not outp['methods']:
+        del outp['methods']
+    return outp
+
+
+def parse_cxx_method(decl, source):
+    """Parse a C++ method declaration."""
+    # Skip deleted, defaulted, implicit methods
+    if decl.get('isImplicit') or decl.get('isDeleted'):
+        return None
+
+    name = decl.get('name', '')
+    if not name or name.startswith('operator'):
+        return None
+
+    outp = {
+        'kind': 'method',
+        'name': name,
+        'type': filter_types(decl['type']['qualType']),
+        'params': [],
+    }
+
+    # Check for static/const
+    if decl.get('storageClass') == 'static':
+        outp['static'] = True
+
+    if 'inner' in decl:
+        for param in decl['inner']:
+            kind = param['kind']
+            if kind == 'ParmVarDecl':
+                outp['params'].append({
+                    'name': param.get('name', ''),
+                    'type': filter_types(param['type']['qualType']),
+                })
+            elif kind == 'FullComment':
+                outp['comment'] = extract_comment(param, source)
+
     return outp
 
 
@@ -155,11 +204,13 @@ def parse_func(decl, source):
     return outp
 
 
-def parse_decl(decl, source):
+def parse_decl(decl, source, cpp_mode=False):
     """Parse a declaration based on its kind."""
     kind = decl['kind']
     if kind == 'RecordDecl':
-        return parse_struct(decl, source)
+        return parse_struct(decl, source, cpp_mode)
+    elif kind == 'CXXRecordDecl':
+        return parse_struct(decl, source, cpp_mode=True)
     elif kind == 'EnumDecl':
         return parse_enum(decl, source)
     elif kind == 'FunctionDecl':
@@ -167,12 +218,15 @@ def parse_decl(decl, source):
     return None
 
 
-def run_clang(source_path, include_paths, cpp_mode):
+def run_clang(source_path, include_paths, cpp_mode, std=None):
     """Run clang to generate AST dump."""
     cmd = ["clang"]
     if cpp_mode:
         cmd.extend(["-x", "c++"])
-    cmd.extend(["-Xclang", "-ast-dump=json", "-c", str(source_path)])
+        # Default to C++17 for modern C++ libraries
+        std = std or "c++17"
+        cmd.extend([f"-std={std}"])
+    cmd.extend(["-Xclang", "-ast-dump=json", "-fsyntax-only", str(source_path)])
     for inc in include_paths:
         cmd.extend(["-I", str(inc)])
     return subprocess.check_output(cmd)
@@ -288,13 +342,63 @@ def create_temp_source(headers, include_paths, cpp_mode, defines):
     return path
 
 
-def generate_ir(header_path, source_path, module, prefix, dep_prefixes, output_path, include_paths, cpp_mode):
+def collect_decls(node, prefix, dep_prefixes, source, cpp_mode, namespace_prefix=""):
+    """Recursively collect declarations from AST node."""
+    results = []
+
+    for decl in node.get('inner', []):
+        kind = decl['kind']
+
+        # Handle namespaces recursively
+        if kind == 'NamespaceDecl':
+            ns_name = decl.get('name', '')
+            new_prefix = f"{namespace_prefix}{ns_name}::" if ns_name else namespace_prefix
+            results.extend(collect_decls(decl, prefix, dep_prefixes, source, cpp_mode, new_prefix))
+            continue
+
+        # Check if this declaration matches prefix
+        is_dep = is_dep_decl(decl, dep_prefixes or [])
+        full_name = namespace_prefix + decl.get('name', '')
+
+        # For C++, also check with namespace prefix
+        matches = is_api_decl(decl, prefix) or is_dep
+        if not matches and namespace_prefix:
+            # Check if namespace::name matches
+            if full_name.startswith(prefix) or any(full_name.startswith(p) for p in (dep_prefixes or [])):
+                matches = True
+
+        if matches:
+            # Skip forward declarations
+            if kind in ('RecordDecl', 'CXXRecordDecl') and 'inner' not in decl:
+                continue
+            if kind == 'EnumDecl' and 'inner' not in decl:
+                continue
+
+            try:
+                outp_decl = parse_decl(decl, source, cpp_mode)
+            except (ValueError, KeyError, TypeError) as e:
+                name = decl.get('name', '<anonymous>')
+                print(f"  >> warning: skipping {kind} {name}: {e}")
+                continue
+
+            if outp_decl is not None:
+                # Add namespace prefix to name
+                if namespace_prefix and 'name' in outp_decl:
+                    outp_decl['namespace'] = namespace_prefix.rstrip('::')
+                outp_decl['is_dep'] = is_dep
+                outp_decl['dep_prefix'] = get_dep_prefix(decl, dep_prefixes or [])
+                results.append(outp_decl)
+
+    return results
+
+
+def generate_ir(header_path, source_path, module, prefix, dep_prefixes, output_path, include_paths, cpp_mode, std=None):
     """Generate IR from header file."""
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     # Run clang
-    ast = run_clang(source_path, include_paths, cpp_mode)
+    ast = run_clang(source_path, include_paths, cpp_mode, std)
     inp = json.loads(ast)
 
     # Build output
@@ -313,26 +417,7 @@ def generate_ir(header_path, source_path, module, prefix, dep_prefixes, output_p
         if match and "Project URL" in match.group(1):
             outp['comment'] = match.group(1)
 
-        for decl in inp.get('inner', []):
-            is_dep = is_dep_decl(decl, dep_prefixes or [])
-            if is_api_decl(decl, prefix) or is_dep:
-                # Skip forward declarations
-                if decl['kind'] == 'RecordDecl' and 'inner' not in decl:
-                    continue
-                if decl['kind'] == 'EnumDecl' and 'inner' not in decl:
-                    continue
-
-                try:
-                    outp_decl = parse_decl(decl, source)
-                except (ValueError, KeyError, TypeError) as e:
-                    name = decl.get('name', '<anonymous>')
-                    print(f"  >> warning: skipping {decl['kind']} {name}: {e}")
-                    continue
-
-                if outp_decl is not None:
-                    outp_decl['is_dep'] = is_dep
-                    outp_decl['dep_prefix'] = get_dep_prefix(decl, dep_prefixes or [])
-                    outp['decls'].append(outp_decl)
+        outp['decls'] = collect_decls(inp, prefix, dep_prefixes, source, cpp_mode)
 
     with open(output_path, 'w') as f:
         f.write(json.dumps(outp, indent=2))
@@ -361,6 +446,8 @@ def main():
                         help="Preprocessor defines (can be specified multiple times)")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Verbose output")
+    parser.add_argument("--std", default=None,
+                        help="C++ standard (e.g., c++17, c++20). Default: c++17 for --cpp")
 
     args = parser.parse_args()
 
@@ -412,6 +499,7 @@ def main():
             output_path=output_path,
             include_paths=include_paths,
             cpp_mode=args.cpp,
+            std=args.std,
         )
         return 0 if success else 1
 
