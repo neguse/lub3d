@@ -34,3 +34,6 @@
 [submodule "deps/bgfx"]
 	path = deps/bgfx
 	url = https://github.com/bkaradzic/bgfx.git
+[submodule "deps/cute_framework"]
+	path = deps/cute_framework
+	url = https://github.com/RandyGaul/cute_framework.git

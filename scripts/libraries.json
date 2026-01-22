@@ -561,5 +561,58 @@
       "-I",
       "deps/bgfx/include"
     ]
+  },
+  {
+    "module": "cute_framework",
+    "headers": [
+      "deps/cute_framework/include/cute.h",
+      "deps/cute_framework/include/cute_alloc.h",
+      "deps/cute_framework/include/cute_app.h",
+      "deps/cute_framework/include/cute_array.h",
+      "deps/cute_framework/include/cute_audio.h",
+      "deps/cute_framework/include/cute_base64.h",
+      "deps/cute_framework/include/cute_c_runtime.h",
+      "deps/cute_framework/include/cute_clipboard.h",
+      "deps/cute_framework/include/cute_color.h",
+      "deps/cute_framework/include/cute_coroutine.h",
+      "deps/cute_framework/include/cute_debug_printf.h",
+      "deps/cute_framework/include/cute_defer.h",
+      "deps/cute_framework/include/cute_defines.h",
+      "deps/cute_framework/include/cute_doubly_list.h",
+      "deps/cute_framework/include/cute_draw.h",
+      "deps/cute_framework/include/cute_file_system.h",
+      "deps/cute_framework/include/cute_graphics.h",
+      "deps/cute_framework/include/cute_guid.h",
+      "deps/cute_framework/include/cute_haptics.h",
+      "deps/cute_framework/include/cute_hashtable.h",
+      "deps/cute_framework/include/cute_https.h",
+      "deps/cute_framework/include/cute_image.h",
+      "deps/cute_framework/include/cute_input.h",
+      "deps/cute_framework/include/cute_joypad.h",
+      "deps/cute_framework/include/cute_json.h",
+      "deps/cute_framework/include/cute_math.h",
+      "deps/cute_framework/include/cute_multithreading.h",
+      "deps/cute_framework/include/cute_networking.h",
+      "deps/cute_framework/include/cute_noise.h",
+      "deps/cute_framework/include/cute_png_cache.h",
+      "deps/cute_framework/include/cute_priority_queue.h",
+      "deps/cute_framework/include/cute_result.h",
+      "deps/cute_framework/include/cute_rnd.h",
+      "deps/cute_framework/include/cute_routine.h",
+      "deps/cute_framework/include/cute_shader_bytecode.h",
+      "deps/cute_framework/include/cute_sprite.h",
+      "deps/cute_framework/include/cute_string.h",
+      "deps/cute_framework/include/cute_symbol.h",
+      "deps/cute_framework/include/cute_time.h",
+      "deps/cute_framework/include/cute_user_config.h",
+      "deps/cute_framework/include/cute_version.h"
+    ],
+    "prefix": "cf_",
+    "options": [
+      "-I",
+      "deps/cute_framework/include",
+      "-I",
+      "deps/cute_framework/libraries"
+    ]
   }
 ]
