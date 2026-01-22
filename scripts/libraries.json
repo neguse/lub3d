@@ -547,5 +547,19 @@
       "deps/raylib/src/rlgl.h"
     ],
     "prefix": ""
+  },
+  {
+    "module": "bgfx",
+    "headers": [
+      "deps/bgfx/include/bgfx/bgfx.h",
+      "deps/bgfx/include/bgfx/defines.h",
+      "deps/bgfx/include/bgfx/platform.h"
+    ],
+    "prefix": "bgfx",
+    "options": [
+      "--cpp",
+      "-I",
+      "deps/bgfx/include"
+    ]
   }
 ]
