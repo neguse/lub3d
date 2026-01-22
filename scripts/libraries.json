@@ -1,0 +1,20 @@
+[
+  {"module": "stb_image", "headers": ["deps/stb/stb_image.h"], "prefix": "stbi_"},
+  {"module": "stb_image_write", "headers": ["deps/stb/stb_image_write.h"], "prefix": "stbi_write_"},
+  {"module": "stb_image_resize2", "headers": ["deps/stb/stb_image_resize2.h"], "prefix": "stbir_"},
+  {"module": "stb_truetype", "headers": ["deps/stb/stb_truetype.h"], "prefix": "stbtt_"},
+  {"module": "stb_rect_pack", "headers": ["deps/stb/stb_rect_pack.h"], "prefix": "stbrp_"},
+  {"module": "stb_ds", "headers": ["deps/stb/stb_ds.h"], "prefix": "stbds_"},
+  {"module": "stb_sprintf", "headers": ["deps/stb/stb_sprintf.h"], "prefix": "stbsp_"},
+  {"module": "stb_vorbis", "headers": ["deps/stb/stb_vorbis.c"], "prefix": "stb_vorbis_"},
+  {"module": "bc7enc", "headers": ["deps/bc7enc_rdo/bc7enc.h"], "prefix": "bc7enc_", "options": ["--cpp"]},
+  {"module": "box2d", "headers": ["deps/box2d/include/box2d/box2d.h"], "prefix": "b2", "options": ["-I", "deps/box2d/include"]},
+  {"module": "sokol_gfx", "headers": ["deps/sokol/sokol_gfx.h"], "prefix": "sg_"},
+  {"module": "sokol_app", "headers": ["deps/sokol/sokol_app.h"], "prefix": "sapp_"},
+  {"module": "sokol_audio", "headers": ["deps/sokol/sokol_audio.h"], "prefix": "saudio_"},
+  {"module": "sokol_time", "headers": ["deps/sokol/sokol_time.h"], "prefix": "stm_"},
+  {"module": "sokol_log", "headers": ["deps/sokol/sokol_log.h"], "prefix": "slog_"},
+  {"module": "sokol_fetch", "headers": ["deps/sokol/sokol_fetch.h"], "prefix": "sfetch_"},
+  {"module": "sokol_args", "headers": ["deps/sokol/sokol_args.h"], "prefix": "sargs_"},
+  {"module": "sokol_glue", "headers": ["deps/sokol/sokol_gfx.h", "deps/sokol/sokol_app.h", "deps/sokol/sokol_glue.h"], "prefix": "sglue_"}
+]
