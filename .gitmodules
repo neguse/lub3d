@@ -25,3 +25,6 @@
 [submodule "deps/JoltPhysics"]
 	path = deps/JoltPhysics
 	url = https://github.com/jrouwe/JoltPhysics.git
+[submodule "deps/ozz-animation"]
+	path = deps/ozz-animation
+	url = https://github.com/guillaumeblanc/ozz-animation.git
