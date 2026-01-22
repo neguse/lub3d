@@ -538,5 +538,14 @@
       "-I",
       "deps/ozz-animation/include"
     ]
+  },
+  {
+    "module": "raylib",
+    "headers": [
+      "deps/raylib/src/raylib.h",
+      "deps/raylib/src/raymath.h",
+      "deps/raylib/src/rlgl.h"
+    ],
+    "prefix": ""
   }
 ]

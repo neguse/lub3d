@@ -28,3 +28,6 @@
 [submodule "deps/ozz-animation"]
 	path = deps/ozz-animation
 	url = https://github.com/guillaumeblanc/ozz-animation.git
+[submodule "deps/raylib"]
+	path = deps/raylib
+	url = https://github.com/raysan5/raylib.git
