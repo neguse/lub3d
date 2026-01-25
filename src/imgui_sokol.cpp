@@ -17,6 +17,9 @@ extern "C" {
 
 static int l_imgui_setup(lua_State* L) {
     simgui_desc_t desc = {};
+    const char* font_path = NULL;
+    float font_size = 18.0f;
+
     if (lua_istable(L, 1)) {
         lua_getfield(L, 1, "max_vertices");
         if (!lua_isnil(L, -1)) desc.max_vertices = (int)lua_tointeger(L, -1);
@@ -25,8 +28,30 @@ static int l_imgui_setup(lua_State* L) {
         lua_getfield(L, 1, "no_default_font");
         if (!lua_isnil(L, -1)) desc.no_default_font = lua_toboolean(L, -1);
         lua_pop(L, 1);
+
+        // Japanese font support
+        lua_getfield(L, 1, "japanese_font");
+        if (!lua_isnil(L, -1)) {
+            font_path = lua_tostring(L, -1);
+            desc.no_default_font = true;
+        }
+        lua_pop(L, 1);
+
+        lua_getfield(L, 1, "font_size");
+        if (!lua_isnil(L, -1)) font_size = (float)lua_tonumber(L, -1);
+        lua_pop(L, 1);
     }
+
     simgui_setup(&desc);
+
+    // Load Japanese font after simgui_setup
+    // Since ImGui 1.92.0, font atlas is automatically handled by sokol_imgui
+    if (font_path) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.Fonts->AddFontFromFileTTF(font_path, font_size, NULL,
+            io.Fonts->GetGlyphRangesJapanese());
+    }
+
     return 0;
 }
 

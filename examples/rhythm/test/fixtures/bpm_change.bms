@@ -1,0 +1,18 @@
+*---------------------- HEADER FIELD
+#PLAYER 1
+#GENRE Test
+#TITLE BPM Change Test
+#ARTIST mane3d
+#BPM 120
+#PLAYLEVEL 1
+
+#WAV01 test_kick.wav
+#WAV02 test_snare.wav
+#BPM01 180
+
+*---------------------- MAIN DATA FIELD
+
+#00011:01
+#00108:01
+#00111:02
+#00211:01

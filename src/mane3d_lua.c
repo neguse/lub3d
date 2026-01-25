@@ -19,6 +19,9 @@ extern int luaopen_sokol_audio(lua_State *L);
 extern int luaopen_sokol_shape(lua_State *L);
 extern int luaopen_mane3d_licenses(lua_State *L);
 extern int luaopen_stb_image(lua_State *L);
+extern int luaopen_miniaudio(lua_State *L);
+extern int luaopen_lfs(lua_State *L);
+extern int luaopen_mane3d_encoding(lua_State *L);
 
 #ifdef MANE3D_HAS_SHDC
 extern int luaopen_shdc(lua_State *L);
@@ -115,6 +118,12 @@ void mane3d_lua_register_all(lua_State *L)
     luaL_requiref(L, "mane3d.licenses", luaopen_mane3d_licenses, 0);
     lua_pop(L, 1);
     luaL_requiref(L, "stb.image", luaopen_stb_image, 0);
+    lua_pop(L, 1);
+    luaL_requiref(L, "miniaudio", luaopen_miniaudio, 0);
+    lua_pop(L, 1);
+    luaL_requiref(L, "lfs", luaopen_lfs, 0);
+    lua_pop(L, 1);
+    luaL_requiref(L, "mane3d.encoding", luaopen_mane3d_encoding, 0);
     lua_pop(L, 1);
 
     /* Export get_mtime to Lua for hot reload */

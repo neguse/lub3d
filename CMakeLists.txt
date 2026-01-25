@@ -141,11 +141,18 @@ if(Python3_FOUND)
     )
 endif()
 
+# LuaFileSystem
+add_library(lfs STATIC deps/luafilesystem/src/lfs.c)
+target_include_directories(lfs PRIVATE ${LUA_INCLUDE})
+target_link_libraries(lfs PRIVATE ${LUA_TARGET})
+
 # mane3d sources
 set(MANE3D_SOURCES
     src/sokol_impl.c
     src/stb_image_lua.c
     src/mane3d_lua.c
+    src/miniaudio_lua.c
+    src/encoding_lua.c
     ${MANE3D_GENERATED}
 )
 
@@ -165,10 +172,11 @@ target_include_directories(mane3d
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio
 )
 
-# Link Lua
-target_link_libraries(mane3d PUBLIC ${LUA_TARGET})
+# Link Lua and LuaFileSystem
+target_link_libraries(mane3d PUBLIC ${LUA_TARGET} lfs)
 
 # Backend selection for sokol_impl.c
 if(MANE3D_BACKEND_DUMMY)

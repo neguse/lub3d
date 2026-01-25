@@ -22,3 +22,6 @@
 [submodule "deps/bc7enc_rdo"]
 	path = deps/bc7enc_rdo
 	url = https://github.com/richgel999/bc7enc_rdo
+[submodule "deps/luafilesystem"]
+	path = deps/luafilesystem
+	url = https://github.com/lunarmodules/luafilesystem
