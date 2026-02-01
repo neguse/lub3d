@@ -1,5 +1,5 @@
 -- hello.lua - Minimal example demonstrating Lua entry point architecture
--- Lua script calls app.run() directly - no C callbacks needed
+-- Lua script calls app.Run() directly - no C callbacks needed
 
 local app = require("sokol.app")
 local gfx = require("sokol.gfx")
@@ -8,17 +8,17 @@ local gl = require("sokol.gl")
 
 local frame_count = 0
 
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Hello Mane3D (Lua Entry Point)",
 
     init_cb = function()
         -- Initialize graphics in init_cb (window is ready here)
-        gfx.setup(gfx.Desc({
-            environment = glue.environment(),
+        gfx.Setup(gfx.Desc({
+            environment = glue.Environment(),
         }))
-        gl.setup(gl.Desc({}))
+        gl.Setup(gl.Desc({}))
         print("init_cb: graphics initialized")
     end,
 
@@ -31,7 +31,7 @@ app.run(app.Desc({
         local g = (math.sin(t + 2) + 1) / 2
         local b = (math.sin(t + 4) + 1) / 2
 
-        gfx.begin_pass(gfx.Pass({
+        gfx.BeginPass(gfx.Pass({
             action = gfx.PassAction({
                 colors = {
                     gfx.ColorAttachmentAction({
@@ -40,35 +40,35 @@ app.run(app.Desc({
                     }),
                 },
             }),
-            swapchain = glue.swapchain(),
+            swapchain = glue.Swapchain(),
         }))
 
         -- Draw a simple triangle using sokol.gl
-        gl.defaults()
-        gl.matrix_mode_projection()
-        gl.ortho(-1, 1, -1, 1, -1, 1)
+        gl.Defaults()
+        gl.MatrixModeProjection()
+        gl.Ortho(-1, 1, -1, 1, -1, 1)
 
-        gl.begin_triangles()
-        gl.v2f_c3f(0.0, 0.5, 1.0, 0.0, 0.0)
-        gl.v2f_c3f(-0.5, -0.5, 0.0, 1.0, 0.0)
-        gl.v2f_c3f(0.5, -0.5, 0.0, 0.0, 1.0)
-        gl.end_()
+        gl.BeginTriangles()
+        gl.V2fC3f(0.0, 0.5, 1.0, 0.0, 0.0)
+        gl.V2fC3f(-0.5, -0.5, 0.0, 1.0, 0.0)
+        gl.V2fC3f(0.5, -0.5, 0.0, 0.0, 1.0)
+        gl.End()
 
-        gl.draw()
-        gfx.end_pass()
-        gfx.commit()
+        gl.Draw()
+        gfx.EndPass()
+        gfx.Commit()
     end,
 
     cleanup_cb = function()
         print("cleanup_cb: shutting down")
-        gl.shutdown()
-        gfx.shutdown()
+        gl.Shutdown()
+        gfx.Shutdown()
     end,
 
     event_cb = function(ev)
         if ev.type == app.EventType.KEY_DOWN then
             if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
-                app.quit()
+                app.Quit()
             end
         end
     end,

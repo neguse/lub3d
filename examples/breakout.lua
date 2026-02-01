@@ -177,8 +177,8 @@ local function init_game()
     log.info("3D Block Breaker starting...")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
@@ -202,7 +202,7 @@ local function init_game()
         return
     end
 
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -219,19 +219,19 @@ local function init_game()
         primitive_type = gfx.PrimitiveType.TRIANGLES,
     }))
 
-    if gfx.query_pipeline_state(pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
         log.error("Pipeline creation failed!")
         return
     end
 
     -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
     local vertices = make_cube_vertices()
-    vbuf = gfx.make_buffer(gfx.BufferDesc({
+    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         data = gfx.Range(util.pack_floats(vertices))
     }))
 
     local indices = make_cube_indices()
-    ibuf = gfx.make_buffer(gfx.BufferDesc({
+    ibuf = gfx.MakeBuffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(pack_indices(indices))
     }))
@@ -340,8 +340,8 @@ local function draw_cube(proj, view, pos, scale, color)
     local model = glm.translate(pos) * glm.scale(scale)
     local mvp = proj * view * model
 
-    gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
-    gfx.draw(0, 36, 1)
+    gfx.ApplyUniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
+    gfx.Draw(0, 36, 1)
 end
 
 local function update_frame()
@@ -365,7 +365,7 @@ local function update_frame()
     update_game_logic(dt)
 
     -- Camera setup
-    local aspect = app.widthf() / app.heightf()
+    local aspect = app.Widthf() / app.Heightf()
     local proj = glm.perspective(glm.radians(45), aspect, 0.1, 100.0)
     local view = glm.lookat(
         glm.vec3(0, -5, 18),
@@ -374,7 +374,7 @@ local function update_frame()
     )
 
     -- Begin render pass
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
@@ -385,11 +385,11 @@ local function update_frame()
                 clear_value = 1.0
             }
         }),
-        swapchain = glue.swapchain()
+        swapchain = glue.Swapchain()
     }))
 
-    gfx.apply_pipeline(pipeline)
-    gfx.apply_bindings(gfx.Bindings({
+    gfx.ApplyPipeline(pipeline)
+    gfx.ApplyBindings(gfx.Bindings({
         vertex_buffers = { vbuf },
         index_buffer = ibuf
     }))
@@ -415,19 +415,19 @@ local function update_frame()
         end
     end
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 local function handle_event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         keys_down[ev.key_code] = true
         if ev.key_code == app.Keycode.Q then
-            app.quit()
+            app.Quit()
         end
         if ev.key_code == app.Keycode.R then
             -- Reset game
@@ -445,7 +445,7 @@ local function handle_event(ev)
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - 3D Breakout",

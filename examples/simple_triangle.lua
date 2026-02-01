@@ -61,12 +61,12 @@ local function init_game()
     log.info("Simple triangle example init")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Setup ImGui
-    imgui.setup()
+    imgui.Setup()
 
     -- Create triangle vertex buffer
     -- Each vertex: pos (x, y), color (r, g, b)
@@ -77,7 +77,7 @@ local function init_game()
         -0.5, -0.5,     0.0, 0.0, 1.0,  -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
-    vbuf = gfx.make_buffer(gfx.BufferDesc({
+    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         data = gfx.Range(data),
     }))
 
@@ -105,7 +105,7 @@ local function init_game()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -119,7 +119,7 @@ local function init_game()
 end
 
 local function update_frame()
-    imgui.new_frame()
+    imgui.NewFrame()
 
     -- Update rotation
     if auto_rotate then
@@ -127,19 +127,19 @@ local function update_frame()
     end
 
     -- === RENDER PASS ===
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = {{
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 },
             }},
         }),
-        swapchain = glue.swapchain(),
+        swapchain = glue.Swapchain(),
     }))
 
-    gfx.apply_pipeline(pipeline)
+    gfx.ApplyPipeline(pipeline)
 
-    gfx.apply_bindings(gfx.Bindings({
+    gfx.ApplyBindings(gfx.Bindings({
         vertex_buffers = { vbuf },
     }))
 
@@ -149,47 +149,47 @@ local function update_frame()
         triangle_color[1], triangle_color[2], triangle_color[3], 1.0,
         rotation, 0.0, 0.0, 0.0
     )
-    gfx.apply_uniforms(0, gfx.Range(uniform_data))
+    gfx.ApplyUniforms(0, gfx.Range(uniform_data))
 
-    gfx.draw(0, 3, 1)
+    gfx.Draw(0, 3, 1)
 
     -- ImGui UI
     if imgui.begin("Triangle Controls") then
         imgui.text_unformatted("Simple Triangle Example")
-        imgui.separator()
+        imgui.Separator()
 
-        local clicked, new_val = imgui.checkbox("Auto Rotate", auto_rotate)
+        local clicked, new_val = imgui.Checkbox("Auto Rotate", auto_rotate)
         if clicked then auto_rotate = new_val end
 
-        local changed, new_speed = imgui.slider_float("Rotation Speed", rotation_speed, 0.0, 5.0)
+        local changed, new_speed = imgui.SliderFloat("Rotation Speed", rotation_speed, 0.0, 5.0)
         if changed then rotation_speed = new_speed end
 
         if not auto_rotate then
-            local rot_changed, new_rot = imgui.slider_float("Rotation", rotation, 0.0, 6.28318)
+            local rot_changed, new_rot = imgui.SliderFloat("Rotation", rotation, 0.0, 6.28318)
             if rot_changed then rotation = new_rot end
         end
 
-        imgui.separator()
+        imgui.Separator()
 
         local col_changed, new_col = imgui.color_edit3("Tint Color", triangle_color)
         if col_changed then
             triangle_color = new_col
         end
 
-        imgui.separator()
+        imgui.Separator()
         imgui.text_unformatted(string.format("Rotation: %.2f rad", rotation))
     end
-    imgui.end_()
+    imgui.End_()
 
-    imgui.render()
+    imgui.Render()
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    imgui.shutdown()
-    gfx.shutdown()
+    imgui.Shutdown()
+    gfx.Shutdown()
     log.info("cleanup")
 end
 
@@ -202,13 +202,13 @@ local function handle_event(ev)
     -- ESC to quit
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE then
-            app.request_quit()
+            app.RequestQuit()
         end
     end
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Simple Triangle with ImGui",

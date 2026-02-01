@@ -252,8 +252,8 @@ local function init_game()
     log.info("Lighting example init")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Compile shader
@@ -285,7 +285,7 @@ local function init_game()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -306,11 +306,11 @@ local function init_game()
     local cube_verts = make_cube_vertices()
     local cube_indices = make_cube_indices()
 
-    cube_vbuf = gfx.make_buffer(gfx.BufferDesc({
+    cube_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         data = gfx.Range(util.pack_floats(cube_verts)),
     }))
 
-    cube_ibuf = gfx.make_buffer(gfx.BufferDesc({
+    cube_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(pack_indices(cube_indices)),
     }))
@@ -323,11 +323,11 @@ local function init_game()
     local sphere_verts, segs, rings = make_sphere_vertices(24, 12)
     local sphere_indices = make_sphere_indices(segs, rings)
 
-    sphere_vbuf = gfx.make_buffer(gfx.BufferDesc({
+    sphere_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         data = gfx.Range(util.pack_floats(sphere_verts)),
     }))
 
-    sphere_ibuf = gfx.make_buffer(gfx.BufferDesc({
+    sphere_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(pack_indices(sphere_indices)),
     }))
@@ -366,8 +366,8 @@ local function update_frame()
     )
 
     -- Matrices
-    local w = app.width()
-    local h = app.height()
+    local w = app.Width()
+    local h = app.Height()
     local aspect = w / h
 
     local proj = glm.perspective(math.rad(60), aspect, 0.1, 100)
@@ -379,7 +379,7 @@ local function update_frame()
     camera_pos = eye  -- for lighting calculation
 
     -- Begin pass
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = {{
                 load_action = gfx.LoadAction.CLEAR,
@@ -390,13 +390,13 @@ local function update_frame()
                 clear_value = 1.0
             },
         }),
-        swapchain = glue.swapchain(),
+        swapchain = glue.Swapchain(),
     }))
 
-    gfx.apply_pipeline(pipeline)
+    gfx.ApplyPipeline(pipeline)
 
     -- Draw spheres (better for showing Fresnel)
-    gfx.apply_bindings(gfx.Bindings({
+    gfx.ApplyBindings(gfx.Bindings({
         vertex_buffers = { sphere_vbuf },
         index_buffer = sphere_ibuf,
     }))
@@ -432,8 +432,8 @@ local function update_frame()
             0.3, 0.3, 0.3, 64,  -- specular + shininess
         })
 
-        gfx.apply_uniforms(0, gfx.Range(uniforms))
-        gfx.draw(0, sphere_data.index_count, 1)
+        gfx.ApplyUniforms(0, gfx.Range(uniforms))
+        gfx.Draw(0, sphere_data.index_count, 1)
     end
 
     -- Draw light indicator (small bright sphere)
@@ -449,11 +449,11 @@ local function update_frame()
         0, 0, 0, 1,
     })
 
-    gfx.apply_uniforms(0, gfx.Range(uniforms))
-    gfx.draw(0, sphere_data.index_count, 1)
+    gfx.ApplyUniforms(0, gfx.Range(uniforms))
+    gfx.Draw(0, sphere_data.index_count, 1)
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function handle_event(ev)
@@ -462,8 +462,8 @@ local function handle_event(ev)
         local key = ev.key_code
         if key == app.Keycode.ESCAPE then
             mouse_captured = false
-            app.show_mouse(true)
-            app.lock_mouse(false)
+            app.ShowMouse(true)
+            app.LockMouse(false)
         elseif key == app.Keycode.W then keys_down["W"] = true
         elseif key == app.Keycode.S then keys_down["S"] = true
         elseif key == app.Keycode.A then keys_down["A"] = true
@@ -482,8 +482,8 @@ local function handle_event(ev)
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
-        app.show_mouse(false)
-        app.lock_mouse(true)
+        app.ShowMouse(false)
+        app.LockMouse(true)
     elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
             local dx = ev.mouse_dx
@@ -496,12 +496,12 @@ local function handle_event(ev)
 end
 
 local function cleanup_game()
-    gfx.shutdown()
+    gfx.Shutdown()
     log.info("Lighting cleanup")
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 1280,
     height = 720,
     window_title = "Mane3D - Lighting",

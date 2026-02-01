@@ -162,7 +162,7 @@ local mix_buffer = {}
 local function audio_callback()
     if not initialized or not audio then return end
 
-    local num_frames = audio.expect()
+    local num_frames = audio.Expect()
     if num_frames <= 0 then return end
     -- Limit to packet size to avoid overflow
     if num_frames > PACKET_FRAMES then
@@ -224,7 +224,7 @@ local function audio_callback()
     end
 
     if #float_data > 0 then
-        audio.push(table.concat(float_data), num_frames)
+        audio.Push(table.concat(float_data), num_frames)
     end
 end
 
@@ -244,7 +244,7 @@ function M.init()
     end
 
     -- Initialize sokol.audio from Lua
-    audio.setup(audio.Desc({
+    audio.Setup(audio.Desc({
         sample_rate = SAMPLE_RATE,
         num_channels = NUM_CHANNELS,
         buffer_frames = BUFFER_FRAMES,
@@ -252,7 +252,7 @@ function M.init()
         num_packets = 4,
     }))
 
-    if not audio.isvalid() then
+    if not audio.Isvalid() then
         log.error("Failed to initialize audio")
         return false
     end
@@ -285,7 +285,7 @@ end
 -- Cleanup audio system
 function M.cleanup()
     if audio and initialized then
-        audio.shutdown()
+        audio.Shutdown()
     end
     initialized = false
     sounds = {}

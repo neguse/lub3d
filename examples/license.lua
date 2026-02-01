@@ -9,11 +9,11 @@ local license_text = ""
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
-    imgui.setup()
+    imgui.Setup()
 
     -- Build license text
     local parts = { "=== Mane3D Third-Party Licenses ===\n\n" }
@@ -34,20 +34,20 @@ local function init_game()
 end
 
 local function update_frame()
-    local w = app.width()
-    local h = app.height()
+    local w = app.Width()
+    local h = app.Height()
 
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = {{
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
             }}
         }),
-        swapchain = glue.swapchain()
+        swapchain = glue.Swapchain()
     }))
 
-    imgui.new_frame()
+    imgui.NewFrame()
 
     imgui.set_next_window_pos({w * 0.1, h * 0.05})
     imgui.set_next_window_size({w * 0.8, h * 0.9})
@@ -55,16 +55,16 @@ local function update_frame()
     if imgui.begin("Mane3D Licenses", nil, 38) then
         imgui.text_unformatted(license_text)
     end
-    imgui.end_()
+    imgui.End_()
 
-    imgui.render()
-    gfx.end_pass()
-    gfx.commit()
+    imgui.Render()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    imgui.shutdown()
-    gfx.shutdown()
+    imgui.Shutdown()
+    gfx.Shutdown()
 end
 
 local function handle_event(ev)
@@ -72,7 +72,7 @@ local function handle_event(ev)
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 1024,
     height = 768,
     window_title = "Mane3D - Licenses",

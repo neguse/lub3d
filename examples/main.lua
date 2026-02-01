@@ -42,8 +42,8 @@ void main() {
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Log license information
@@ -58,7 +58,7 @@ local function init_game()
         return
     end
 
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -69,13 +69,13 @@ local function init_game()
         primitive_type = gfx.PrimitiveType.TRIANGLES,
     }))
 
-    if gfx.query_pipeline_state(pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
         log.log("Pipeline creation failed!")
         return
     end
 
     -- Stream buffer for animated vertices
-    vbuf = gfx.make_buffer(gfx.BufferDesc({
+    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         size = 18 * 4, -- 18 floats
         usage = { vertex_buffer = true, stream_update = true }
     }))
@@ -101,37 +101,37 @@ local function update_frame()
         table.insert(vertices, b)
         table.insert(vertices, 1.0)
     end
-    gfx.update_buffer(vbuf, gfx.Range(util.pack_floats(vertices)))
+    gfx.UpdateBuffer(vbuf, gfx.Range(util.pack_floats(vertices)))
 
     -- Render
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.2, a = 1.0 }
             } }
         }),
-        swapchain = glue.swapchain()
+        swapchain = glue.Swapchain()
     }))
-    gfx.apply_pipeline(pipeline)
-    gfx.apply_bindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
-    gfx.draw(0, 3, 1)
-    gfx.end_pass()
-    gfx.commit()
+    gfx.ApplyPipeline(pipeline)
+    gfx.ApplyBindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
+    gfx.Draw(0, 3, 1)
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 local function handle_event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
-        app.quit()
+        app.Quit()
     end
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Triangle",

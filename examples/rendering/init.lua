@@ -35,12 +35,12 @@ local imgui_pass = {
             action = gfx.PassAction({
                 colors = { { load_action = gfx.LoadAction.LOAD } },
             }),
-            swapchain = glue.swapchain(),
+            swapchain = glue.Swapchain(),
         })
     end,
     execute = function()
-        notify.draw(app.width(), app.height())
-        imgui.render()
+        notify.draw(app.Width(), app.Height())
+        imgui.Render()
     end,
 }
 
@@ -48,10 +48,10 @@ local imgui_pass = {
 local function update_ui()
     if imgui.begin("Rendering") then
         imgui.text_unformatted("Modular Rendering Pipeline")
-        imgui.separator()
+        imgui.Separator()
         imgui.text_unformatted(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
         imgui.text_unformatted("WASD: Move, Mouse: Look (right-click to capture)")
-        imgui.separator()
+        imgui.Separator()
 
         -- Global ambient
         local achanged, new_ambient = imgui.color_edit3("Global Ambient",
@@ -63,19 +63,19 @@ local function update_ui()
         imgui.text_unformatted(string.format("Active Lights: %d / %d", #light.sources, light.NUMBER_OF_LIGHTS))
 
         -- Blinn-Phong toggle
-        local bp_changed, bp_new = imgui.checkbox("Blinn-Phong", light.blinn_phong_enabled)
+        local bp_changed, bp_new = imgui.Checkbox("Blinn-Phong", light.blinn_phong_enabled)
         if bp_changed then light.blinn_phong_enabled = bp_new end
 
-        local fr_changed, fr_new = imgui.checkbox("Fresnel", light.fresnel_enabled)
+        local fr_changed, fr_new = imgui.Checkbox("Fresnel", light.fresnel_enabled)
         if fr_changed then light.fresnel_enabled = fr_new end
 
         if light.fresnel_enabled then
-            imgui.same_line()
-            local fp_changed, fp = imgui.slider_float("Max Power", light.max_fresnel_power, 0.1, 10.0)
+            imgui.SameLine()
+            local fp_changed, fp = imgui.SliderFloat("Max Power", light.max_fresnel_power, 0.1, 10.0)
             if fp_changed then light.max_fresnel_power = fp end
         end
 
-        local rl_changed, rl_new = imgui.checkbox("Rim Light", light.rim_light_enabled)
+        local rl_changed, rl_new = imgui.Checkbox("Rim Light", light.rim_light_enabled)
         if rl_changed then light.rim_light_enabled = rl_new end
 
         -- Debug mode
@@ -86,30 +86,30 @@ local function update_ui()
                     light.debug_mode = i - 1
                 end
             end
-            imgui.tree_pop()
+            imgui.TreePop()
         end
 
         -- Animation controls
         if imgui.tree_node_str("Day/Night Cycle") then
-            local anim_changed, anim_new = imgui.checkbox("Animate", light.animate_enabled)
+            local anim_changed, anim_new = imgui.Checkbox("Animate", light.animate_enabled)
             if anim_changed then light.animate_enabled = anim_new end
 
-            local pitch_changed, pitch = imgui.slider_float("Sun Angle", light.sun_pitch, 0, 360)
+            local pitch_changed, pitch = imgui.SliderFloat("Sun Angle", light.sun_pitch, 0, 360)
             if pitch_changed then
                 light.sun_pitch = pitch
                 light.animate(0)
             end
 
-            local speed_changed, speed = imgui.slider_float("Speed", light.animation_speed, 0, 100)
+            local speed_changed, speed = imgui.SliderFloat("Speed", light.animation_speed, 0, 100)
             if speed_changed then
                 light.animation_speed = speed
             end
 
-            if imgui.button("Midday") then light.set_time("midday") end
-            imgui.same_line()
-            if imgui.button("Midnight") then light.set_time("midnight") end
+            if imgui.Button("Midday") then light.set_time("midday") end
+            imgui.SameLine()
+            if imgui.Button("Midnight") then light.set_time("midnight") end
 
-            imgui.tree_pop()
+            imgui.TreePop()
         end
 
         -- Edit each light
@@ -143,7 +143,7 @@ local function update_ui()
                             src.spot_direction = glm.vec4(dir.x, dir.y, dir.z, src.spot_direction.w)
                         end
 
-                        local expchanged, exp = imgui.slider_float("Exponent", src.spot_direction.w, 0, 20)
+                        local expchanged, exp = imgui.SliderFloat("Exponent", src.spot_direction.w, 0, 20)
                         if expchanged then
                             src.spot_direction = glm.vec4(src.spot_direction.x, src.spot_direction.y, src.spot_direction.z, exp)
                         end
@@ -166,11 +166,11 @@ local function update_ui()
                     src.specular = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
                 end
 
-                imgui.tree_pop()
+                imgui.TreePop()
             end
         end
     end
-    imgui.end_()
+    imgui.End_()
 end
 
 local function load_model()
@@ -400,17 +400,17 @@ end
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     log.info("Rendering Pipeline init")
-    imgui.setup()
+    imgui.Setup()
     notify.setup()
 
     ctx.init()
 
-    local width, height = app.width(), app.height()
+    local width, height = app.Width(), app.Height()
     ctx.ensure_size(width, height)
 
     -- Register passes
@@ -424,7 +424,7 @@ end
 local function update_frame()
     hotreload.update()
 
-    local width, height = app.width(), app.height()
+    local width, height = app.Width(), app.Height()
     ctx.ensure_size(width, height)
 
     -- Camera update
@@ -433,11 +433,11 @@ local function update_frame()
     local proj = camera.projection_matrix(width, height)
     local model_mat = glm.mat4()
 
-    -- Animate lights (uses app.frame_duration for delta time)
-    local dt = app.frame_duration()
+    -- Animate lights (uses app.FrameDuration for delta time)
+    local dt = app.FrameDuration()
     light.animate(dt)
 
-    imgui.new_frame()
+    imgui.NewFrame()
     update_ui()
 
     -- Reset outputs
@@ -457,7 +457,7 @@ local function update_frame()
 end
 
 local function cleanup_game()
-    imgui.shutdown()
+    imgui.Shutdown()
     notify.shutdown()
 
     -- Destroy pipeline and passes
@@ -492,7 +492,7 @@ local function cleanup_game()
     default_specular = nil
 
     log.info("cleanup")
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 local function handle_event(ev)
@@ -505,12 +505,12 @@ local function handle_event(ev)
     end
 
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.ESCAPE then
-        app.request_quit()
+        app.RequestQuit()
     end
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 1280,
     height = 720,
     window_title = "Mane3D - Rendering Pipeline",

@@ -222,16 +222,16 @@ local function create_default_texture(r, g, b)
         math.floor(b * 255),
         255
     )
-    local img = gfx.make_image(gfx.ImageDesc({
+    local img = gfx.MakeImage(gfx.ImageDesc({
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { pixels } },
     }))
-    local view = gfx.make_view(gfx.ViewDesc({
+    local view = gfx.MakeView(gfx.ViewDesc({
         texture = { image = img },
     }))
-    local smp = gfx.make_sampler(gfx.SamplerDesc({
+    local smp = gfx.MakeSampler(gfx.SamplerDesc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
     }))
@@ -243,8 +243,8 @@ local default_normal_view, default_normal_smp
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     log.info("Model loading example init")
@@ -298,7 +298,7 @@ local function init_game()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -335,7 +335,7 @@ local function init_game()
             local verts_with_tangents = add_tangents(mesh.vertices)
 
             if #verts_with_tangents > 0 then
-                local vbuf = gfx.make_buffer(gfx.BufferDesc({
+                local vbuf = gfx.MakeBuffer(gfx.BufferDesc({
                     data = gfx.Range(util.pack_floats(verts_with_tangents)),
                 }))
 
@@ -413,8 +413,8 @@ local function update_frame()
     if keys_down["Q"] or keys_down["LEFT_SHIFT"] then camera_pos = camera_pos - camera_up * move_speed end
 
     -- Matrices
-    local w = app.width()
-    local h = app.height()
+    local w = app.Width()
+    local h = app.Height()
     local aspect = w / h
 
     local proj = glm.perspective(math.rad(60), aspect, 0.1, 500)
@@ -424,7 +424,7 @@ local function update_frame()
     local model = glm.mat4()  -- identity
 
     -- Begin pass
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = {{
                 load_action = gfx.LoadAction.CLEAR,
@@ -435,16 +435,16 @@ local function update_frame()
                 clear_value = 1.0
             },
         }),
-        swapchain = glue.swapchain(),
+        swapchain = glue.Swapchain(),
     }))
 
-    gfx.apply_pipeline(pipeline)
+    gfx.ApplyPipeline(pipeline)
 
     local mvp = proj * view * model
 
     -- Draw all meshes
     for _, mesh in ipairs(meshes) do
-        gfx.apply_bindings(gfx.Bindings({
+        gfx.ApplyBindings(gfx.Bindings({
             vertex_buffers = { mesh.vbuf },
             views = { mesh.diffuse_view, mesh.normal_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp },
@@ -459,12 +459,12 @@ local function update_frame()
             mat.diffuse[1], mat.diffuse[2], mat.diffuse[3], mat.shininess or 32,
         })
 
-        gfx.apply_uniforms(0, gfx.Range(uniforms))
-        gfx.draw(0, mesh.vertex_count, 1)
+        gfx.ApplyUniforms(0, gfx.Range(uniforms))
+        gfx.Draw(0, mesh.vertex_count, 1)
     end
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local event_logged = false
@@ -479,8 +479,8 @@ local function handle_event(ev)
         log.info("KEY_DOWN: " .. tostring(key))
         if key == app.Keycode.ESCAPE then
             mouse_captured = false
-            app.show_mouse(true)
-            app.lock_mouse(false)
+            app.ShowMouse(true)
+            app.LockMouse(false)
         elseif key == app.Keycode.W then keys_down["W"] = true
         elseif key == app.Keycode.S then keys_down["S"] = true
         elseif key == app.Keycode.A then keys_down["A"] = true
@@ -503,8 +503,8 @@ local function handle_event(ev)
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
-        app.show_mouse(false)
-        app.lock_mouse(true)
+        app.ShowMouse(false)
+        app.LockMouse(true)
     elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
             local dx = ev.mouse_dx
@@ -526,11 +526,11 @@ local function cleanup_game()
     textures_cache = {}
 
     log.info("Model cleanup")
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 1024,
     height = 768,
     window_title = "Mane3D - Model Loading",
