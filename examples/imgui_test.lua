@@ -23,8 +23,8 @@ local function update_frame()
     imgui.NewFrame()
 
     -- Main debug window
-    if imgui.begin("Debug Menu") then
-        imgui.text_unformatted("Mane3D ImGui Test")
+    if imgui.Begin("Debug Menu") then
+        imgui.TextUnformatted("Mane3D ImGui Test")
         imgui.Separator()
 
         local clicked, new_val = imgui.Checkbox("Enable Feature", checkbox_val)
@@ -33,7 +33,7 @@ local function update_frame()
         local changed, new_slider = imgui.SliderFloat("Value", slider_val, 0.0, 1.0)
         if changed then slider_val = new_slider end
 
-        local col_changed, new_col = imgui.color_edit3("Color", color)
+        local col_changed, new_col = imgui.ColorEdit3("Color", color)
         if col_changed then color = new_col end
 
         imgui.Separator()
@@ -41,7 +41,7 @@ local function update_frame()
             show_demo = not show_demo
         end
     end
-    imgui.End_()
+    imgui.End()
 
     if show_demo then
         local open = imgui.ShowDemoWindow(show_demo)
@@ -64,7 +64,7 @@ local function update_frame()
 end
 
 local function handle_event(ev)
-    imgui.handle_event(ev)
+    imgui.HandleEvent(ev)
 end
 
 local function cleanup_game()

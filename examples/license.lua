@@ -49,13 +49,13 @@ local function update_frame()
 
     imgui.NewFrame()
 
-    imgui.set_next_window_pos({w * 0.1, h * 0.05})
-    imgui.set_next_window_size({w * 0.8, h * 0.9})
+    imgui.SetNextWindowPos({w * 0.1, h * 0.05})
+    imgui.SetNextWindowSize({w * 0.8, h * 0.9})
     -- flags: NoResize(2) + NoMove(4) + NoCollapse(32) = 38
-    if imgui.begin("Mane3D Licenses", nil, 38) then
-        imgui.text_unformatted(license_text)
+    if imgui.Begin("Mane3D Licenses", nil, 38) then
+        imgui.TextUnformatted(license_text)
     end
-    imgui.End_()
+    imgui.End()
 
     imgui.Render()
     gfx.EndPass()
@@ -68,7 +68,7 @@ local function cleanup_game()
 end
 
 local function handle_event(ev)
-    imgui.handle_event(ev)
+    imgui.HandleEvent(ev)
 end
 
 -- Run the application

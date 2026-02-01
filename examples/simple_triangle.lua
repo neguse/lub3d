@@ -154,8 +154,8 @@ local function update_frame()
     gfx.Draw(0, 3, 1)
 
     -- ImGui UI
-    if imgui.begin("Triangle Controls") then
-        imgui.text_unformatted("Simple Triangle Example")
+    if imgui.Begin("Triangle Controls") then
+        imgui.TextUnformatted("Simple Triangle Example")
         imgui.Separator()
 
         local clicked, new_val = imgui.Checkbox("Auto Rotate", auto_rotate)
@@ -171,15 +171,15 @@ local function update_frame()
 
         imgui.Separator()
 
-        local col_changed, new_col = imgui.color_edit3("Tint Color", triangle_color)
+        local col_changed, new_col = imgui.ColorEdit3("Tint Color", triangle_color)
         if col_changed then
             triangle_color = new_col
         end
 
         imgui.Separator()
-        imgui.text_unformatted(string.format("Rotation: %.2f rad", rotation))
+        imgui.TextUnformatted(string.format("Rotation: %.2f rad", rotation))
     end
-    imgui.End_()
+    imgui.End()
 
     imgui.Render()
 
@@ -195,7 +195,7 @@ end
 
 local function handle_event(ev)
     -- Let ImGui handle events first
-    if imgui.handle_event(ev) then
+    if imgui.HandleEvent(ev) then
         return
     end
 
