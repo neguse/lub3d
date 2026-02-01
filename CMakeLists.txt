@@ -128,6 +128,17 @@ if(Python3_FOUND)
             --bindgen ${BINDGEN_DIR}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/bindings/sokol.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/__init__.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/ir.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/types.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/codegen.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/struct.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/func.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/callback.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/enum.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/luacats.py
+                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/generator.py
         COMMENT "Generating Lua bindings..."
     )
 
