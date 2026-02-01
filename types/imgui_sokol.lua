@@ -20,6 +20,6 @@ function imgui.Render() end
 ---Handle a sokol app event
 ---@param event table sokol_app event
 ---@return boolean handled Whether the event was handled by imgui
-function imgui.handle_event(event) end
+function imgui.HandleEvent(event) end
 
 return imgui
