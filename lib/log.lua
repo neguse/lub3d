@@ -4,15 +4,15 @@ local slog = require("sokol.log")
 local M = {}
 
 function M.info(msg)
-    slog.func("lua", 3, 0, msg, 0, "", nil)
+    slog.Func("lua", 3, 0, msg, 0, "", nil)
 end
 
 function M.warn(msg)
-    slog.func("lua", 2, 0, msg, 0, "", nil)
+    slog.Func("lua", 2, 0, msg, 0, "", nil)
 end
 
 function M.error(msg)
-    slog.func("lua", 1, 0, msg, 0, "", nil)
+    slog.Func("lua", 1, 0, msg, 0, "", nil)
 end
 
 -- Alias for backward compatibility

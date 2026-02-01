@@ -112,7 +112,7 @@ function M.load(filename, opts)
         data = { mip_levels = { data.pixels } },
     }))
 
-    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
+    if gfx.QueryImageState(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create image"
     end
 
@@ -206,7 +206,7 @@ function M.load_bc7(filename, opts)
         data = { mip_levels = { compressed } },
     }))
 
-    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
+    if gfx.QueryImageState(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create BC7 image"
     end
 
