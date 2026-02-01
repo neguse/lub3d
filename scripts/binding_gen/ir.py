@@ -38,6 +38,8 @@ class ParamInfo:
     """Function parameter information"""
     name: str
     type: str
+    has_default: bool = False  # Parameter has default value
+    is_out: bool = False       # Output parameter (non-const pointer)
 
 
 @dataclass
@@ -47,6 +49,9 @@ class FuncInfo:
     type: str  # Full function type signature
     params: list[ParamInfo]
     comment: str = ""
+    is_vararg: bool = False     # Variadic function (...)
+    has_overloads: bool = False # Has overloaded variants
+    namespace: str = ""         # Namespace (e.g., "ImGui")
 
     @property
     def return_type(self) -> str:
@@ -169,12 +174,17 @@ class IR:
             params.append(ParamInfo(
                 name=p['name'],
                 type=p['type'],
+                has_default=p.get('has_default', False),
+                is_out=p.get('is_out', False),
             ))
         return FuncInfo(
             name=decl['name'],
             type=decl['type'],
             params=params,
             comment=decl.get('comment', ''),
+            is_vararg=decl.get('is_vararg', False),
+            has_overloads=decl.get('has_overloads', False),
+            namespace=decl.get('namespace', ''),
         )
 
     @staticmethod
