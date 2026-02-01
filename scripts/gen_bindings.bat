@@ -25,4 +25,4 @@ if not exist "%CLANGPP%" (
 echo Using clang: %CLANGPP%
 
 :: Run the binding generator
-python "%~dp0sokol_bindings.py" %*
+python "%~dp0gen_lua.py" --imgui "%~dp0..\deps\imgui" %*

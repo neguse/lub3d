@@ -5,7 +5,7 @@ gen_lua.py - Lua binding generator entry point
 Generates Lua bindings for all configured libraries.
 
 Usage:
-    python scripts/gen_lua.py [--bindgen PATH] [--sokol PATH]
+    python scripts/gen_lua.py [--bindgen PATH] [--sokol PATH] [--imgui PATH]
 """
 
 import argparse
@@ -22,6 +22,8 @@ parser.add_argument('--bindgen', default=os.path.join(root_dir, 'deps/sokol/bind
                     help='Path to sokol/bindgen directory')
 parser.add_argument('--sokol', default=os.path.join(root_dir, 'deps/sokol'),
                     help='Path to sokol directory (for headers)')
+parser.add_argument('--imgui', default=None,
+                    help='Path to imgui directory (optional)')
 args = parser.parse_args()
 
 # Add CLANGPP directory to PATH for gen_ir.py
@@ -52,13 +54,22 @@ def generate_sokol():
     gen.generate_all()
 
 
+def generate_imgui():
+    """Generate ImGui bindings"""
+    from bindings import imgui
+    imgui.generate(
+        imgui_root=args.imgui,
+        output_root=root_dir,
+    )
+
+
 def main():
-    # Generate all bindings
+    # Generate Sokol bindings (always)
     generate_sokol()
 
-    # Future: add more generators here
-    # generate_imgui()
-    # generate_jolt()
+    # Generate ImGui bindings (if path provided)
+    if args.imgui:
+        generate_imgui()
 
 
 if __name__ == '__main__':
