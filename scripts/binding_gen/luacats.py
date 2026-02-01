@@ -99,7 +99,15 @@ class LuaCATSGenerator:
     def _gen_constructor_field(self, struct: 'StructInfo') -> str:
         """Generate constructor field for module class"""
         struct_name = as_pascal_case(struct.name, self.prefix)
-        return f'---@field {struct_name} fun(t?: {self.module_name}.{struct_name}): {self.module_name}.{struct_name}'
+
+        # TypeHandler があればその luacats_type() を使用
+        handler = self.type_conv.get_handler(struct.name)
+        if handler:
+            param_type = handler.luacats_type()
+        else:
+            param_type = f'{self.module_name}.{struct_name}'
+
+        return f'---@field {struct_name} fun(t?: {param_type}): {self.module_name}.{struct_name}'
 
     def _gen_enum(self, enum: 'EnumInfo') -> list[str]:
         """Generate enum type definition"""

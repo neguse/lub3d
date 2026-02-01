@@ -232,8 +232,8 @@ class TypeConverter:
         elif is_1d_array_type(type_str):
             from .codegen import extract_array_type
             inner = extract_array_type(type_str)
-            inner_lua = self._default_luacats_type(inner, prefix)
-            return f'{inner_lua}[]'
+            inner_lua = self.luacats_type(inner, prefix)
+            return f'({inner_lua})[]'
 
         # Struct types
         if self._is_struct_type(type_str) or self._is_struct_ptr(type_str) or self._is_const_struct_ptr(type_str):
