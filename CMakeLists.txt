@@ -351,13 +351,15 @@ if(MANE3D_BUILD_IMGUI)
         add_custom_command(
             OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp
             COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1 CLANGPP=${CLANGPP_EXECUTABLE}
-                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_imgui.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
-                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp
+                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
+                --sokol ${SOKOL_DIR}
+                --bindgen ${BINDGEN_DIR}
+                --imgui ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_imgui.py
-                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_ir_imgui.py
-                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_util_imgui.py
+            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/bindings/imgui.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/__init__.py
+                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/ir.py
                     ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
             COMMENT "Generating ImGui Lua bindings..."
         )
