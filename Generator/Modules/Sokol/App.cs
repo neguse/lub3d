@@ -1,4 +1,4 @@
-namespace Generator.Modules;
+namespace Generator.Modules.Sokol;
 
 using Generator;
 using Generator.ClangAst;

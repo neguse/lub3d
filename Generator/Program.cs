@@ -1,5 +1,5 @@
 using Generator.ClangAst;
-using Generator.Modules;
+using Generator.Modules.Sokol;
 
 if (args.Length < 2)
 {
