@@ -101,7 +101,7 @@ set(BINDGEN_DIR "${SOKOL_DIR}/bindgen" CACHE PATH "Path to sokol/bindgen directo
 set(MANE3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_log.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_app.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_app.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_time.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_audio.c
@@ -111,11 +111,40 @@ set(MANE3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
+# New Generator (C#) for sokol_app
+set(GENERATOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Generator")
+set(NEWGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/newgen")
+find_program(DOTNET_EXECUTABLE dotnet REQUIRED)
+find_program(CLANG_EXECUTABLE NAMES clang clang.exe
+    HINTS "${CLANGPP_EXECUTABLE}/.."
+    REQUIRED)
+
+add_custom_command(
+    OUTPUT ${NEWGEN_DIR}/sokol_app.c ${NEWGEN_DIR}/sokol_app.lua
+    COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
+        ${NEWGEN_DIR}
+        --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
+        --clang ${CLANG_EXECUTABLE}
+    DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_app.h
+        ${GENERATOR_DIR}/Program.cs
+        ${GENERATOR_DIR}/IModule.cs
+        ${GENERATOR_DIR}/Pipeline.cs
+        ${GENERATOR_DIR}/ClangAst/ClangAst.cs
+        ${GENERATOR_DIR}/ClangAst/TypeRegistry.cs
+        ${GENERATOR_DIR}/CBinding/CBinding.cs
+        ${GENERATOR_DIR}/CBinding/CBindingGen.cs
+        ${GENERATOR_DIR}/LuaCats/LuaCats.cs
+        ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
+        ${GENERATOR_DIR}/Modules/Sokol/App.cs
+    COMMENT "Running Generator (header -> bindings)"
+)
+
+# Legacy Python generator (remaining modules)
 if(Python3_FOUND)
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_log.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_app.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_time.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_audio.c
@@ -139,7 +168,7 @@ if(Python3_FOUND)
                 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/enum.py
                 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/luacats.py
                 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/generator.py
-        COMMENT "Generating Lua bindings..."
+        COMMENT "Generating Lua bindings (legacy)..."
     )
 
     add_custom_command(
@@ -516,6 +545,3 @@ if(MANE3D_BUILD_TESTS)
         target_compile_definitions(mane3d-test PRIVATE MANE3D_HAS_SHDC)
     endif()
 endif()
-
-# New example (Generator output test)
-add_subdirectory(newexample)
