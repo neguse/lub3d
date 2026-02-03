@@ -43,10 +43,13 @@ public static class CBindingGen
         var fieldInits = string.Join("\n", fields.Select(GenFieldInit));
         return $$"""
             static int l_{{structName}}_new(lua_State *L) {
-                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 0);
+                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 1);
                 memset(ud, 0, sizeof({{structName}}));
                 luaL_setmetatable(L, "{{metatable}}");
                 if (lua_istable(L, 1)) {
+                    /* Store original table as uservalue for callback access */
+                    lua_pushvalue(L, 1);
+                    lua_setiuservalue(L, -2, 1);
             {{fieldInits}}
                 }
                 return 1;

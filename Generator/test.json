@@ -1,5 +1,5 @@
 {
-  "module": "app",
+  "module": "sokol.app",
   "prefix": "sapp_",
   "dep_prefixes": ["slog_"],
   "decls": [
@@ -67,9 +67,7 @@
       "kind": "func",
       "name": "sapp_run",
       "type": "void (const sapp_desc *)",
-      "params": [
-        { "name": "desc", "type": "const sapp_desc *" }
-      ],
+      "params": [{ "name": "desc", "type": "const sapp_desc *" }],
       "is_dep": false,
       "dep_prefix": null
     },

@@ -14,11 +14,13 @@ Directory.CreateDirectory(outputDir);
 
 var reg = TypeRegistry.Load(input);
 
-var cPath = Path.Combine(outputDir, $"sokol_{reg.ModuleName}.c");
+var moduleId = reg.ModuleName.Replace('.', '_');
+
+var cPath = Path.Combine(outputDir, $"{moduleId}.c");
 File.WriteAllText(cPath, App.GenerateC(reg));
 Console.WriteLine($"Generated: {cPath}");
 
-var luaPath = Path.Combine(outputDir, $"{reg.ModuleName}.lua");
+var luaPath = Path.Combine(outputDir, $"{moduleId}.lua");
 File.WriteAllText(luaPath, App.GenerateLua(reg));
 Console.WriteLine($"Generated: {luaPath}");
 

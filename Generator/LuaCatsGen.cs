@@ -18,7 +18,7 @@ public static class LuaCatsGen
     /// <summary>
     /// LuaCATS ファイルフッタ
     /// </summary>
-    public static string Footer(string moduleName) => $"return {moduleName}\n";
+    public static string Footer(string moduleName) => "return M\n";
 
     /// <summary>
     /// 構造体の LuaCATS クラス定義
@@ -46,7 +46,8 @@ public static class LuaCatsGen
     public static string ModuleClass(string moduleName, IEnumerable<string> fields) => $$"""
         ---@class {{moduleName}}
         {{string.Join("\n", fields)}}
-        local {{moduleName}} = {}
+        ---@type {{moduleName}}
+        local M = {}
 
         """;
 
@@ -64,12 +65,12 @@ public static class LuaCatsGen
     /// <summary>
     /// Enum の LuaCATS 定義
     /// </summary>
-    public static string EnumDef(string enumName, IEnumerable<(string name, int value)> items)
+    public static string EnumDef(string enumName, string fieldName, IEnumerable<(string name, int value)> items)
     {
         var itemLines = string.Join("\n", items.Select(item => $"    {item.name} = {item.value},"));
         return $$"""
             ---@enum {{enumName}}
-            {{enumName}} = {
+            M.{{fieldName}} = {
             {{itemLines}}
             }
 

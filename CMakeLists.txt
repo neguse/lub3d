@@ -516,3 +516,6 @@ if(MANE3D_BUILD_TESTS)
         target_compile_definitions(mane3d-test PRIVATE MANE3D_HAS_SHDC)
     endif()
 endif()
+
+# New example (Generator output test)
+add_subdirectory(newexample)
