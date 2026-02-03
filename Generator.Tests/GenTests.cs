@@ -109,7 +109,7 @@ public class GenTests
     {
         var reg = TypeRegistry.FromJson(TestJson);
         var e = reg.GetEnum("sapp_event_type");
-        var code = CBindingGen.Enum("sapp_event_type", "EventType", Pipeline.ToEnumItems(e, "sapp_"));
+        var code = CBindingGen.Enum("sapp_event_type", "EventType", Pipeline.ToEnumItemsC(e, "sapp_"));
         Assert.Contains("INVALID", code);
         Assert.Contains("KEY_DOWN", code);
     }

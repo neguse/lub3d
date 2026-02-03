@@ -101,6 +101,7 @@ public class GenLuaCATSTests
         var e = reg.GetEnum("sapp_event_type");
         var code = LuaCatsGen.EnumDef(
             Pipeline.ToLuaCatsEnumName(e, ModuleName, Prefix),
+            Pipeline.ToPascalCase(Pipeline.StripPrefix(e.Name, Prefix)),
             Pipeline.ToEnumItems(e, Prefix));
         Assert.Contains("---@enum app.EventType", code);
         Assert.Contains("INVALID = 0", code);
@@ -121,7 +122,7 @@ public class GenLuaCATSTests
         Assert.Contains("---@class app", code);
         Assert.Contains("---@field Foo fun()", code);
         Assert.Contains("---@field Bar fun(): integer", code);
-        Assert.Contains("local app = {}", code);
+        Assert.Contains("local M = {}", code);
     }
 
     [Fact]
@@ -135,6 +136,6 @@ public class GenLuaCATSTests
     public void Footer_ContainsReturn()
     {
         var code = LuaCatsGen.Footer("app");
-        Assert.Contains("return app", code);
+        Assert.Contains("return M", code);
     }
 }
