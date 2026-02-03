@@ -31,6 +31,8 @@ public class TypeRegistry
         }
     }
 
+    public static TypeRegistry FromModule(Module module) => new(module);
+
     public static TypeRegistry FromJson(string json)
     {
         var module = JsonSerializer.Deserialize<Module>(json)!;

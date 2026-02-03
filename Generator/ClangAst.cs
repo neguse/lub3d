@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
@@ -101,6 +103,193 @@ public abstract record Types
     public sealed record FuncPtr(List<Types> Args, Types Ret) : Types;
     public sealed record StructRef(string Name) : Types;
     public sealed record Void : Types;
+}
+
+/// <summary>
+/// Clang を実行してヘッダファイルから Module を構築する
+/// </summary>
+public static class ClangRunner
+{
+    /// <summary>
+    /// clang を実行して AST JSON を取得し、Module に変換する
+    /// </summary>
+    public static Module ParseHeader(
+        string clangPath,
+        string headerPath,
+        string moduleName,
+        string prefix,
+        List<string> depPrefixes,
+        List<string> includePaths)
+    {
+        var json = RunClang(clangPath, headerPath, includePaths);
+        return ParseAstJson(json, moduleName, prefix, depPrefixes);
+    }
+
+    private static string RunClang(string clangPath, string headerPath, List<string> includePaths)
+    {
+        var wrapperPath = Path.Combine(Path.GetTempPath(), "generator_wrapper.c");
+        File.WriteAllText(wrapperPath, $"""
+            #include <stdbool.h>
+            #include <stdint.h>
+            #include <stddef.h>
+            #include "{Path.GetFileName(headerPath)}"
+            """);
+
+        var args = new List<string>
+        {
+            "-Xclang", "-ast-dump=json",
+            "-fsyntax-only"
+        };
+        var headerDir = Path.GetDirectoryName(headerPath);
+        if (headerDir != null)
+            args.AddRange(["-I", headerDir]);
+        foreach (var inc in includePaths)
+            args.AddRange(["-I", inc]);
+        args.Add(wrapperPath);
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = clangPath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        foreach (var arg in args)
+            psi.ArgumentList.Add(arg);
+
+        using var proc = Process.Start(psi)
+            ?? throw new InvalidOperationException($"Failed to start clang: {clangPath}");
+        var stdout = proc.StandardOutput.ReadToEnd();
+        var stderr = proc.StandardError.ReadToEnd();
+        proc.WaitForExit();
+
+        if (proc.ExitCode != 0)
+            throw new InvalidOperationException($"clang failed (exit {proc.ExitCode}):\n{stderr}");
+
+        return stdout;
+    }
+
+    private static Module ParseAstJson(string json, string moduleName, string prefix, List<string> depPrefixes)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var decls = new List<Decl>();
+        var allPrefixes = new List<string> { prefix };
+        allPrefixes.AddRange(depPrefixes);
+
+        foreach (var node in root.GetProperty("inner").EnumerateArray())
+        {
+            var kind = node.GetProperty("kind").GetString() ?? "";
+            var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+
+            var matchedPrefix = allPrefixes.FirstOrDefault(p => name.StartsWith(p));
+            if (matchedPrefix == null) continue;
+            if (kind == "TypedefDecl") continue;
+
+            var isDep = matchedPrefix != prefix;
+            string? depPrefix = isDep ? matchedPrefix : null;
+
+            switch (kind)
+            {
+                case "FunctionDecl":
+                    decls.Add(ParseFunc(node, isDep, depPrefix));
+                    break;
+                case "RecordDecl":
+                    if (node.TryGetProperty("tagUsed", out var tag) && tag.GetString() == "struct")
+                        decls.Add(ParseStruct(node, isDep, depPrefix));
+                    break;
+                case "EnumDecl":
+                    decls.Add(ParseEnum(node, isDep, depPrefix));
+                    break;
+            }
+        }
+
+        return new Module(moduleName, prefix, depPrefixes, decls);
+    }
+
+    private static Funcs ParseFunc(JsonElement node, bool isDep, string? depPrefix)
+    {
+        var name = node.GetProperty("name").GetString()!;
+        var typeStr = node.GetProperty("type").GetProperty("qualType").GetString()!;
+        var parms = new List<Param>();
+
+        if (node.TryGetProperty("inner", out var inner))
+        {
+            foreach (var child in inner.EnumerateArray())
+            {
+                if (child.GetProperty("kind").GetString() != "ParmVarDecl") continue;
+                var pName = child.TryGetProperty("name", out var pn) ? pn.GetString() ?? "" : "";
+                var pType = child.GetProperty("type").GetProperty("qualType").GetString()!;
+                parms.Add(new Param(pName, pType));
+            }
+        }
+
+        return new Funcs(name, typeStr, parms, isDep, depPrefix);
+    }
+
+    private static Structs ParseStruct(JsonElement node, bool isDep, string? depPrefix)
+    {
+        var name = node.GetProperty("name").GetString()!;
+        var fields = new List<Field>();
+
+        if (node.TryGetProperty("inner", out var inner))
+        {
+            foreach (var child in inner.EnumerateArray())
+            {
+                if (child.GetProperty("kind").GetString() != "FieldDecl") continue;
+                var fName = child.GetProperty("name").GetString()!;
+                var fType = child.GetProperty("type").GetProperty("qualType").GetString()!;
+                fields.Add(new Field(fName, fType));
+            }
+        }
+
+        return new Structs(name, fields, isDep, depPrefix);
+    }
+
+    private static Enums ParseEnum(JsonElement node, bool isDep, string? depPrefix)
+    {
+        var name = node.GetProperty("name").GetString()!;
+        var items = new List<EnumItem>();
+
+        if (node.TryGetProperty("inner", out var inner))
+        {
+            foreach (var child in inner.EnumerateArray())
+            {
+                if (child.GetProperty("kind").GetString() != "EnumConstantDecl") continue;
+                var iName = child.GetProperty("name").GetString()!;
+                var value = TryGetEnumValue(child);
+                items.Add(new EnumItem(iName, value));
+            }
+        }
+
+        return new Enums(name, items, isDep, depPrefix);
+    }
+
+    private static string? TryGetEnumValue(JsonElement node)
+    {
+        if (!node.TryGetProperty("inner", out var inner)) return null;
+
+        foreach (var child in inner.EnumerateArray())
+        {
+            var kind = child.GetProperty("kind").GetString();
+
+            if (kind == "ConstantExpr" && child.TryGetProperty("value", out var val))
+                return val.GetString();
+
+            if (kind == "ImplicitCastExpr" && child.TryGetProperty("inner", out var castInner))
+            {
+                foreach (var castChild in castInner.EnumerateArray())
+                {
+                    if (castChild.GetProperty("kind").GetString() == "ConstantExpr"
+                        && castChild.TryGetProperty("value", out var castVal))
+                        return castVal.GetString();
+                }
+            }
+        }
+
+        return null;
+    }
 }
 
 /// <summary>

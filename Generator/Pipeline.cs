@@ -91,7 +91,16 @@ public static class Pipeline
         $"{moduleName}.{ToPascalCase(StripPrefix(e.Name, prefix))}";
 
     /// <summary>
-    /// Enums → (name, value) 一覧
+    /// Enums → C バインディング用 (luaName, cConstName) 一覧
+    /// C 定数名をそのまま使い、値の解決はコンパイラに任せる
+    /// </summary>
+    public static IEnumerable<(string luaName, string cConstName)> ToEnumItemsC(Enums e, string prefix) =>
+        e.Items.Where(i => !i.Name.StartsWith("_"))
+            .Select(i => (EnumItemName(i.Name, e.Name, prefix), i.Name));
+
+    /// <summary>
+    /// Enums → LuaCATS 用 (name, value) 一覧
+    /// 値が取れない場合はインクリメンタルに推定
     /// </summary>
     public static IEnumerable<(string name, int value)> ToEnumItems(Enums e, string prefix)
     {

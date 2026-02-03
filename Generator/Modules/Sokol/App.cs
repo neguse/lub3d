@@ -6,30 +6,26 @@ using Generator.CBinding;
 using Generator.LuaCats;
 
 /// <summary>
-/// app モジュールの生成定義
+/// sokol.app モジュールの生成定義
 /// </summary>
-public static class App
+public class App : IModule
 {
-    private const string Prefix = "sapp_";
+    public string ModuleName => "sokol.app";
+    public string Header => "sokol/sokol_app.h";
+    public IReadOnlyList<string> IncludeDirs => ["sokol"];
+    public string Prefix => "sapp_";
+    public IReadOnlyList<string> DepPrefixes => ["slog_"];
+
     private const string LogFunc = "slog_func";
 
-    /// <summary>
-    /// ドット区切りのモジュール名からメタテーブル名を生成
-    /// </summary>
     private static string Metatable(string moduleName, string typeName) =>
         $"{moduleName}.{typeName}";
 
-    /// <summary>
-    /// ドット区切りのモジュール名をアンダースコア区切りに変換
-    /// </summary>
     private static string ToUnderscore(string moduleName) =>
         moduleName.Replace('.', '_');
 
-    // ===== App 固有ヘルパー (sokol_app の構造を知っている) =====
+    // ===== App 固有ヘルパー =====
 
-    /// <summary>
-    /// コールバックコンテキスト構造体
-    /// </summary>
     private static string ContextStruct() => """
         typedef struct {
             lua_State* L;
@@ -38,9 +34,6 @@ public static class App
 
         """;
 
-    /// <summary>
-    /// 引数なしトランポリン (init, frame, cleanup)
-    /// </summary>
     private static string Trampoline(string name, string luaField) => $$"""
         static void trampoline_{{name}}(void* user_data) {
             LuaCallbackContext* ctx = (LuaCallbackContext*)user_data;
@@ -57,9 +50,6 @@ public static class App
 
         """;
 
-    /// <summary>
-    /// event トランポリン (引数あり)
-    /// </summary>
     private static string TrampolineEvent(string eventMetatable) => $$"""
         static void trampoline_event(const sapp_event* e, void* user_data) {
             LuaCallbackContext* ctx = (LuaCallbackContext*)user_data;
@@ -79,9 +69,6 @@ public static class App
 
         """;
 
-    /// <summary>
-    /// Run 関数 (user_data 形式でコールバック設定)
-    /// </summary>
     private static string RunFunc(string descMetatable) => $$"""
         static int l_sapp_run(lua_State *L) {
         #ifdef SOKOL_DUMMY_BACKEND
@@ -90,19 +77,15 @@ public static class App
         #else
             sapp_desc* desc = (sapp_desc*)luaL_checkudata(L, 1, "{{descMetatable}}");
 
-            // context を userdata として作成 (GC で回収されないよう registry に保持)
             LuaCallbackContext* ctx = (LuaCallbackContext*)lua_newuserdatauv(L, sizeof(LuaCallbackContext), 1);
             ctx->L = L;
 
-            // Desc userdata を context の uservalue[1] として保持 (GC 防止)
             lua_pushvalue(L, 1);
             lua_setiuservalue(L, -2, 1);
 
-            // Desc userdata の uservalue[1] に元テーブルが保存されている
             lua_getiuservalue(L, 1, 1);
             ctx->table_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
-            // user_data 形式でコールバック設定
             desc->user_data = ctx;
             desc->init_userdata_cb = trampoline_init;
             desc->frame_userdata_cb = trampoline_frame;
@@ -118,9 +101,6 @@ public static class App
 
     // ===== LuaCATS ヘルパー =====
 
-    /// <summary>
-    /// コールバックフィールド名を短い名前に変換
-    /// </summary>
     private static readonly Dictionary<string, string> CallbackNames = new()
     {
         ["init_cb"] = "init",
@@ -134,13 +114,12 @@ public static class App
 
     // ===== 生成メソッド =====
 
-    public static string GenerateC(TypeRegistry reg)
+    public string GenerateC(TypeRegistry reg)
     {
-        var moduleName = reg.ModuleName;
-        var descMetatable = Metatable(moduleName, "Desc");
-        var eventMetatable = Metatable(moduleName, "Event");
-        var funcArrayName = $"{ToUnderscore(moduleName)}_funcs";
-        var luaOpenName = ToUnderscore(moduleName);
+        var descMetatable = Metatable(ModuleName, "Desc");
+        var eventMetatable = Metatable(ModuleName, "Event");
+        var funcArrayName = $"{ToUnderscore(ModuleName)}_funcs";
+        var luaOpenName = ToUnderscore(ModuleName);
 
         var descStruct = reg.GetStruct("sapp_desc");
         var eventStruct = reg.GetStruct("sapp_event");
@@ -161,7 +140,7 @@ public static class App
             CBindingGen.Func("sapp_height", Pipeline.ToCParams(heightFunc), Pipeline.ToCReturnType(heightFunc), descMetatable) +
             CBindingGen.Enum("sapp_event_type",
                 Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),
-                Pipeline.ToEnumItems(eventTypeEnum, Prefix)) +
+                Pipeline.ToEnumItemsC(eventTypeEnum, Prefix)) +
             CBindingGen.RegisterMetatables([descMetatable, eventMetatable]) +
             CBindingGen.LuaReg(funcArrayName,
                 [("Desc", "l_sapp_desc_new"),
@@ -172,10 +151,8 @@ public static class App
             CBindingGen.LuaOpen(luaOpenName, funcArrayName);
     }
 
-    public static string GenerateLua(TypeRegistry reg)
+    public string GenerateLua(TypeRegistry reg)
     {
-        var moduleName = reg.ModuleName;
-
         var descStruct = reg.GetStruct("sapp_desc");
         var eventStruct = reg.GetStruct("sapp_event");
         var runFunc = reg.GetFunc("sapp_run");
@@ -183,35 +160,33 @@ public static class App
         var heightFunc = reg.GetFunc("sapp_height");
         var eventTypeEnum = reg.GetEnum("sapp_event_type");
 
-        // Desc 構造体のフィールド名変換 (init_cb → init など)
         var descFields = descStruct.Fields.Select(f =>
-            (MapFieldName(f.Name), Pipeline.ToLuaCatsType(f.ParsedType, moduleName, Prefix)));
+            (MapFieldName(f.Name), Pipeline.ToLuaCatsType(f.ParsedType, ModuleName, Prefix)));
 
-        // Event 構造体は変換なし
-        var eventFields = Pipeline.ToLuaCatsFields(eventStruct, moduleName, Prefix);
+        var eventFields = Pipeline.ToLuaCatsFields(eventStruct, ModuleName, Prefix);
 
-        return LuaCatsGen.Header(moduleName) +
-            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(descStruct, moduleName, Prefix), descFields) +
-            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(eventStruct, moduleName, Prefix), eventFields) +
-            LuaCatsGen.ModuleClass(moduleName,
-                [LuaCatsGen.StructCtor("Desc", moduleName),
-                 LuaCatsGen.StructCtor("Event", moduleName),
+        return LuaCatsGen.Header(ModuleName) +
+            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(descStruct, ModuleName, Prefix), descFields) +
+            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(eventStruct, ModuleName, Prefix), eventFields) +
+            LuaCatsGen.ModuleClass(ModuleName,
+                [LuaCatsGen.StructCtor("Desc", ModuleName),
+                 LuaCatsGen.StructCtor("Event", ModuleName),
                  LuaCatsGen.FuncField(
                      Pipeline.ToLuaCatsFuncName(runFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(runFunc, moduleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(runFunc, moduleName, Prefix)),
+                     Pipeline.ToLuaCatsParams(runFunc, ModuleName, Prefix),
+                     Pipeline.ToLuaCatsReturnType(runFunc, ModuleName, Prefix)),
                  LuaCatsGen.FuncField(
                      Pipeline.ToLuaCatsFuncName(widthFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(widthFunc, moduleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(widthFunc, moduleName, Prefix)),
+                     Pipeline.ToLuaCatsParams(widthFunc, ModuleName, Prefix),
+                     Pipeline.ToLuaCatsReturnType(widthFunc, ModuleName, Prefix)),
                  LuaCatsGen.FuncField(
                      Pipeline.ToLuaCatsFuncName(heightFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(heightFunc, moduleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(heightFunc, moduleName, Prefix))]) +
+                     Pipeline.ToLuaCatsParams(heightFunc, ModuleName, Prefix),
+                     Pipeline.ToLuaCatsReturnType(heightFunc, ModuleName, Prefix))]) +
             LuaCatsGen.EnumDef(
-                Pipeline.ToLuaCatsEnumName(eventTypeEnum, moduleName, Prefix),
+                Pipeline.ToLuaCatsEnumName(eventTypeEnum, ModuleName, Prefix),
                 Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),
                 Pipeline.ToEnumItems(eventTypeEnum, Prefix)) +
-            LuaCatsGen.Footer(moduleName);
+            LuaCatsGen.Footer(ModuleName);
     }
 }

@@ -89,10 +89,10 @@ public static class CBindingGen
     /// <summary>
     /// Enum の Lua テーブル生成
     /// </summary>
-    public static string Enum(string cEnumName, string luaEnumName, IEnumerable<(string name, int value)> items)
+    public static string Enum(string cEnumName, string luaEnumName, IEnumerable<(string luaName, string cConstName)> items)
     {
         var itemLines = string.Join("\n", items.Select(item =>
-            $"        lua_pushinteger(L, {item.value}); lua_setfield(L, -2, \"{item.name}\");"));
+            $"        lua_pushinteger(L, {item.cConstName}); lua_setfield(L, -2, \"{item.luaName}\");"));
         return $$"""
             static void register_{{cEnumName}}(lua_State *L) {
                 lua_newtable(L);
