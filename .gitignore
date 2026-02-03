@@ -18,6 +18,7 @@ assets/
 __pycache__/
 
 # IDE
+.idea/
 .vs/
 .vscode/
 CMakeSettings.json
