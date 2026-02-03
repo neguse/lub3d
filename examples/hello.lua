@@ -1,5 +1,5 @@
--- hello.lua - Minimal example demonstrating Lua entry point architecture
--- Lua script calls app.Run() directly - no C callbacks needed
+-- hello.lua - Minimal example
+-- Animated triangle using sokol.app + sokol.gfx + sokol.gl
 
 local app = require("sokol.app")
 local gfx = require("sokol.gfx")
@@ -13,16 +13,14 @@ app.Run(app.Desc({
     height = 600,
     window_title = "Hello Mane3D (Lua Entry Point)",
 
-    init_cb = function()
-        -- Initialize graphics in init_cb (window is ready here)
+    init = function()
         gfx.Setup(gfx.Desc({
             environment = glue.Environment(),
         }))
         gl.Setup(gl.Desc({}))
-        print("init_cb: graphics initialized")
     end,
 
-    frame_cb = function()
+    frame = function()
         frame_count = frame_count + 1
 
         -- Clear with animated color
@@ -59,13 +57,12 @@ app.Run(app.Desc({
         gfx.Commit()
     end,
 
-    cleanup_cb = function()
-        print("cleanup_cb: shutting down")
+    cleanup = function()
         gl.Shutdown()
         gfx.Shutdown()
     end,
 
-    event_cb = function(ev)
+    event = function(ev)
         if ev.type == app.EventType.KEY_DOWN then
             if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
                 app.Quit()
