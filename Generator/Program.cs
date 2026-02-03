@@ -63,6 +63,7 @@ rootCommand.SetAction(parseResult =>
             mod.Prefix, [.. mod.DepPrefixes], includePaths);
 
         var reg = TypeRegistry.FromModule(astModule);
+        var sourceLink = SourceLink.FromHeader(depsDir, mod.Header);
         var moduleId = mod.ModuleName.Replace('.', '_');
 
         var jsonPath = Path.Combine(outputDir, $"{moduleId}.json");
@@ -74,7 +75,7 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {cPath}");
 
         var luaPath = Path.Combine(outputDir, $"{moduleId}.lua");
-        File.WriteAllText(luaPath, mod.GenerateLua(reg));
+        File.WriteAllText(luaPath, mod.GenerateLua(reg, sourceLink));
         Console.WriteLine($"Generated: {luaPath}");
     }
 

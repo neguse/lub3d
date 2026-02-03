@@ -13,5 +13,5 @@ public interface IModule
     IReadOnlyList<string> DepPrefixes { get; }
 
     string GenerateC(TypeRegistry reg);
-    string GenerateLua(TypeRegistry reg);
+    string GenerateLua(TypeRegistry reg, SourceLink? sourceLink = null);
 }

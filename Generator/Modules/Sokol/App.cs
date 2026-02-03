@@ -151,7 +151,7 @@ public class App : IModule
             CBindingGen.LuaOpen(luaOpenName, funcArrayName);
     }
 
-    public string GenerateLua(TypeRegistry reg)
+    public string GenerateLua(TypeRegistry reg, SourceLink? sourceLink = null)
     {
         var descStruct = reg.GetStruct("sapp_desc");
         var eventStruct = reg.GetStruct("sapp_event");
@@ -160,14 +160,19 @@ public class App : IModule
         var heightFunc = reg.GetFunc("sapp_height");
         var eventTypeEnum = reg.GetEnum("sapp_event_type");
 
+        string? Link(Decl d) => d is { } decl && sourceLink != null
+            ? (decl switch { Structs s => s.Line, Funcs f => f.Line, Enums e => e.Line, _ => null })
+                is int line ? sourceLink.GetLink(line) : null
+            : null;
+
         var descFields = descStruct.Fields.Select(f =>
             (MapFieldName(f.Name), Pipeline.ToLuaCatsType(f.ParsedType, ModuleName, Prefix)));
 
         var eventFields = Pipeline.ToLuaCatsFields(eventStruct, ModuleName, Prefix);
 
         return LuaCatsGen.Header(ModuleName) +
-            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(descStruct, ModuleName, Prefix), descFields) +
-            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(eventStruct, ModuleName, Prefix), eventFields) +
+            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(descStruct, ModuleName, Prefix), descFields, Link(descStruct)) +
+            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(eventStruct, ModuleName, Prefix), eventFields, Link(eventStruct)) +
             LuaCatsGen.ModuleClass(ModuleName,
                 [LuaCatsGen.StructCtor("Desc", ModuleName),
                  LuaCatsGen.StructCtor("Event", ModuleName),
@@ -186,7 +191,8 @@ public class App : IModule
             LuaCatsGen.EnumDef(
                 Pipeline.ToLuaCatsEnumName(eventTypeEnum, ModuleName, Prefix),
                 Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),
-                Pipeline.ToEnumItems(eventTypeEnum, Prefix)) +
+                Pipeline.ToEnumItems(eventTypeEnum, Prefix),
+                Link(eventTypeEnum)) +
             LuaCatsGen.Footer(ModuleName);
     }
 }

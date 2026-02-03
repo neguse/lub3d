@@ -21,13 +21,19 @@ public static class LuaCatsGen
     public static string Footer(string moduleName) => "return M\n";
 
     /// <summary>
+    /// ソースリンクコメント行 (nullable)
+    /// </summary>
+    public static string SourceComment(string? link) =>
+        link != null ? $"---@see {link}\n" : "";
+
+    /// <summary>
     /// 構造体の LuaCATS クラス定義
     /// </summary>
-    public static string StructClass(string className, IEnumerable<(string name, Type type)> fields)
+    public static string StructClass(string className, IEnumerable<(string name, Type type)> fields, string? sourceLink = null)
     {
         var fieldLines = string.Join("\n", fields.Select(f =>
             $"---@field {f.name}? {TypeToString(f.type)}"));
-        return $"""
+        return SourceComment(sourceLink) + $"""
             ---@class {className}
             {fieldLines}
 
@@ -65,10 +71,10 @@ public static class LuaCatsGen
     /// <summary>
     /// Enum の LuaCATS 定義
     /// </summary>
-    public static string EnumDef(string enumName, string fieldName, IEnumerable<(string name, int value)> items)
+    public static string EnumDef(string enumName, string fieldName, IEnumerable<(string name, int value)> items, string? sourceLink = null)
     {
         var itemLines = string.Join("\n", items.Select(item => $"    {item.name} = {item.value},"));
-        return $$"""
+        return SourceComment(sourceLink) + $$"""
             ---@enum {{enumName}}
             M.{{fieldName}} = {
             {{itemLines}}

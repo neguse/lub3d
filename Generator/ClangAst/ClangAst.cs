@@ -31,20 +31,23 @@ public abstract record Decl(
 public record Structs(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("fields")] List<Field> Fields,
-    bool IsDep, string? DepPrefix
+    bool IsDep, string? DepPrefix,
+    [property: JsonPropertyName("line")] int? Line = null
 ) : Decl(IsDep, DepPrefix);
 
 public record Funcs(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("type")] string TypeStr,
     [property: JsonPropertyName("params")] List<Param> Params,
-    bool IsDep, string? DepPrefix
+    bool IsDep, string? DepPrefix,
+    [property: JsonPropertyName("line")] int? Line = null
 ) : Decl(IsDep, DepPrefix);
 
 public record Enums(
     [property: JsonPropertyName("name")] string Name,
     [property: JsonPropertyName("items")] List<EnumItem> Items,
-    bool IsDep, string? DepPrefix
+    bool IsDep, string? DepPrefix,
+    [property: JsonPropertyName("line")] int? Line = null
 ) : Decl(IsDep, DepPrefix);
 
 public record Consts(
@@ -190,17 +193,19 @@ public static class ClangRunner
             var isDep = matchedPrefix != prefix;
             string? depPrefix = isDep ? matchedPrefix : null;
 
+            var line = GetLine(node);
+
             switch (kind)
             {
                 case "FunctionDecl":
-                    decls.Add(ParseFunc(node, isDep, depPrefix));
+                    decls.Add(ParseFunc(node, isDep, depPrefix, line));
                     break;
                 case "RecordDecl":
                     if (node.TryGetProperty("tagUsed", out var tag) && tag.GetString() == "struct")
-                        decls.Add(ParseStruct(node, isDep, depPrefix));
+                        decls.Add(ParseStruct(node, isDep, depPrefix, line));
                     break;
                 case "EnumDecl":
-                    decls.Add(ParseEnum(node, isDep, depPrefix));
+                    decls.Add(ParseEnum(node, isDep, depPrefix, line));
                     break;
             }
         }
@@ -208,7 +213,14 @@ public static class ClangRunner
         return new Module(moduleName, prefix, depPrefixes, decls);
     }
 
-    private static Funcs ParseFunc(JsonElement node, bool isDep, string? depPrefix)
+    private static int? GetLine(JsonElement node)
+    {
+        if (node.TryGetProperty("loc", out var loc) && loc.TryGetProperty("line", out var line))
+            return line.GetInt32();
+        return null;
+    }
+
+    private static Funcs ParseFunc(JsonElement node, bool isDep, string? depPrefix, int? line)
     {
         var name = node.GetProperty("name").GetString()!;
         var typeStr = node.GetProperty("type").GetProperty("qualType").GetString()!;
@@ -225,10 +237,10 @@ public static class ClangRunner
             }
         }
 
-        return new Funcs(name, typeStr, parms, isDep, depPrefix);
+        return new Funcs(name, typeStr, parms, isDep, depPrefix, line);
     }
 
-    private static Structs ParseStruct(JsonElement node, bool isDep, string? depPrefix)
+    private static Structs ParseStruct(JsonElement node, bool isDep, string? depPrefix, int? line)
     {
         var name = node.GetProperty("name").GetString()!;
         var fields = new List<Field>();
@@ -244,10 +256,10 @@ public static class ClangRunner
             }
         }
 
-        return new Structs(name, fields, isDep, depPrefix);
+        return new Structs(name, fields, isDep, depPrefix, line);
     }
 
-    private static Enums ParseEnum(JsonElement node, bool isDep, string? depPrefix)
+    private static Enums ParseEnum(JsonElement node, bool isDep, string? depPrefix, int? line)
     {
         var name = node.GetProperty("name").GetString()!;
         var items = new List<EnumItem>();
@@ -263,7 +275,7 @@ public static class ClangRunner
             }
         }
 
-        return new Enums(name, items, isDep, depPrefix);
+        return new Enums(name, items, isDep, depPrefix, line);
     }
 
     private static string? TryGetEnumValue(JsonElement node)
