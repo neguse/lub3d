@@ -27,13 +27,18 @@ let currentSearch: string = "";
 let container: HTMLElement | null = null;
 
 function getModule(name: string): string {
-  if (name.includes(".")) {
-    return name.split(".")[0];
+  const parts = name.split(".");
+  if (parts.length >= 2) {
+    return parts.slice(0, 2).join(".");
   }
   if (["vec2", "vec3", "vec4", "mat3", "mat4", "vec_base"].includes(name)) {
     return "glm";
   }
   return name;
+}
+
+function getModuleGroup(mod: string): string {
+  return mod.split(".")[0];
 }
 
 function getModules(docs: DocEntry[]): string[] {
@@ -159,9 +164,31 @@ function render() {
     <input type="text" id="docs-search" placeholder="Search..." value="${escapeHtml(currentSearch)}" />
     <div class="module-list">`;
 
+  // Group modules by top-level namespace
+  const groups = new Map<string, string[]>();
   for (const mod of modules) {
-    const activeClass = mod === currentModule ? "active" : "";
-    sidebar += `<a href="#" class="module-item ${activeClass}" data-module="${escapeHtml(mod)}">${escapeHtml(mod)}</a>`;
+    const group = getModuleGroup(mod);
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group)!.push(mod);
+  }
+
+  for (const [group, mods] of groups) {
+    if (mods.length === 1 && mods[0] === group) {
+      // Single module, no grouping needed
+      const activeClass = group === currentModule ? "active" : "";
+      sidebar += `<a href="#" class="module-item ${activeClass}" data-module="${escapeHtml(group)}">${escapeHtml(group)}</a>`;
+    } else {
+      // Group header + children
+      sidebar += `<div class="module-group"><div class="module-group-label">${escapeHtml(group)}</div>`;
+      for (const mod of mods) {
+        const label = mod.includes(".")
+          ? mod.split(".").slice(1).join(".")
+          : mod;
+        const activeClass = mod === currentModule ? "active" : "";
+        sidebar += `<a href="#" class="module-item module-child ${activeClass}" data-module="${escapeHtml(mod)}">${escapeHtml(label)}</a>`;
+      }
+      sidebar += `</div>`;
+    }
   }
   sidebar += `</div></div>`;
 
