@@ -1,176 +1,207 @@
 // Docs viewer module - can be embedded in main playground
 
 interface DocField {
-  name: string
-  view?: string
-  desc?: string
-  rawdesc?: string
-  file?: string
-  type?: string
+  name: string;
+  view?: string;
+  desc?: string;
+  rawdesc?: string;
+  file?: string;
+  type?: string;
 }
 
 interface DocEntry {
-  name: string
-  type?: string
-  view?: string
+  name: string;
+  type?: string;
+  view?: string;
   defines?: Array<{
-    file?: string
-    desc?: string
-    view?: string
-  }>
-  fields?: DocField[]
+    file?: string;
+    desc?: string;
+    view?: string;
+  }>;
+  fields?: DocField[];
 }
 
-let allDocs: DocEntry[] = []
-let currentModule: string | null = null
-let currentSearch: string = ''
-let container: HTMLElement | null = null
+let allDocs: DocEntry[] = [];
+let currentModule: string | null = null;
+let currentSearch: string = "";
+let container: HTMLElement | null = null;
 
 function getModule(name: string): string {
-  if (name.includes('.')) {
-    return name.split('.')[0]
+  if (name.includes(".")) {
+    return name.split(".")[0];
   }
-  if (['vec2', 'vec3', 'vec4', 'mat3', 'mat4', 'vec_base'].includes(name)) {
-    return 'glm'
+  if (["vec2", "vec3", "vec4", "mat3", "mat4", "vec_base"].includes(name)) {
+    return "glm";
   }
-  return name
+  return name;
 }
 
 function getModules(docs: DocEntry[]): string[] {
-  const modules = new Set<string>()
+  const modules = new Set<string>();
   for (const entry of docs) {
-    modules.add(getModule(entry.name))
+    modules.add(getModule(entry.name));
   }
-  return Array.from(modules).sort()
+  return Array.from(modules).sort();
 }
 
 function escapeHtml(text: string): string {
   return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 const skipNames = new Set([
-  'LuaLS', 'boolean', 'function', 'integer', 'nil', 'number', 'string',
-  'table', 'thread', 'userdata', 'lightuserdata', 'any', 'unknown',
-  'true', 'false', 'metatable', 'init', 'frame', 'event', 'cleanup'
-])
+  "LuaLS",
+  "boolean",
+  "function",
+  "integer",
+  "nil",
+  "number",
+  "string",
+  "table",
+  "thread",
+  "userdata",
+  "lightuserdata",
+  "any",
+  "unknown",
+  "true",
+  "false",
+  "metatable",
+  "init",
+  "frame",
+  "event",
+  "cleanup",
+]);
 
-function filterDocs(docs: DocEntry[], module: string | null, search: string): DocEntry[] {
-  let result = docs.filter(d => !skipNames.has(d.name) && !d.name.startsWith('_'))
+function isForeign(d: DocEntry): boolean {
+  return d.defines?.every((def) => def.file?.startsWith("[FOREIGN]")) ?? false;
+}
+
+function filterDocs(
+  docs: DocEntry[],
+  module: string | null,
+  search: string,
+): DocEntry[] {
+  let result = docs.filter(
+    (d) => !skipNames.has(d.name) && !d.name.startsWith("_") && !isForeign(d),
+  );
 
   if (module) {
-    result = result.filter(d => getModule(d.name) === module)
+    result = result.filter((d) => getModule(d.name) === module);
   }
 
   if (search) {
-    const lower = search.toLowerCase()
-    result = result.filter(d => {
-      if (d.name.toLowerCase().includes(lower)) return true
-      if (d.fields?.some(f => f.name.toLowerCase().includes(lower))) return true
-      return false
-    })
+    const lower = search.toLowerCase();
+    result = result.filter((d) => {
+      if (d.name.toLowerCase().includes(lower)) return true;
+      if (d.fields?.some((f) => f.name.toLowerCase().includes(lower)))
+        return true;
+      return false;
+    });
   }
 
-  return result
+  return result;
 }
 
 function renderEntry(entry: DocEntry): string {
-  const fields = entry.fields || []
-  const define = entry.defines?.[0]
-  const file = define?.file || ''
-  const desc = define?.desc || ''
+  const fields = entry.fields || [];
+  const define = entry.defines?.[0];
+  const file = define?.file || "";
+  const desc = define?.desc || "";
 
   let html = `<div class="doc-entry" id="${escapeHtml(entry.name)}">
-    <h3>${escapeHtml(entry.name)}</h3>`
+    <h3>${escapeHtml(entry.name)}</h3>`;
 
   if (file) {
-    html += `<div class="doc-file">${escapeHtml(file)}</div>`
+    html += `<div class="doc-file">${escapeHtml(file)}</div>`;
   }
 
   if (desc) {
-    html += `<div class="doc-desc">${escapeHtml(desc)}</div>`
+    html += `<div class="doc-desc">${escapeHtml(desc)}</div>`;
   }
 
   if (entry.view) {
-    html += `<pre class="doc-type">${escapeHtml(entry.view)}</pre>`
+    html += `<pre class="doc-type">${escapeHtml(entry.view)}</pre>`;
   }
 
   if (fields.length > 0) {
-    html += `<div class="doc-fields">`
+    html += `<div class="doc-fields">`;
     for (const field of fields) {
-      const fieldDesc = field.desc || field.rawdesc || ''
+      const fieldDesc = field.desc || field.rawdesc || "";
       html += `<div class="doc-field">
-        <span class="field-name">${escapeHtml(field.name)}</span>`
+        <span class="field-name">${escapeHtml(field.name)}</span>`;
       if (field.view) {
-        html += `<span class="field-type">${escapeHtml(field.view)}</span>`
+        html += `<span class="field-type">${escapeHtml(field.view)}</span>`;
       }
       if (fieldDesc) {
-        html += `<div class="field-desc">${escapeHtml(fieldDesc)}</div>`
+        html += `<div class="field-desc">${escapeHtml(fieldDesc)}</div>`;
       }
-      html += `</div>`
+      html += `</div>`;
     }
-    html += `</div>`
+    html += `</div>`;
   }
 
-  html += `</div>`
-  return html
+  html += `</div>`;
+  return html;
 }
 
 function render() {
-  if (!container) return
+  if (!container) return;
 
-  const cleanDocs = allDocs.filter(d => !skipNames.has(d.name) && !d.name.startsWith('_'))
-  const modules = getModules(cleanDocs)
-  const filtered = filterDocs(allDocs, currentModule, currentSearch)
+  const cleanDocs = allDocs.filter(
+    (d) => !skipNames.has(d.name) && !d.name.startsWith("_") && !isForeign(d),
+  );
+  const modules = getModules(cleanDocs);
+  const filtered = filterDocs(allDocs, currentModule, currentSearch);
 
   let sidebar = `<div class="docs-sidebar-inner">
     <input type="text" id="docs-search" placeholder="Search..." value="${escapeHtml(currentSearch)}" />
-    <div class="module-list">`
+    <div class="module-list">`;
 
   for (const mod of modules) {
-    const activeClass = mod === currentModule ? 'active' : ''
-    sidebar += `<a href="#" class="module-item ${activeClass}" data-module="${escapeHtml(mod)}">${escapeHtml(mod)}</a>`
+    const activeClass = mod === currentModule ? "active" : "";
+    sidebar += `<a href="#" class="module-item ${activeClass}" data-module="${escapeHtml(mod)}">${escapeHtml(mod)}</a>`;
   }
-  sidebar += `</div></div>`
+  sidebar += `</div></div>`;
 
-  const content = filtered.length > 0
-    ? filtered.map(renderEntry).join('')
-    : '<div class="no-results">No results found</div>'
+  const content =
+    filtered.length > 0
+      ? filtered.map(renderEntry).join("")
+      : '<div class="no-results">No results found</div>';
 
   container.innerHTML = `
     <div class="docs-layout">
       <nav class="docs-sidebar">${sidebar}</nav>
       <main class="docs-content">${content}</main>
     </div>
-  `
+  `;
 
   // Event listeners
-  container.querySelector('#docs-search')?.addEventListener('input', (e) => {
-    currentSearch = (e.target as HTMLInputElement).value
-    render()
-  })
+  container.querySelector("#docs-search")?.addEventListener("input", (e) => {
+    currentSearch = (e.target as HTMLInputElement).value;
+    render();
+  });
 
-  container.querySelectorAll('.module-item').forEach(el => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault()
-      const mod = (el as HTMLElement).dataset.module!
-      currentModule = mod === currentModule ? null : mod
-      render()
-    })
-  })
+  container.querySelectorAll(".module-item").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      const mod = (el as HTMLElement).dataset.module!;
+      currentModule = mod === currentModule ? null : mod;
+      render();
+    });
+  });
 }
 
 export async function initDocs(containerEl: HTMLElement): Promise<void> {
-  container = containerEl
-  container.innerHTML = '<div class="loading">Loading documentation...</div>'
+  container = containerEl;
+  container.innerHTML = '<div class="loading">Loading documentation...</div>';
 
   try {
-    const res = await fetch('/doc.json')
-    allDocs = await res.json()
-    render()
+    const res = await fetch("/doc.json");
+    allDocs = await res.json();
+    render();
   } catch (e) {
-    container.innerHTML = `<div class="error">Failed to load documentation: ${e}</div>`
+    container.innerHTML = `<div class="error">Failed to load documentation: ${e}</div>`;
   }
 }
