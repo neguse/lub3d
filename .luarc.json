@@ -1,7 +1,19 @@
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
-  "workspace.library": ["gen/types", "types", "lib"],
-  "workspace.ignoreDir": ["build", "out", "deps", "examples/hakonotaiatari/font.lua"],
+  "workspace.library": ["newgen", "gen/types", "types", "lib"],
+  "workspace.ignoreDir": [
+    "build",
+    "out",
+    "deps",
+    "examples/hakonotaiatari/font.lua"
+  ],
   "runtime.version": "Lua 5.5",
-  "diagnostics.globals": ["init", "frame", "cleanup", "event", "get_mtime", "_headless_frames"]
+  "diagnostics.globals": [
+    "init",
+    "frame",
+    "cleanup",
+    "event",
+    "get_mtime",
+    "_headless_frames"
+  ]
 }
