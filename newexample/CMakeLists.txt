@@ -19,12 +19,12 @@ add_custom_command(
         ${GENERATOR_DIR}/Program.cs
         ${GENERATOR_DIR}/IModule.cs
         ${GENERATOR_DIR}/Pipeline.cs
-        ${GENERATOR_DIR}/TypeRegistry.cs
-        ${GENERATOR_DIR}/ClangAst.cs
-        ${GENERATOR_DIR}/CBinding.cs
-        ${GENERATOR_DIR}/CBindingGen.cs
-        ${GENERATOR_DIR}/LuaCats.cs
-        ${GENERATOR_DIR}/LuaCatsGen.cs
+        ${GENERATOR_DIR}/ClangAst/ClangAst.cs
+        ${GENERATOR_DIR}/ClangAst/TypeRegistry.cs
+        ${GENERATOR_DIR}/CBinding/CBinding.cs
+        ${GENERATOR_DIR}/CBinding/CBindingGen.cs
+        ${GENERATOR_DIR}/LuaCats/LuaCats.cs
+        ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
         ${GENERATOR_DIR}/Modules/Sokol/App.cs
     COMMENT "Running Generator (header -> bindings)"
 )
