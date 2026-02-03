@@ -109,14 +109,34 @@ function filterDocs(
   return result;
 }
 
+function extractSourceLink(desc: string): {
+  link: string | null;
+  rest: string;
+} {
+  const match = desc.match(/\[source\]\((https?:\/\/[^\s)]+)\)/);
+  const link = match ? match[1] : null;
+  let rest = match ? desc.replace(match[0], "").trim() : desc;
+  // Remove auto-generated header comments
+  rest = rest
+    .replace(/LuaCATS type definitions for \S+/g, "")
+    .replace(/Auto-generated, do not edit/g, "")
+    .trim();
+  return { link, rest };
+}
+
 function renderEntry(entry: DocEntry): string {
   const fields = entry.fields || [];
   const define = entry.defines?.[0];
   const file = define?.file || "";
-  const desc = define?.desc || "";
+  const rawDesc = define?.desc || "";
+  const { link: sourceLink, rest: desc } = extractSourceLink(rawDesc);
 
   let html = `<div class="doc-entry" id="${escapeHtml(entry.name)}">
-    <h3>${escapeHtml(entry.name)}</h3>`;
+    <h3>${escapeHtml(entry.name)}`;
+  if (sourceLink) {
+    html += ` <a class="source-link" href="${escapeHtml(sourceLink)}" target="_blank" rel="noopener">source</a>`;
+  }
+  html += `</h3>`;
 
   if (file) {
     html += `<div class="doc-file">${escapeHtml(file)}</div>`;

@@ -24,7 +24,7 @@ public static class LuaCatsGen
     /// ソースリンクコメント行 (nullable)
     /// </summary>
     public static string SourceComment(string? link) =>
-        link != null ? $"---@see {link}\n" : "";
+        link != null ? $"--- [source]({link})\n---@see {link}\n" : "";
 
     /// <summary>
     /// 構造体の LuaCATS クラス定義

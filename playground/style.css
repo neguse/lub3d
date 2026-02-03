@@ -281,6 +281,18 @@ body {
     color: #4fc3f7;
 }
 
+.source-link {
+    font-size: 12px;
+    font-weight: normal;
+    color: #888;
+    text-decoration: none;
+}
+
+.source-link:hover {
+    color: #4fc3f7;
+    text-decoration: underline;
+}
+
 .doc-file {
     font-size: 12px;
     color: #888;
