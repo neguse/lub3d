@@ -175,19 +175,22 @@ public class App : IModule
             LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(eventStruct, ModuleName, Prefix), eventFields, Link(eventStruct)) +
             LuaCatsGen.ModuleClass(ModuleName,
                 [LuaCatsGen.StructCtor("Desc", ModuleName),
-                 LuaCatsGen.StructCtor("Event", ModuleName),
-                 LuaCatsGen.FuncField(
-                     Pipeline.ToLuaCatsFuncName(runFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(runFunc, ModuleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(runFunc, ModuleName, Prefix)),
-                 LuaCatsGen.FuncField(
-                     Pipeline.ToLuaCatsFuncName(widthFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(widthFunc, ModuleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(widthFunc, ModuleName, Prefix)),
-                 LuaCatsGen.FuncField(
-                     Pipeline.ToLuaCatsFuncName(heightFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(heightFunc, ModuleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(heightFunc, ModuleName, Prefix))]) +
+                 LuaCatsGen.StructCtor("Event", ModuleName)]) +
+            LuaCatsGen.FuncDef(
+                Pipeline.ToLuaCatsFuncName(runFunc, Prefix),
+                Pipeline.ToLuaCatsParams(runFunc, ModuleName, Prefix),
+                Pipeline.ToLuaCatsReturnType(runFunc, ModuleName, Prefix),
+                Link(runFunc)) +
+            LuaCatsGen.FuncDef(
+                Pipeline.ToLuaCatsFuncName(widthFunc, Prefix),
+                Pipeline.ToLuaCatsParams(widthFunc, ModuleName, Prefix),
+                Pipeline.ToLuaCatsReturnType(widthFunc, ModuleName, Prefix),
+                Link(widthFunc)) +
+            LuaCatsGen.FuncDef(
+                Pipeline.ToLuaCatsFuncName(heightFunc, Prefix),
+                Pipeline.ToLuaCatsParams(heightFunc, ModuleName, Prefix),
+                Pipeline.ToLuaCatsReturnType(heightFunc, ModuleName, Prefix),
+                Link(heightFunc)) +
             LuaCatsGen.EnumDef(
                 Pipeline.ToLuaCatsEnumName(eventTypeEnum, ModuleName, Prefix),
                 Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),

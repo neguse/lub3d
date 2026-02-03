@@ -58,7 +58,7 @@ public static class LuaCatsGen
         """;
 
     /// <summary>
-    /// 関数の LuaCATS フィールド定義
+    /// 関数の LuaCATS フィールド定義 (ModuleClass 内に埋め込む用)
     /// </summary>
     public static string FuncField(string name, IEnumerable<(string name, Type type)> parameters, Type? ret)
     {
@@ -66,6 +66,25 @@ public static class LuaCatsGen
         return ret == null
             ? $"---@field {name} fun({args})"
             : $"---@field {name} fun({args}): {TypeToString(ret)}";
+    }
+
+    /// <summary>
+    /// 関数の LuaCATS 定義 (function M.Xxx() end 形式、個別にコメント付与可能)
+    /// </summary>
+    public static string FuncDef(string name, IEnumerable<(string name, Type type)> parameters, Type? ret, string? sourceLink = null)
+    {
+        var paramList = parameters.ToList();
+        var lines = new List<string>();
+        var source = SourceComment(sourceLink);
+        if (source.Length > 0)
+            lines.AddRange(source.TrimEnd('\n').Split('\n'));
+        foreach (var p in paramList)
+            lines.Add($"---@param {p.name} {TypeToString(p.type)}");
+        if (ret != null)
+            lines.Add($"---@return {TypeToString(ret)}");
+        var argNames = string.Join(", ", paramList.Select(p => p.name));
+        lines.Add($"function M.{name}({argNames}) end");
+        return string.Join("\n", lines) + "\n\n";
     }
 
     /// <summary>
