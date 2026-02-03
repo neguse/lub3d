@@ -14,8 +14,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          cache: 'npm'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -26,8 +26,8 @@ jobs:
       - name: Setup emsdk
         uses: mymindstorm/setup-emsdk@v14
         with:
-          version: '4.0.23'
-          actions-cache-folder: 'emsdk-cache'
+          version: "4.0.23"
+          actions-cache-folder: "emsdk-cache"
 
       - name: Add clang to PATH
         run: echo "$EMSDK/upstream/bin" >> $GITHUB_PATH
@@ -59,7 +59,7 @@ jobs:
         run: |
           LUA_LS_VERSION="3.16.4"
           curl -sL "https://github.com/LuaLS/lua-language-server/releases/download/${LUA_LS_VERSION}/lua-language-server-${LUA_LS_VERSION}-linux-x64.tar.gz" | tar xz -C /tmp
-          /tmp/bin/lua-language-server --doc .
+          /tmp/bin/lua-language-server --configpath .luarc-doc.json --doc .
 
       - name: Build Vite
         run: npm run build

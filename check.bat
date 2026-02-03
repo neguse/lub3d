@@ -19,7 +19,7 @@ echo Checking mane3d...
 
 echo.
 echo Generating doc.json...
-"%LUA_LS%" --doc "%~dp0."
+"%LUA_LS%" --configpath .luarc-doc.json --doc "%~dp0."
 
 echo.
 echo Done.
