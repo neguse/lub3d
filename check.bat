@@ -18,4 +18,8 @@ echo Checking mane3d...
 "%LUA_LS%" --check "%~dp0."
 
 echo.
+echo Generating doc.json...
+"%LUA_LS%" --doc "%~dp0."
+
+echo.
 echo Done.
