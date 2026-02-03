@@ -153,9 +153,14 @@ function renderEntry(entry: DocEntry): string {
   if (fields.length > 0) {
     html += `<div class="doc-fields">`;
     for (const field of fields) {
-      const fieldDesc = field.desc || field.rawdesc || "";
+      const rawFieldDesc = field.desc || field.rawdesc || "";
+      const { link: fieldLink, rest: fieldDesc } =
+        extractSourceLink(rawFieldDesc);
       html += `<div class="doc-field">
         <span class="field-name">${escapeHtml(field.name)}</span>`;
+      if (fieldLink) {
+        html += ` <a class="source-link" href="${escapeHtml(fieldLink)}" target="_blank" rel="noopener">source</a>`;
+      }
       if (field.view) {
         html += `<span class="field-type">${escapeHtml(field.view)}</span>`;
       }
