@@ -44,7 +44,7 @@ rootCommand.SetAction(parseResult =>
 
     Directory.CreateDirectory(outputDir);
 
-    IModule[] modules = [new App()];
+    IModule[] modules = [new App(), new Log()];
 
     var jsonOptions = new JsonSerializerOptions
     {
