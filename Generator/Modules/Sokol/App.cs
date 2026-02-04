@@ -135,13 +135,18 @@ public class App : IModule
             TrampolineEvent(eventMetatable) +
             CBindingGen.StructNew("sapp_desc", descMetatable, Pipeline.ToCFieldInits(descStruct)) +
             CBindingGen.StructNew("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
+            CBindingGen.StructIndex("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
+            CBindingGen.StructNewindex("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
+            CBindingGen.StructPairs("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
             RunFunc(descMetatable) +
             CBindingGen.Func("sapp_width", Pipeline.ToCParams(widthFunc), Pipeline.ToCReturnType(widthFunc), descMetatable) +
             CBindingGen.Func("sapp_height", Pipeline.ToCParams(heightFunc), Pipeline.ToCReturnType(heightFunc), descMetatable) +
             CBindingGen.Enum("sapp_event_type",
                 Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),
                 Pipeline.ToEnumItemsC(eventTypeEnum, Prefix)) +
-            CBindingGen.RegisterMetatables([descMetatable, eventMetatable]) +
+            CBindingGen.RegisterMetatables([
+                (descMetatable, null, null, null),
+                (eventMetatable, "l_sapp_event__index", "l_sapp_event__newindex", "l_sapp_event__pairs")]) +
             CBindingGen.LuaReg(funcArrayName,
                 [("Desc", "l_sapp_desc_new"),
                  ("Event", "l_sapp_event_new"),

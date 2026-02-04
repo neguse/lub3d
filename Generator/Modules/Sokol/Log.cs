@@ -28,7 +28,7 @@ public class Log : IModule
 
         return CBindingGen.Header(["sokol_log.h"]) +
             CBindingGen.Func("slog_func", Pipeline.ToCParams(slogFunc), Pipeline.ToCReturnType(slogFunc), "") +
-            CBindingGen.RegisterMetatables([]) +
+            CBindingGen.RegisterMetatables(Array.Empty<(string, string?, string?, string?)>()) +
             CBindingGen.LuaReg(funcArrayName,
                 [("Func", "l_slog_func")]) +
             CBindingGen.LuaOpen(luaOpenName, funcArrayName);

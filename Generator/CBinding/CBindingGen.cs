@@ -130,11 +130,103 @@ public static class CBindingGen
         """;
 
     /// <summary>
+    /// 構造体の __index メタメソッド生成
+    /// </summary>
+    public static string StructIndex(string structName, string metatable, IEnumerable<FieldInit> fields)
+    {
+        var branches = fields
+            .Where(f => f.Type is not Type.FuncPtr)
+            .Select(f => $"    if (strcmp(key, \"{f.LuaFieldName}\") == 0) {{ {GenPush(f)}; return 1; }}");
+        return $$"""
+            static int l_{{structName}}__index(lua_State *L) {
+                {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
+                const char* key = luaL_checkstring(L, 2);
+            {{string.Join("\n", branches)}}
+                return 0;
+            }
+
+            """;
+    }
+
+    /// <summary>
+    /// 構造体の __pairs メタメソッド生成 (next関数 + イテレータ)
+    /// </summary>
+    public static string StructPairs(string structName, string metatable, IEnumerable<FieldInit> fields)
+    {
+        var accessibleFields = fields.Where(f => f.Type is not Type.FuncPtr).ToList();
+        var fieldNames = string.Join(",\n", accessibleFields.Select(f =>
+            $"        \"{f.LuaFieldName}\""));
+        return $$"""
+            static int l_{{structName}}__pairs_next(lua_State *L) {
+                static const char* fields[] = {
+            {{fieldNames}}
+                };
+                static const int nfields = {{accessibleFields.Count}};
+                {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
+                int idx = 0;
+                if (!lua_isnil(L, 2)) {
+                    const char* key = lua_tostring(L, 2);
+                    for (int i = 0; i < nfields; i++) {
+                        if (strcmp(key, fields[i]) == 0) { idx = i + 1; break; }
+                    }
+                }
+                if (idx >= nfields) return 0;
+                lua_pushstring(L, fields[idx]);
+                lua_pushvalue(L, 1);
+                lua_pushstring(L, fields[idx]);
+                lua_gettable(L, -2);
+                lua_remove(L, -2);
+                return 2;
+            }
+            static int l_{{structName}}__pairs(lua_State *L) {
+                lua_pushcfunction(L, l_{{structName}}__pairs_next);
+                lua_pushvalue(L, 1);
+                lua_pushnil(L);
+                return 3;
+            }
+
+            """;
+    }
+
+    /// <summary>
+    /// 構造体の __newindex メタメソッド生成
+    /// </summary>
+    public static string StructNewindex(string structName, string metatable, IEnumerable<FieldInit> fields)
+    {
+        var branches = fields
+            .Where(f => f.Type is not Type.FuncPtr)
+            .Select(f => $"    if (strcmp(key, \"{f.LuaFieldName}\") == 0) {{ {GenSet(f)}; return 0; }}");
+        return $$"""
+            static int l_{{structName}}__newindex(lua_State *L) {
+                {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
+                const char* key = luaL_checkstring(L, 2);
+            {{string.Join("\n", branches)}}
+                return luaL_error(L, "unknown field: %s", key);
+            }
+
+            """;
+    }
+
+    /// <summary>
     /// メタテーブル登録関数
     /// </summary>
-    public static string RegisterMetatables(IEnumerable<string> metatables)
+    /// <param name="metatables">
+    /// (metatable名, __index関数名 or null, __newindex関数名 or null, __pairs関数名 or null)
+    /// </param>
+    public static string RegisterMetatables(IEnumerable<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc)> metatables)
     {
-        var lines = metatables.Select(m => $"    luaL_newmetatable(L, \"{m}\"); lua_pop(L, 1);");
+        var lines = metatables.Select(m =>
+        {
+            var sb = $"    luaL_newmetatable(L, \"{m.metatable}\");";
+            if (m.indexFunc != null)
+                sb += $"\n    lua_pushcfunction(L, {m.indexFunc}); lua_setfield(L, -2, \"__index\");";
+            if (m.newindexFunc != null)
+                sb += $"\n    lua_pushcfunction(L, {m.newindexFunc}); lua_setfield(L, -2, \"__newindex\");";
+            if (m.pairsFunc != null)
+                sb += $"\n    lua_pushcfunction(L, {m.pairsFunc}); lua_setfield(L, -2, \"__pairs\");";
+            sb += "\n    lua_pop(L, 1);";
+            return sb;
+        });
         return $$"""
             static void register_metatables(lua_State *L) {
             {{string.Join("\n", lines)}}
@@ -144,6 +236,42 @@ public static class CBindingGen
     }
 
     // ===== ヘルパー関数 =====
+
+    /// <summary>
+    /// フィールドの getter 式 (lua_push*)
+    /// </summary>
+    private static string GenPush(FieldInit f) => f.Type switch
+    {
+        Type.Int or Type.Int64 or Type.UInt32 or Type.UInt64 or Type.Size or Type.UIntPtr or Type.IntPtr
+            => $"lua_pushinteger(L, (lua_Integer)self->{f.FieldName})",
+        Type.Float or Type.Double
+            => $"lua_pushnumber(L, (lua_Number)self->{f.FieldName})",
+        Type.Bool
+            => $"lua_pushboolean(L, self->{f.FieldName})",
+        Type.String or Type.ConstPointer(Type.String)
+            => $"lua_pushstring(L, self->{f.FieldName})",
+        Type.Struct(_)
+            => $"lua_pushinteger(L, (lua_Integer)self->{f.FieldName})",
+        _ => $"lua_pushnil(L)"
+    };
+
+    /// <summary>
+    /// フィールドの setter 式 (luaL_check*)
+    /// </summary>
+    private static string GenSet(FieldInit f) => f.Type switch
+    {
+        Type.Int or Type.Int64 or Type.UInt32 or Type.UInt64 or Type.Size or Type.UIntPtr or Type.IntPtr
+            => $"self->{f.FieldName} = ({TypeToString(f.Type)})luaL_checkinteger(L, 3)",
+        Type.Float or Type.Double
+            => $"self->{f.FieldName} = ({TypeToString(f.Type)})luaL_checknumber(L, 3)",
+        Type.Bool
+            => $"self->{f.FieldName} = lua_toboolean(L, 3)",
+        Type.String or Type.ConstPointer(Type.String)
+            => $"self->{f.FieldName} = luaL_checkstring(L, 3)",
+        Type.Struct(var name)
+            => $"self->{f.FieldName} = ({name})luaL_checkinteger(L, 3)",
+        _ => $"luaL_error(L, \"unsupported type for field: %s\", key)"
+    };
 
     private static string TypeToString(Type typ) => typ switch
     {
