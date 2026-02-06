@@ -17,9 +17,10 @@ call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat" >nul 2>&1
 :: Set UTF-8 for Python (needed for binding generation)
 set PYTHONUTF8=1
 
-:: Set CLANGPP for binding generation
+:: Set CLANGPP/CLANG for binding generation
 for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Llvm.Clang -property installationPath`) do (
     set "CLANGPP=%%i\VC\Tools\Llvm\x64\bin\clang++.exe"
+    set "CLANG=%%i\VC\Tools\Llvm\x64\bin\clang.exe"
 )
 
 :: Default preset
