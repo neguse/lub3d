@@ -104,6 +104,7 @@ public abstract record Types
     public sealed record Ptr(Types Inner) : Types;
     public sealed record ConstPtr(Types Inner) : Types;
     public sealed record FuncPtr(List<Types> Args, Types Ret) : Types;
+    public sealed record Array(Types Inner, int Length) : Types;
     public sealed record StructRef(string Name) : Types;
     public sealed record Void : Types;
 }
@@ -114,7 +115,7 @@ public abstract record Types
 public static class ClangRunner
 {
     /// <summary>
-    /// clang を実行して AST JSON を取得し、Module に変換する
+    /// clang を実行して AST JSON を取得し、Module に変換する (単一ヘッダ版 — テスト用)
     /// </summary>
     public static Module ParseHeader(
         string clangPath,
@@ -124,18 +125,47 @@ public static class ClangRunner
         List<string> depPrefixes,
         List<string> includePaths)
     {
-        var json = RunClang(clangPath, headerPath, includePaths);
+        var json = RunClang(clangPath, [headerPath], includePaths);
         return ParseAstJson(json, moduleName, prefix, depPrefixes);
     }
 
-    private static string RunClang(string clangPath, string headerPath, List<string> includePaths)
+    /// <summary>
+    /// 複数ヘッダを一括 parse し、全 prefix の decl を含む unified Module を返す
+    /// </summary>
+    public static Module ParseHeaders(
+        string clangPath,
+        List<string> headerPaths,
+        List<string> allPrefixes,
+        List<string> includePaths)
+    {
+        var json = RunClang(clangPath, headerPaths, includePaths);
+        return ParseUnifiedAstJson(json, allPrefixes);
+    }
+
+    /// <summary>
+    /// unified Module から特定 prefix の view を生成（IsDep 再計算）
+    /// </summary>
+    public static Module CreateView(Module unified, string ownPrefix, string moduleName)
+    {
+        var decls = unified.Decls.Select(d => d switch
+        {
+            Structs s => s with { IsDep = !s.Name.StartsWith(ownPrefix) },
+            Funcs f => f with { IsDep = !f.Name.StartsWith(ownPrefix) },
+            Enums e => e with { IsDep = !e.Name.StartsWith(ownPrefix) },
+            _ => d
+        }).ToList();
+        return new Module(moduleName, ownPrefix, [], decls);
+    }
+
+    private static string RunClang(string clangPath, List<string> headerPaths, List<string> includePaths)
     {
         var wrapperPath = Path.Combine(Path.GetTempPath(), "generator_wrapper.c");
+        var includes = string.Join("\n", headerPaths.Select(h => $"#include \"{Path.GetFileName(h)}\""));
         File.WriteAllText(wrapperPath, $"""
             #include <stdbool.h>
             #include <stdint.h>
             #include <stddef.h>
-            #include "{Path.GetFileName(headerPath)}"
+            {includes}
             """);
 
         var args = new List<string>
@@ -143,9 +173,12 @@ public static class ClangRunner
             "-Xclang", "-ast-dump=json",
             "-fsyntax-only"
         };
-        var headerDir = Path.GetDirectoryName(headerPath);
-        if (headerDir != null)
-            args.AddRange(["-I", headerDir]);
+        foreach (var headerPath in headerPaths)
+        {
+            var headerDir = Path.GetDirectoryName(headerPath);
+            if (headerDir != null)
+                args.AddRange(["-I", headerDir]);
+        }
         foreach (var inc in includePaths)
             args.AddRange(["-I", inc]);
         args.Add(wrapperPath);
@@ -211,6 +244,43 @@ public static class ClangRunner
         }
 
         return new Module(moduleName, prefix, depPrefixes, decls);
+    }
+
+    private static Module ParseUnifiedAstJson(string json, List<string> allPrefixes)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var decls = new List<Decl>();
+
+        foreach (var node in root.GetProperty("inner").EnumerateArray())
+        {
+            var kind = node.GetProperty("kind").GetString() ?? "";
+            var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+
+            var matchedPrefix = allPrefixes
+                .OrderByDescending(p => p.Length)
+                .FirstOrDefault(p => name.StartsWith(p));
+            if (matchedPrefix == null) continue;
+            if (kind == "TypedefDecl") continue;
+
+            var line = GetLine(node);
+
+            switch (kind)
+            {
+                case "FunctionDecl":
+                    decls.Add(ParseFunc(node, false, null, line));
+                    break;
+                case "RecordDecl":
+                    if (node.TryGetProperty("tagUsed", out var tag) && tag.GetString() == "struct")
+                        decls.Add(ParseStruct(node, false, null, line));
+                    break;
+                case "EnumDecl":
+                    decls.Add(ParseEnum(node, false, null, line));
+                    break;
+            }
+        }
+
+        return new Module("unified", "", [], decls);
     }
 
     private static int? GetLine(JsonElement node)
@@ -327,7 +397,7 @@ public static partial class CTypeParser
     [GeneratedRegex(@"^(.+)\s*\*$")]
     private static partial Regex PtrRegex();
 
-    [GeneratedRegex(@"^(.+)\s*\[\d+\]$")]
+    [GeneratedRegex(@"^(.+)\s*\[(\d+)\]$")]
     private static partial Regex ArrayRegex();
 
     public static Types Parse(string typeStr)
@@ -371,7 +441,7 @@ public static partial class CTypeParser
 
         var arrayMatch = ArrayRegex().Match(typeStr);
         if (arrayMatch.Success)
-            return new Types.Ptr(Parse(arrayMatch.Groups[1].Value));
+            return new Types.Array(Parse(arrayMatch.Groups[1].Value), int.Parse(arrayMatch.Groups[2].Value));
 
         return typeStr switch
         {

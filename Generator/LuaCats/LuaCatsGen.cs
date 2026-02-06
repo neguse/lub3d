@@ -148,6 +148,8 @@ public static class LuaCatsGen
             => ToLuaCatsType(inner),
         BindingType.ConstPtr(var inner)
             => ToLuaCatsType(inner),
+        BindingType.FixedArray(var inner, _)
+            => new Type.Class(TypeToString(ToLuaCatsType(inner)) + "[]"),
         BindingType.Struct(_, _, var luaClassName)
             => new Type.Class(luaClassName),
         BindingType.Enum(_, var luaName)

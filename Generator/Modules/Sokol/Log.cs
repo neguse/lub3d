@@ -6,6 +6,5 @@ namespace Generator.Modules.Sokol;
 public class Log : SokolModule
 {
     public override string ModuleName => "sokol.log";
-    public override string Header => "sokol/sokol_log.h";
     public override string Prefix => "slog_";
 }

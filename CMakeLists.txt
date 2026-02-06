@@ -100,18 +100,18 @@ set(BINDGEN_DIR "${SOKOL_DIR}/bindgen" CACHE PATH "Path to sokol/bindgen directo
 
 set(MANE3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_log.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_gfx.c
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_app.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_glue.c
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_time.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_audio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gl.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_debugtext.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_shape.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_audio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_gl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_debugtext.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_shape.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
-# New Generator (C#) for sokol_app
+# C# Generator for all Sokol modules
 set(GENERATOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Generator")
 set(NEWGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/newgen")
 find_program(DOTNET_EXECUTABLE dotnet REQUIRED)
@@ -123,6 +123,12 @@ add_custom_command(
     OUTPUT ${NEWGEN_DIR}/sokol_app.c ${NEWGEN_DIR}/sokol_app.lua
            ${NEWGEN_DIR}/sokol_log.c ${NEWGEN_DIR}/sokol_log.lua
            ${NEWGEN_DIR}/sokol_time.c ${NEWGEN_DIR}/sokol_time.lua
+           ${NEWGEN_DIR}/sokol_gfx.c ${NEWGEN_DIR}/sokol_gfx.lua
+           ${NEWGEN_DIR}/sokol_glue.c ${NEWGEN_DIR}/sokol_glue.lua
+           ${NEWGEN_DIR}/sokol_audio.c ${NEWGEN_DIR}/sokol_audio.lua
+           ${NEWGEN_DIR}/sokol_gl.c ${NEWGEN_DIR}/sokol_gl.lua
+           ${NEWGEN_DIR}/sokol_debugtext.c ${NEWGEN_DIR}/sokol_debugtext.lua
+           ${NEWGEN_DIR}/sokol_shape.c ${NEWGEN_DIR}/sokol_shape.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${NEWGEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
@@ -131,8 +137,16 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_app.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_log.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_time.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_gfx.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_audio.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_gl.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_debugtext.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_shape.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_glue.h
         ${GENERATOR_DIR}/Program.cs
         ${GENERATOR_DIR}/IModule.cs
+        ${GENERATOR_DIR}/ModuleSpec.cs
+        ${GENERATOR_DIR}/BindingType.cs
         ${GENERATOR_DIR}/Pipeline.cs
         ${GENERATOR_DIR}/ClangAst/ClangAst.cs
         ${GENERATOR_DIR}/ClangAst/TypeRegistry.cs
@@ -140,41 +154,21 @@ add_custom_command(
         ${GENERATOR_DIR}/CBinding/CBindingGen.cs
         ${GENERATOR_DIR}/LuaCats/LuaCats.cs
         ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
+        ${GENERATOR_DIR}/Modules/Sokol/SokolModule.cs
         ${GENERATOR_DIR}/Modules/Sokol/App.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Audio.cs
+        ${GENERATOR_DIR}/Modules/Sokol/DebugText.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Gfx.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Gl.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Glue.cs
         ${GENERATOR_DIR}/Modules/Sokol/Log.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Shape.cs
         ${GENERATOR_DIR}/Modules/Sokol/Time.cs
     COMMENT "Running Generator (header -> bindings)"
 )
 
-# Legacy Python generator (remaining modules)
+# License generator (Python)
 if(Python3_FOUND)
-    add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_audio.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gl.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_debugtext.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_shape.c
-        COMMAND ${CMAKE_COMMAND} -E env "PYTHONUTF8=1" "CLANGPP=${CLANGPP_EXECUTABLE}"
-            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
-            --sokol ${SOKOL_DIR}
-            --bindgen ${BINDGEN_DIR}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/bindings/sokol.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/__init__.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/ir.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/types.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/codegen.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/struct.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/func.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/callback.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/enum.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/luacats.py
-                ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/generator.py
-        COMMENT "Generating Lua bindings (legacy)..."
-    )
-
     add_custom_command(
         OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
         COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1

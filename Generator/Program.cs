@@ -44,7 +44,37 @@ rootCommand.SetAction(parseResult =>
 
     Directory.CreateDirectory(outputDir);
 
-    IModule[] modules = [new App(), new Log(), new Time()];
+    // --- ヘッダグループ (Sokol) ---
+    var sokolHeaders = new List<string>
+    {
+        "sokol_log.h", "sokol_gfx.h", "sokol_app.h", "sokol_time.h",
+        "sokol_audio.h", "sokol_gl.h", "sokol_debugtext.h",
+        "sokol_shape.h", "sokol_glue.h"
+    };
+    var sokolIncludePaths = new List<string>
+    {
+        Path.Combine(depsDir, "sokol"),
+        Path.Combine(depsDir, "sokol", "util")
+    };
+
+    // --- モジュール定義 ---
+    IModule[] modules = [
+        new App(), new Audio(), new DebugText(), new Gfx(),
+        new Gl(), new Glue(), new Log(), new Shape(), new Time()
+    ];
+
+    var prefixToModule = modules.ToDictionary(m => m.Prefix, m => m.ModuleName);
+
+    // --- Clang 1回実行 ---
+    var headerPaths = sokolHeaders.Select(h => FindHeader(h, sokolIncludePaths)).ToList();
+    Console.WriteLine($"Parsing {headerPaths.Count} headers with clang ...");
+
+    var unified = ClangRunner.ParseHeaders(
+        clangPath, headerPaths,
+        prefixToModule.Keys.ToList(),
+        sokolIncludePaths);
+
+    Console.WriteLine($"  Found {unified.Decls.Count} declarations total");
 
     var jsonOptions = new JsonSerializerOptions
     {
@@ -52,30 +82,39 @@ rootCommand.SetAction(parseResult =>
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
+    // --- 各モジュール生成 ---
     foreach (var mod in modules)
     {
-        var headerPath = Path.Combine(depsDir, mod.Header);
-        var includePaths = mod.IncludeDirs.Select(d => Path.Combine(depsDir, d)).ToList();
-        Console.WriteLine($"Parsing {headerPath} ...");
+        var view = ClangRunner.CreateView(unified, mod.Prefix, mod.ModuleName);
+        var reg = TypeRegistry.FromModule(view);
 
-        var astModule = ClangRunner.ParseHeader(
-            clangPath, headerPath, mod.ModuleName,
-            mod.Prefix, [.. mod.DepPrefixes], includePaths);
+        // SourceLink: find the header that corresponds to this module's prefix
+        var headerFile = sokolHeaders.FirstOrDefault(h =>
+        {
+            var fullPath = FindHeader(h, sokolIncludePaths);
+            return fullPath != null;
+        });
+        SourceLink? sourceLink = null;
+        if (headerFile != null)
+        {
+            var relPath = headerFile.Contains("util")
+                ? $"sokol/util/{headerFile}"
+                : $"sokol/{headerFile}";
+            sourceLink = SourceLink.FromHeader(depsDir, relPath);
+        }
 
-        var reg = TypeRegistry.FromModule(astModule);
-        var sourceLink = SourceLink.FromHeader(depsDir, mod.Header);
         var moduleId = mod.ModuleName.Replace('.', '_');
 
         var jsonPath = Path.Combine(outputDir, $"{moduleId}.json");
-        File.WriteAllText(jsonPath, JsonSerializer.Serialize(astModule, jsonOptions));
+        File.WriteAllText(jsonPath, JsonSerializer.Serialize(view, jsonOptions));
         Console.WriteLine($"Generated: {jsonPath}");
 
         var cPath = Path.Combine(outputDir, $"{moduleId}.c");
-        File.WriteAllText(cPath, mod.GenerateC(reg));
+        File.WriteAllText(cPath, mod.GenerateC(reg, prefixToModule));
         Console.WriteLine($"Generated: {cPath}");
 
         var luaPath = Path.Combine(outputDir, $"{moduleId}.lua");
-        File.WriteAllText(luaPath, mod.GenerateLua(reg, sourceLink));
+        File.WriteAllText(luaPath, mod.GenerateLua(reg, prefixToModule, sourceLink));
         Console.WriteLine($"Generated: {luaPath}");
     }
 
@@ -83,6 +122,16 @@ rootCommand.SetAction(parseResult =>
 });
 
 return rootCommand.Parse(args).Invoke();
+
+static string FindHeader(string headerName, List<string> includePaths)
+{
+    foreach (var dir in includePaths)
+    {
+        var path = Path.Combine(dir, headerName);
+        if (File.Exists(path)) return path;
+    }
+    throw new FileNotFoundException($"Header not found: {headerName} in {string.Join(", ", includePaths)}");
+}
 
 static string? FindClang()
 {

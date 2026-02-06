@@ -8,10 +8,7 @@ using Generator.ClangAst;
 public abstract class SokolModule : IModule
 {
     public abstract string ModuleName { get; }
-    public abstract string Header { get; }
     public abstract string Prefix { get; }
-    public virtual IReadOnlyList<string> IncludeDirs => ["sokol"];
-    public virtual IReadOnlyList<string> DepPrefixes => [];
 
     // ===== カスタマイズ hooks (virtual) =====
 
@@ -19,14 +16,14 @@ public abstract class SokolModule : IModule
     protected virtual bool ShouldGenerateFunc(Funcs f) => true;
     protected virtual bool HasMetamethods(Structs s) => false;
     protected virtual string MapFieldName(string fieldName) => fieldName;
-    protected virtual BindingType ResolveType(Types t, string moduleName, string prefix) =>
-        DefaultResolveType(t, moduleName, prefix);
+    protected virtual BindingType ResolveType(Types t, string moduleName, string prefix, Dictionary<string, string> prefixToModule) =>
+        DefaultResolveType(t, moduleName, prefix, prefixToModule);
     protected virtual string? ExtraCCode(TypeRegistry reg) => null;
     protected virtual IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs => [];
 
     // ===== BuildSpec =====
 
-    public ModuleSpec BuildSpec(TypeRegistry reg, SourceLink? sourceLink = null)
+    public ModuleSpec BuildSpec(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
         var enumNames = reg.AllDecls.OfType<Enums>().Select(e => e.Name).ToHashSet();
 
@@ -34,17 +31,22 @@ public abstract class SokolModule : IModule
         {
             if (t is Types.StructRef(var name) && enumNames.Contains(name))
             {
-                var luaName = $"{ModuleName}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, Prefix))}";
+                var matchedPrefix = prefixToModule.Keys
+                    .OrderByDescending(p => p.Length)
+                    .FirstOrDefault(p => name.StartsWith(p));
+                var ownerModule = matchedPrefix != null ? prefixToModule[matchedPrefix] : ModuleName;
+                var stripPrefix = matchedPrefix ?? Prefix;
+                var luaName = $"{ownerModule}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, stripPrefix))}";
                 return new BindingType.Enum(name, luaName);
             }
-            return ResolveType(t, ModuleName, Prefix);
+            return ResolveType(t, ModuleName, Prefix, prefixToModule);
         }
 
         var structs = new List<StructBinding>();
         foreach (var s in reg.OwnStructs)
         {
             if (Ignores.Contains(s.Name)) continue;
-            var pascalName = Pipeline.ToPascalCase(Pipeline.StripPrefix(s.Name, Prefix));
+            var pascalName = Pipeline.ToPascalCase(Pipeline.StripTypeSuffix(Pipeline.StripPrefix(s.Name, Prefix)));
             var metatable = $"{ModuleName}.{pascalName}";
             var fields = s.Fields.Select(f => new FieldBinding(
                 f.Name,
@@ -93,9 +95,13 @@ public abstract class SokolModule : IModule
                 GetLink(e, sourceLink)));
         }
 
-        var includes = DepPrefixes.Count > 0
-            ? DepPrefixes.Select(_ => "sokol_log.h").Concat([Path.GetFileName(Header)]).ToList()
-            : [Path.GetFileName(Header)];
+        // All Sokol headers in dependency order
+        var includes = new List<string>
+        {
+            "sokol_log.h", "sokol_gfx.h", "sokol_app.h", "sokol_time.h",
+            "sokol_audio.h", "sokol_gl.h", "sokol_debugtext.h",
+            "sokol_shape.h", "sokol_glue.h"
+        };
 
         return new ModuleSpec(
             ModuleName, Prefix, includes,
@@ -106,21 +112,21 @@ public abstract class SokolModule : IModule
 
     // ===== IModule 実装 =====
 
-    public string GenerateC(TypeRegistry reg)
+    public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
     {
-        var spec = BuildSpec(reg);
+        var spec = BuildSpec(reg, prefixToModule);
         return CBinding.CBindingGen.Generate(spec);
     }
 
-    public string GenerateLua(TypeRegistry reg, SourceLink? sourceLink = null)
+    public string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
-        var spec = BuildSpec(reg, sourceLink);
+        var spec = BuildSpec(reg, prefixToModule, sourceLink);
         return LuaCats.LuaCatsGen.Generate(spec);
     }
 
     // ===== デフォルト型変換 =====
 
-    protected static BindingType DefaultResolveType(Types t, string moduleName, string prefix) => t switch
+    protected static BindingType DefaultResolveType(Types t, string moduleName, string prefix, Dictionary<string, string> prefixToModule) => t switch
     {
         Types.Int => new BindingType.Int(),
         Types.Int64 => new BindingType.Int64(),
@@ -133,19 +139,31 @@ public abstract class SokolModule : IModule
         Types.Double => new BindingType.Double(),
         Types.Bool => new BindingType.Bool(),
         Types.String => new BindingType.Str(),
+        Types.Array(var inner, var len) => new BindingType.FixedArray(
+            DefaultResolveType(inner, moduleName, prefix, prefixToModule), len),
         Types.Ptr(Types.Void) => new BindingType.VoidPtr(),
-        Types.Ptr(var inner) => new BindingType.Ptr(DefaultResolveType(inner, moduleName, prefix)),
-        Types.ConstPtr(var inner) => new BindingType.ConstPtr(DefaultResolveType(inner, moduleName, prefix)),
+        Types.Ptr(var inner) => new BindingType.Ptr(DefaultResolveType(inner, moduleName, prefix, prefixToModule)),
+        Types.ConstPtr(var inner) => new BindingType.ConstPtr(DefaultResolveType(inner, moduleName, prefix, prefixToModule)),
         Types.FuncPtr(var args, var ret) => new BindingType.Callback(
-            args.Select((a, i) => ($"arg{i}", DefaultResolveType(a, moduleName, prefix))).ToList(),
-            ret is Types.Void ? null : DefaultResolveType(ret, moduleName, prefix)),
-        Types.StructRef(var name) => new BindingType.Struct(
-            name,
-            $"{moduleName}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, prefix))}",
-            $"{moduleName}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, prefix))}"),
+            args.Select((a, i) => ($"arg{i}", DefaultResolveType(a, moduleName, prefix, prefixToModule))).ToList(),
+            ret is Types.Void ? null : DefaultResolveType(ret, moduleName, prefix, prefixToModule)),
+        Types.StructRef(var name) => ResolveStructRef(name, moduleName, prefix, prefixToModule),
         Types.Void => new BindingType.Void(),
         _ => new BindingType.Void()
     };
+
+    private static BindingType ResolveStructRef(string name, string moduleName, string prefix, Dictionary<string, string> prefixToModule)
+    {
+        // Try to find the owning module by prefix match
+        var matchedPrefix = prefixToModule.Keys
+            .OrderByDescending(p => p.Length)
+            .FirstOrDefault(p => name.StartsWith(p));
+        var ownerModule = matchedPrefix != null ? prefixToModule[matchedPrefix] : moduleName;
+        var stripPrefix = matchedPrefix ?? prefix;
+        var pascal = Pipeline.ToPascalCase(Pipeline.StripTypeSuffix(Pipeline.StripPrefix(name, stripPrefix)));
+        var fullName = $"{ownerModule}.{pascal}";
+        return new BindingType.Struct(name, fullName, fullName);
+    }
 
     // ===== ヘルパー =====
 

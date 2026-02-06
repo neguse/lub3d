@@ -10,12 +10,11 @@ namespace Generator.Tests;
 file class TestModule : SokolModule
 {
     public override string ModuleName => "sokol.test";
-    public override string Header => "sokol/sokol_test.h";
     public override string Prefix => "stest_";
 
     // DefaultResolveType をテストから呼べるように公開
     public static BindingType TestResolveType(Types t, string moduleName, string prefix) =>
-        DefaultResolveType(t, moduleName, prefix);
+        DefaultResolveType(t, moduleName, prefix, new Dictionary<string, string> { [prefix] = moduleName });
 }
 
 /// <summary>
@@ -24,9 +23,7 @@ file class TestModule : SokolModule
 file class CustomTestModule : SokolModule
 {
     public override string ModuleName => "sokol.app";
-    public override string Header => "sokol/sokol_app.h";
     public override string Prefix => "sapp_";
-    public override IReadOnlyList<string> DepPrefixes => ["slog_"];
 
     protected override bool ShouldGenerateFunc(Funcs f) => f.Name != "sapp_run";
     protected override bool HasMetamethods(Structs s) => s.Name == "sapp_event";
@@ -46,13 +43,34 @@ file class CustomTestModule : SokolModule
 file class TimeTestModule : SokolModule
 {
     public override string ModuleName => "sokol.time";
-    public override string Header => "sokol/sokol_time.h";
     public override string Prefix => "stm_";
     protected override IReadOnlySet<string> Ignores => new HashSet<string> { "stm_laptime" };
 }
 
 public class SokolModuleTests
 {
+    private static readonly Dictionary<string, string> TestPrefixToModule = new()
+    {
+        ["stest_"] = "sokol.test",
+    };
+
+    private static readonly Dictionary<string, string> AppPrefixToModule = new()
+    {
+        ["sapp_"] = "sokol.app",
+        ["slog_"] = "sokol.log",
+    };
+
+    private static readonly Dictionary<string, string> TimePrefixToModule = new()
+    {
+        ["stm_"] = "sokol.time",
+    };
+
+    private static readonly Dictionary<string, string> DepPrefixToModule = new()
+    {
+        ["stest_"] = "sokol.test",
+        ["sdep_"] = "sokol.dep",
+    };
+
     // ===== DefaultResolveType =====
 
     [Fact]
@@ -199,7 +217,7 @@ public class SokolModuleTests
     public void BuildSpec_ModuleName()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Equal("sokol.test", spec.ModuleName);
     }
 
@@ -207,7 +225,7 @@ public class SokolModuleTests
     public void BuildSpec_Prefix()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Equal("stest_", spec.Prefix);
     }
 
@@ -215,15 +233,16 @@ public class SokolModuleTests
     public void BuildSpec_CIncludes()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
-        Assert.Contains("sokol_test.h", spec.CIncludes);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        Assert.Contains("sokol_log.h", spec.CIncludes);
+        Assert.Contains("sokol_gfx.h", spec.CIncludes);
     }
 
     [Fact]
     public void BuildSpec_Structs()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Single(spec.Structs);
         var s = spec.Structs[0];
         Assert.Equal("stest_desc", s.CName);
@@ -236,7 +255,7 @@ public class SokolModuleTests
     public void BuildSpec_StructFields()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         var fields = spec.Structs[0].Fields;
         Assert.Equal(2, fields.Count);
         Assert.Equal("width", fields[0].CName);
@@ -250,7 +269,7 @@ public class SokolModuleTests
     public void BuildSpec_Funcs()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Single(spec.Funcs);
         var f = spec.Funcs[0];
         Assert.Equal("stest_init", f.CName);
@@ -264,7 +283,7 @@ public class SokolModuleTests
     public void BuildSpec_Enums()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Single(spec.Enums);
         var e = spec.Enums[0];
         Assert.Equal("stest_mode", e.CName);
@@ -281,7 +300,7 @@ public class SokolModuleTests
     public void BuildSpec_ExtraCCodeNull()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Null(spec.ExtraCCode);
     }
 
@@ -289,7 +308,7 @@ public class SokolModuleTests
     public void BuildSpec_ExtraLuaRegsEmpty()
     {
         var reg = TypeRegistry.FromJson(SimpleJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Empty(spec.ExtraLuaRegs);
     }
 
@@ -346,7 +365,7 @@ public class SokolModuleTests
     public void BuildSpec_ShouldGenerateFunc_Filters()
     {
         var reg = TypeRegistry.FromJson(AppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "sapp_run");
         Assert.Contains(spec.Funcs, f => f.CName == "sapp_width");
     }
@@ -355,7 +374,7 @@ public class SokolModuleTests
     public void BuildSpec_HasMetamethods_SetCorrectly()
     {
         var reg = TypeRegistry.FromJson(AppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var eventStruct = spec.Structs.First(s => s.CName == "sapp_event");
         var descStruct = spec.Structs.First(s => s.CName == "sapp_desc");
         Assert.True(eventStruct.HasMetamethods);
@@ -366,7 +385,7 @@ public class SokolModuleTests
     public void BuildSpec_MapFieldName_Renames()
     {
         var reg = TypeRegistry.FromJson(AppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var descStruct = spec.Structs.First(s => s.CName == "sapp_desc");
         var initField = descStruct.Fields.First(f => f.CName == "init_cb");
         Assert.Equal("init", initField.LuaName);
@@ -376,7 +395,7 @@ public class SokolModuleTests
     public void BuildSpec_ExtraLuaRegs_Added()
     {
         var reg = TypeRegistry.FromJson(AppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         Assert.Contains(spec.ExtraLuaRegs, r => r.LuaName == "Run" && r.CFunc == "l_sapp_run");
     }
 
@@ -384,7 +403,7 @@ public class SokolModuleTests
     public void BuildSpec_ExtraCCode_Included()
     {
         var reg = TypeRegistry.FromJson(AppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         Assert.Equal("/* custom */\n", spec.ExtraCCode);
     }
 
@@ -423,7 +442,7 @@ public class SokolModuleTests
     public void BuildSpec_EnumFieldType_ResolvesAsEnum()
     {
         var reg = TypeRegistry.FromJson(EnumFieldJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         var eventStruct = spec.Structs.First(s => s.CName == "stest_event");
         var typeField = eventStruct.Fields.First(f => f.CName == "type");
         var enumType = Assert.IsType<BindingType.Enum>(typeField.Type);
@@ -435,7 +454,7 @@ public class SokolModuleTests
     public void BuildSpec_EnumFieldType_EnumStillGenerated()
     {
         var reg = TypeRegistry.FromJson(EnumFieldJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
         Assert.Single(spec.Enums);
         Assert.Equal("stest_event_type", spec.Enums[0].CName);
     }
@@ -542,7 +561,7 @@ public class SokolModuleTests
     public void FullApp_AllEnumsPresent()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         Assert.Equal(5, spec.Enums.Count);
         Assert.Contains(spec.Enums, e => e.CName == "sapp_event_type");
         Assert.Contains(spec.Enums, e => e.CName == "sapp_keycode");
@@ -553,7 +572,7 @@ public class SokolModuleTests
     public void FullApp_EventEnumFields_ResolveAsEnum()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var ev = spec.Structs.First(s => s.CName == "sapp_event");
         var typeField = ev.Fields.First(f => f.CName == "type");
         var keyField = ev.Fields.First(f => f.CName == "key_code");
@@ -567,7 +586,7 @@ public class SokolModuleTests
     public void FullApp_EventHasMetamethods()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var ev = spec.Structs.First(s => s.CName == "sapp_event");
         var desc = spec.Structs.First(s => s.CName == "sapp_desc");
         Assert.True(ev.HasMetamethods);
@@ -578,7 +597,7 @@ public class SokolModuleTests
     public void FullApp_DescCallbackFields()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var desc = spec.Structs.First(s => s.CName == "sapp_desc");
         var initField = desc.Fields.First(f => f.CName == "init_cb");
         Assert.Equal("init", initField.LuaName);
@@ -589,7 +608,7 @@ public class SokolModuleTests
     public void FullApp_RunFiltered_ExtraRegAdded()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "sapp_run");
         Assert.Contains(spec.ExtraLuaRegs, r => r.LuaName == "Run");
     }
@@ -598,7 +617,7 @@ public class SokolModuleTests
     public void FullApp_AllReturnTypes()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         Assert.IsType<BindingType.Bool>(spec.Funcs.First(f => f.CName == "sapp_isvalid").ReturnType);
         Assert.IsType<BindingType.Int>(spec.Funcs.First(f => f.CName == "sapp_width").ReturnType);
         Assert.IsType<BindingType.Float>(spec.Funcs.First(f => f.CName == "sapp_widthf").ReturnType);
@@ -613,7 +632,7 @@ public class SokolModuleTests
     public void FullApp_StringReturnType()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var f = spec.Funcs.First(f => f.CName == "sapp_get_clipboard_string");
         Assert.IsType<BindingType.ConstPtr>(f.ReturnType);
         var inner = Assert.IsType<BindingType.ConstPtr>(f.ReturnType);
@@ -624,7 +643,7 @@ public class SokolModuleTests
     public void FullApp_ParamTypes()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var showKb = spec.Funcs.First(f => f.CName == "sapp_show_keyboard");
         Assert.IsType<BindingType.Bool>(showKb.Params[0].Type);
         var setCursor = spec.Funcs.First(f => f.CName == "sapp_set_mouse_cursor");
@@ -637,7 +656,7 @@ public class SokolModuleTests
     public void FullApp_CGen_EnumFieldInit()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         // enum fields should be initialized with lua_tointeger
         Assert.Contains("(sapp_event_type)lua_tointeger", code);
@@ -647,7 +666,7 @@ public class SokolModuleTests
     public void FullApp_CGen_ReturnTypes()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("lua_pushboolean(L, sapp_isvalid())", code);
         Assert.Contains("lua_pushinteger(L, sapp_width())", code);
@@ -663,7 +682,7 @@ public class SokolModuleTests
     public void FullApp_CGen_ParamTypes()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("lua_toboolean(L, 1)", code);
         Assert.Contains("(sapp_mouse_cursor)luaL_checkinteger(L, 1)", code);
@@ -674,7 +693,7 @@ public class SokolModuleTests
     public void FullApp_CGen_EventMetamethods()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("l_sapp_event__index", code);
         Assert.Contains("l_sapp_event__newindex", code);
@@ -685,7 +704,7 @@ public class SokolModuleTests
     public void FullApp_LuaCats_EnumFieldTypes()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
         Assert.Contains("---@field type? sokol.app.EventType", code);
         Assert.Contains("---@field key_code? sokol.app.Keycode", code);
@@ -696,7 +715,7 @@ public class SokolModuleTests
     public void FullApp_LuaCats_EnumReturn()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
         Assert.Contains("---@field ColorFormat fun(): sokol.app.PixelFormat", code);
         Assert.Contains("---@field GetMouseCursor fun(): sokol.app.MouseCursor", code);
@@ -706,7 +725,7 @@ public class SokolModuleTests
     public void FullApp_LuaCats_CallbackField()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
         Assert.Contains("---@field init? fun()", code);
         Assert.Contains("---@field frame_cb? fun()", code);
@@ -716,7 +735,7 @@ public class SokolModuleTests
     public void FullApp_PixelFormat_UnderscorePrefixFiltered()
     {
         var reg = TypeRegistry.FromJson(FullAppJson);
-        var spec = new CustomTestModule().BuildSpec(reg);
+        var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var pf = spec.Enums.First(e => e.CName == "sapp_pixel_format");
         // Items starting with _ should be filtered
         Assert.DoesNotContain(pf.Items, i => i.CConstName == "_SAPP_PIXELFORMAT_DEFAULT");
@@ -770,7 +789,7 @@ public class SokolModuleTests
     public void BuildSpec_ExcludesDepStructs()
     {
         var reg = TypeRegistry.FromJson(DepJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, DepPrefixToModule);
         Assert.DoesNotContain(spec.Structs, s => s.CName == "sdep_thing");
         Assert.Contains(spec.Structs, s => s.CName == "stest_desc");
     }
@@ -779,7 +798,7 @@ public class SokolModuleTests
     public void BuildSpec_ExcludesDepFuncs()
     {
         var reg = TypeRegistry.FromJson(DepJson);
-        var spec = new TestModule().BuildSpec(reg);
+        var spec = new TestModule().BuildSpec(reg, DepPrefixToModule);
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "sdep_func");
         Assert.Contains(spec.Funcs, f => f.CName == "stest_init");
     }
@@ -837,7 +856,7 @@ public class SokolModuleTests
     public void Time_Ignores_ExcludesLaptime()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "stm_laptime");
     }
 
@@ -845,7 +864,7 @@ public class SokolModuleTests
     public void Time_NineFuncsGenerated()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         Assert.Equal(9, spec.Funcs.Count);
     }
 
@@ -853,7 +872,7 @@ public class SokolModuleTests
     public void Time_NoStructsOrEnums()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         Assert.Empty(spec.Structs);
         Assert.Empty(spec.Enums);
     }
@@ -862,7 +881,7 @@ public class SokolModuleTests
     public void Time_ModuleNameAndPrefix()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         Assert.Equal("sokol.time", spec.ModuleName);
         Assert.Equal("stm_", spec.Prefix);
     }
@@ -871,7 +890,7 @@ public class SokolModuleTests
     public void Time_LuaNames()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         Assert.Contains(spec.Funcs, f => f.LuaName == "Setup");
         Assert.Contains(spec.Funcs, f => f.LuaName == "Now");
         Assert.Contains(spec.Funcs, f => f.LuaName == "Diff");
@@ -887,7 +906,7 @@ public class SokolModuleTests
     public void Time_ReturnTypes()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         Assert.IsType<BindingType.Void>(spec.Funcs.First(f => f.CName == "stm_setup").ReturnType);
         Assert.IsType<BindingType.UInt64>(spec.Funcs.First(f => f.CName == "stm_now").ReturnType);
         Assert.IsType<BindingType.UInt64>(spec.Funcs.First(f => f.CName == "stm_diff").ReturnType);
@@ -899,7 +918,7 @@ public class SokolModuleTests
     public void Time_ParamTypes()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var diff = spec.Funcs.First(f => f.CName == "stm_diff");
         Assert.Equal(2, diff.Params.Count);
         Assert.IsType<BindingType.UInt64>(diff.Params[0].Type);
@@ -910,7 +929,7 @@ public class SokolModuleTests
     public void Time_CGen_UInt64Param()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("luaL_checkinteger(L, 1)", code);
     }
@@ -919,7 +938,7 @@ public class SokolModuleTests
     public void Time_CGen_DoubleReturn()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("lua_pushnumber(L, (lua_Number)stm_sec(", code);
         Assert.Contains("lua_pushnumber(L, (lua_Number)stm_ms(", code);
@@ -929,7 +948,7 @@ public class SokolModuleTests
     public void Time_CGen_UInt64Return()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("lua_pushinteger(L, (lua_Integer)stm_now())", code);
         Assert.Contains("lua_pushinteger(L, (lua_Integer)stm_diff(", code);
@@ -939,7 +958,7 @@ public class SokolModuleTests
     public void Time_CGen_NoLaptime()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.DoesNotContain("stm_laptime", code);
     }
@@ -948,7 +967,7 @@ public class SokolModuleTests
     public void Time_CGen_IncludesHeader()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = CBinding.CBindingGen.Generate(spec);
         Assert.Contains("#include \"sokol_time.h\"", code);
     }
@@ -957,7 +976,7 @@ public class SokolModuleTests
     public void Time_LuaCats_FuncSignatures()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
         Assert.Contains("---@field Setup fun()", code);
         Assert.Contains("---@field Now fun(): integer", code);
@@ -969,8 +988,239 @@ public class SokolModuleTests
     public void Time_LuaCats_NoLaptime()
     {
         var reg = TypeRegistry.FromJson(TimeJson);
-        var spec = new TimeTestModule().BuildSpec(reg);
+        var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
         Assert.DoesNotContain("Laptime", code);
+    }
+
+    // ===== Nested struct / fixed-size array フィールド =====
+
+    private const string NestedStructJson = """
+    {
+      "module": "sokol.test",
+      "prefix": "stest_",
+      "dep_prefixes": [],
+      "decls": [
+        {
+          "kind": "struct",
+          "name": "stest_inner",
+          "fields": [
+            { "name": "value", "type": "int" }
+          ],
+          "is_dep": false,
+          "dep_prefix": null
+        },
+        {
+          "kind": "struct",
+          "name": "stest_outer",
+          "fields": [
+            { "name": "child", "type": "stest_inner" },
+            { "name": "items", "type": "stest_inner [4]" }
+          ],
+          "is_dep": false,
+          "dep_prefix": null
+        }
+      ]
+    }
+    """;
+
+    [Fact]
+    public void NestedStruct_FieldType_IsStruct()
+    {
+        var reg = TypeRegistry.FromJson(NestedStructJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var outer = spec.Structs.First(s => s.CName == "stest_outer");
+        var childField = outer.Fields.First(f => f.CName == "child");
+        var st = Assert.IsType<BindingType.Struct>(childField.Type);
+        Assert.Equal("stest_inner", st.CName);
+        Assert.Equal("sokol.test.Inner", st.Metatable);
+    }
+
+    [Fact]
+    public void NestedStruct_CGen_CheckUdata()
+    {
+        var reg = TypeRegistry.FromJson(NestedStructJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkudata(L, -1, \"sokol.test.Inner\")", code);
+        Assert.Contains("ud->child = *(stest_inner*)", code);
+    }
+
+    [Fact]
+    public void ArrayOfStruct_FieldType_IsFixedArray()
+    {
+        var reg = TypeRegistry.FromJson(NestedStructJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var outer = spec.Structs.First(s => s.CName == "stest_outer");
+        var itemsField = outer.Fields.First(f => f.CName == "items");
+        var arr = Assert.IsType<BindingType.FixedArray>(itemsField.Type);
+        Assert.Equal(4, arr.Length);
+        Assert.IsType<BindingType.Struct>(arr.Inner);
+    }
+
+    [Fact]
+    public void ArrayOfStruct_CGen_RawlenLoop()
+    {
+        var reg = TypeRegistry.FromJson(NestedStructJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.Contains("lua_rawlen(L, -1)", code);
+        Assert.Contains("lua_rawgeti(L, -1, i + 1)", code);
+        Assert.Contains("i < 4", code);
+        Assert.Contains("ud->items[i] = *(stest_inner*)", code);
+    }
+
+    [Fact]
+    public void NestedStruct_LuaCats_StructField()
+    {
+        var reg = TypeRegistry.FromJson(NestedStructJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var code = LuaCats.LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field child? sokol.test.Inner", code);
+    }
+
+    [Fact]
+    public void ArrayOfStruct_LuaCats_ArrayType()
+    {
+        var reg = TypeRegistry.FromJson(NestedStructJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var code = LuaCats.LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field items? sokol.test.Inner[]", code);
+    }
+
+    [Fact]
+    public void ResolveType_Array_ReturnsFixedArray()
+    {
+        var result = TestModule.TestResolveType(
+            new Types.Array(new Types.StructRef("stest_thing"), 8), "sokol.test", "stest_");
+        var fa = Assert.IsType<BindingType.FixedArray>(result);
+        Assert.Equal(8, fa.Length);
+        Assert.IsType<BindingType.Struct>(fa.Inner);
+    }
+
+    // ===== _t サフィックス除去 =====
+
+    private const string TypeSuffixJson = """
+    {
+      "module": "sokol.test",
+      "prefix": "stest_",
+      "dep_prefixes": [],
+      "decls": [
+        {
+          "kind": "struct",
+          "name": "stest_desc_t",
+          "fields": [
+            { "name": "max_vertices", "type": "int" }
+          ],
+          "is_dep": false,
+          "dep_prefix": null
+        },
+        {
+          "kind": "struct",
+          "name": "stest_pipeline_t",
+          "fields": [
+            { "name": "id", "type": "uint32_t" }
+          ],
+          "is_dep": false,
+          "dep_prefix": null
+        },
+        {
+          "kind": "struct",
+          "name": "stest_outer_t",
+          "fields": [
+            { "name": "child", "type": "stest_desc_t" },
+            { "name": "items", "type": "stest_pipeline_t [4]" }
+          ],
+          "is_dep": false,
+          "dep_prefix": null
+        },
+        {
+          "kind": "func",
+          "name": "stest_setup",
+          "type": "void (const stest_desc_t *)",
+          "params": [
+            { "name": "desc", "type": "const stest_desc_t *" }
+          ],
+          "is_dep": false,
+          "dep_prefix": null
+        }
+      ]
+    }
+    """;
+
+    [Fact]
+    public void TypeSuffix_StructPascalName_StripsT()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        Assert.Contains(spec.Structs, s => s.PascalName == "Desc");
+        Assert.Contains(spec.Structs, s => s.PascalName == "Pipeline");
+        Assert.DoesNotContain(spec.Structs, s => s.PascalName == "DescT");
+    }
+
+    [Fact]
+    public void TypeSuffix_Metatable_StripsT()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var desc = spec.Structs.First(s => s.CName == "stest_desc_t");
+        Assert.Equal("sokol.test.Desc", desc.Metatable);
+    }
+
+    [Fact]
+    public void TypeSuffix_NestedStructRef_StripsT()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var outer = spec.Structs.First(s => s.CName == "stest_outer_t");
+        var childField = outer.Fields.First(f => f.CName == "child");
+        var st = Assert.IsType<BindingType.Struct>(childField.Type);
+        Assert.Equal("sokol.test.Desc", st.Metatable);
+    }
+
+    [Fact]
+    public void TypeSuffix_ArrayOfStructRef_StripsT()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var outer = spec.Structs.First(s => s.CName == "stest_outer_t");
+        var itemsField = outer.Fields.First(f => f.CName == "items");
+        var arr = Assert.IsType<BindingType.FixedArray>(itemsField.Type);
+        var inner = Assert.IsType<BindingType.Struct>(arr.Inner);
+        Assert.Equal("sokol.test.Pipeline", inner.Metatable);
+    }
+
+    [Fact]
+    public void TypeSuffix_FuncParam_StripsT()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var setup = spec.Funcs.First(f => f.CName == "stest_setup");
+        var paramType = Assert.IsType<BindingType.ConstPtr>(setup.Params[0].Type);
+        var inner = Assert.IsType<BindingType.Struct>(paramType.Inner);
+        Assert.Equal("sokol.test.Desc", inner.Metatable);
+    }
+
+    [Fact]
+    public void TypeSuffix_CGen_UsesOriginalCName()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var code = CBinding.CBindingGen.Generate(spec);
+        // C コードでは元の型名 stest_desc_t を使う
+        Assert.Contains("stest_desc_t* ud", code);
+        // Lua 側の登録名は _t なし
+        Assert.Contains("{\"Desc\", l_stest_desc_t_new}", code);
+    }
+
+    [Fact]
+    public void TypeSuffix_LuaCats_UsesStrippedName()
+    {
+        var reg = TypeRegistry.FromJson(TypeSuffixJson);
+        var spec = new TestModule().BuildSpec(reg, TestPrefixToModule);
+        var code = LuaCats.LuaCatsGen.Generate(spec);
+        Assert.Contains("---@class sokol.test.Desc", code);
+        Assert.Contains("---@class sokol.test.Pipeline", code);
+        Assert.DoesNotContain("DescT", code);
     }
 }

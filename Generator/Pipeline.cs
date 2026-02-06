@@ -17,6 +17,9 @@ public static class Pipeline
     public static string StripPrefix(string name, string prefix) =>
         name.StartsWith(prefix) ? name[prefix.Length..] : name;
 
+    public static string StripTypeSuffix(string name) =>
+        name.EndsWith("_t") ? name[..^2] : name;
+
     // ===== LuaCATS 変換 =====
 
     /// <summary>

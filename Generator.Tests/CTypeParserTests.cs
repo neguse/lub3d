@@ -86,8 +86,9 @@ public class CTypeParserTests
     public void Parse_Array()
     {
         var result = CTypeParser.Parse("int[16]");
-        Assert.IsType<Types.Ptr>(result);
-        Assert.IsType<Types.Int>(((Types.Ptr)result).Inner);
+        var arr = Assert.IsType<Types.Array>(result);
+        Assert.IsType<Types.Int>(arr.Inner);
+        Assert.Equal(16, arr.Length);
     }
 
     [Fact]

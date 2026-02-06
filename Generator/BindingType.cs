@@ -28,6 +28,7 @@ public abstract record BindingType
     public sealed record ConstPtr(BindingType Inner) : BindingType;
     public sealed record Struct(string CName, string Metatable, string LuaClassName) : BindingType;
     public sealed record Enum(string CName, string LuaName) : BindingType;
+    public sealed record FixedArray(BindingType Inner, int Length) : BindingType;
     public sealed record Callback(List<(string Name, BindingType Type)> Params, BindingType? Ret) : BindingType;
 
     // エスケープハッチ — sg_range 等の自動演繹不可な型

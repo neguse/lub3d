@@ -8,9 +8,7 @@ using Generator.ClangAst;
 public class App : SokolModule
 {
     public override string ModuleName => "sokol.app";
-    public override string Header => "sokol/sokol_app.h";
     public override string Prefix => "sapp_";
-    public override IReadOnlyList<string> DepPrefixes => ["slog_"];
 
     private const string LogFunc = "slog_func";
 

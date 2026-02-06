@@ -282,6 +282,8 @@ public static class CBindingGen
                     {
                         BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
                             $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+                        BindingType.Struct(var cName, var mt, _) =>
+                            $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
                         _ => (string?)null
                     };
                     return new Param(p.Name, ToOldType(p.Type), checkCode);
@@ -309,6 +311,8 @@ public static class CBindingGen
                     {
                         BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
                             $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+                        BindingType.Struct(var cName, var mt, _) =>
+                            $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
                         _ => (string?)null
                     };
                     return new Param(p.Name, ToOldType(p.Type), checkCode);
@@ -371,8 +375,29 @@ public static class CBindingGen
 
     // ===== BindingType → 旧 CBinding.Type 変換 (内部用) =====
 
-    private static FieldInit ToFieldInit(FieldBinding f) =>
-        new(f.CName, f.LuaName, ToOldType(f.Type), null);
+    private static FieldInit ToFieldInit(FieldBinding f) => f.Type switch
+    {
+        BindingType.Struct(var cName, var mt, _) =>
+            new(f.CName, f.LuaName, ToOldType(f.Type),
+                $"        if (lua_isuserdata(L, -1)) ud->{f.CName} = *({cName}*)luaL_checkudata(L, -1, \"{mt}\");\n        lua_pop(L, 1);"),
+        BindingType.FixedArray(BindingType.Struct(var cName, var mt, _), var len) =>
+            new(f.CName, f.LuaName, new Type.Pointer(ToOldType(f.Type)),
+                GenerateArrayFieldInit(f.CName, cName, mt, len)),
+        _ => new(f.CName, f.LuaName, ToOldType(f.Type), null)
+    };
+
+    private static string GenerateArrayFieldInit(string fieldName, string cName, string mt, int size) =>
+        $$"""
+                if (lua_istable(L, -1)) {
+                    int n = (int)lua_rawlen(L, -1);
+                    for (int i = 0; i < n && i < {{size}}; i++) {
+                        lua_rawgeti(L, -1, i + 1);
+                        if (lua_isuserdata(L, -1)) ud->{{fieldName}}[i] = *({{cName}}*)luaL_checkudata(L, -1, "{{mt}}");
+                        lua_pop(L, 1);
+                    }
+                }
+                lua_pop(L, 1);
+        """;
 
     internal static Type ToOldType(BindingType bt) => bt switch
     {
@@ -392,6 +417,7 @@ public static class CBindingGen
         BindingType.Ptr(var inner) => new Type.Pointer(ToOldType(inner)),
         BindingType.ConstPtr(var inner) => new Type.ConstPointer(ToOldType(inner)),
         BindingType.Struct(var cName, _, _) => new Type.Struct(cName),
+        BindingType.FixedArray(var inner, _) => new Type.Pointer(ToOldType(inner)),
         BindingType.Enum(var cName, _) => new Type.Enum(cName),
         BindingType.Callback(var parms, var ret) => new Type.FuncPtr(
             parms.Select(p => ToOldType(p.Type)).ToList(),
