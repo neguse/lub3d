@@ -99,7 +99,7 @@ set(SOKOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol" CACHE PATH "Path to sokol
 set(BINDGEN_DIR "${SOKOL_DIR}/bindgen" CACHE PATH "Path to sokol/bindgen directory")
 
 set(MANE3D_GENERATED
-    ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_log.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_log.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_app.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
@@ -121,6 +121,7 @@ find_program(CLANG_EXECUTABLE NAMES clang clang.exe
 
 add_custom_command(
     OUTPUT ${NEWGEN_DIR}/sokol_app.c ${NEWGEN_DIR}/sokol_app.lua
+           ${NEWGEN_DIR}/sokol_log.c ${NEWGEN_DIR}/sokol_log.lua
            ${NEWGEN_DIR}/sokol_time.c ${NEWGEN_DIR}/sokol_time.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${NEWGEN_DIR}
@@ -128,6 +129,7 @@ add_custom_command(
         --clang ${CLANG_EXECUTABLE}
     DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_app.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_log.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_time.h
         ${GENERATOR_DIR}/Program.cs
         ${GENERATOR_DIR}/IModule.cs
@@ -139,6 +141,7 @@ add_custom_command(
         ${GENERATOR_DIR}/LuaCats/LuaCats.cs
         ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
         ${GENERATOR_DIR}/Modules/Sokol/App.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Log.cs
         ${GENERATOR_DIR}/Modules/Sokol/Time.cs
     COMMENT "Running Generator (header -> bindings)"
 )
@@ -146,8 +149,7 @@ add_custom_command(
 # Legacy Python generator (remaining modules)
 if(Python3_FOUND)
     add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_log.c
-               ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
+        OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gfx.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_glue.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_audio.c
                ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/sokol_gl.c
