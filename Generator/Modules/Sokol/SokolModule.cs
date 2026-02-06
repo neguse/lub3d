@@ -28,6 +28,18 @@ public abstract class SokolModule : IModule
 
     public ModuleSpec BuildSpec(TypeRegistry reg, SourceLink? sourceLink = null)
     {
+        var enumNames = reg.AllDecls.OfType<Enums>().Select(e => e.Name).ToHashSet();
+
+        BindingType Resolve(Types t)
+        {
+            if (t is Types.StructRef(var name) && enumNames.Contains(name))
+            {
+                var luaName = $"{ModuleName}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, Prefix))}";
+                return new BindingType.Enum(name, luaName);
+            }
+            return ResolveType(t, ModuleName, Prefix);
+        }
+
         var structs = new List<StructBinding>();
         foreach (var s in reg.OwnStructs)
         {
@@ -37,7 +49,7 @@ public abstract class SokolModule : IModule
             var fields = s.Fields.Select(f => new FieldBinding(
                 f.Name,
                 MapFieldName(f.Name),
-                ResolveType(f.ParsedType, ModuleName, Prefix)
+                Resolve(f.ParsedType)
             )).ToList();
             structs.Add(new StructBinding(
                 s.Name, pascalName, metatable,
@@ -53,9 +65,9 @@ public abstract class SokolModule : IModule
             var luaName = Pipeline.ToPascalCase(Pipeline.StripPrefix(f.Name, Prefix));
             var parms = f.Params.Select(p => new ParamBinding(
                 p.Name,
-                ResolveType(p.ParsedType, ModuleName, Prefix)
+                Resolve(p.ParsedType)
             )).ToList();
-            var retType = ResolveType(CTypeParser.ParseReturnType(f.TypeStr), ModuleName, Prefix);
+            var retType = Resolve(CTypeParser.ParseReturnType(f.TypeStr));
             funcs.Add(new FuncBinding(
                 f.Name, luaName, parms, retType,
                 GetLink(f, sourceLink)));

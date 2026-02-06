@@ -150,6 +150,8 @@ public static class LuaCatsGen
             => ToLuaCatsType(inner),
         BindingType.Struct(_, _, var luaClassName)
             => new Type.Class(luaClassName),
+        BindingType.Enum(_, var luaName)
+            => new Type.Class(luaName),
         BindingType.Callback(var parms, var ret)
             => new Type.Fun(
                 parms.Select(p => (p.Name, ToLuaCatsType(p.Type))).ToList(),

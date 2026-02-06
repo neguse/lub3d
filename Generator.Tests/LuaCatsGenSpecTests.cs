@@ -150,6 +150,48 @@ public class LuaCatsGenSpecTests
         Assert.Contains("---@field event? fun(arg0: integer)", code);
     }
 
+    // ===== Enum 型フィールド =====
+
+    [Fact]
+    public void Generate_EnumField()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_event", "Event", "sokol.test.Event", false,
+                [new FieldBinding("type", "type",
+                    new BindingType.Enum("stest_event_type", "sokol.test.EventType"))], null)],
+            [], [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field type? sokol.test.EventType", code);
+    }
+
+    [Fact]
+    public void Generate_EnumReturn()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_get_mode", "GetMode", [],
+                new BindingType.Enum("stest_mode", "sokol.test.Mode"), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field GetMode fun(): sokol.test.Mode", code);
+    }
+
+    [Fact]
+    public void Generate_EnumParam()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_set_mode", "SetMode",
+                [new ParamBinding("mode", new BindingType.Enum("stest_mode", "sokol.test.Mode"))],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field SetMode fun(mode: sokol.test.Mode)", code);
+    }
+
     // ===== SourceLink =====
 
     [Fact]
