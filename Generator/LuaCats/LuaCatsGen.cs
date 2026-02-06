@@ -84,6 +84,81 @@ public static class LuaCatsGen
             """;
     }
 
+    // ===== ModuleSpec ベース生成 =====
+
+    /// <summary>
+    /// ModuleSpec から LuaCATS 型スタブ全体を生成
+    /// </summary>
+    public static string Generate(ModuleSpec spec)
+    {
+        var sb = Header(spec.ModuleName);
+
+        // Struct classes
+        foreach (var s in spec.Structs)
+        {
+            var fields = s.Fields.Select(f =>
+                (f.LuaName, ToLuaCatsType(f.Type)));
+            sb += StructClass(
+                $"{spec.ModuleName}.{s.PascalName}",
+                fields,
+                s.SourceLink);
+        }
+
+        // Module class with struct ctors + funcs
+        var moduleFields = new List<string>();
+        foreach (var s in spec.Structs)
+            moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName));
+        foreach (var f in spec.Funcs)
+        {
+            var parms = f.Params.Select(p => (p.Name, ToLuaCatsType(p.Type)));
+            var ret = f.ReturnType is BindingType.Void ? null : ToLuaCatsType(f.ReturnType);
+            moduleFields.Add(FuncField(f.LuaName, parms, ret, f.SourceLink));
+        }
+        sb += ModuleClass(spec.ModuleName, moduleFields);
+
+        // Enums
+        foreach (var e in spec.Enums)
+        {
+            var items = e.Items.Select(i => (i.LuaName, value: i.Value ?? 0));
+            sb += EnumDef(e.LuaName, e.FieldName, items, e.SourceLink);
+        }
+
+        sb += Footer(spec.ModuleName);
+        return sb;
+    }
+
+    // ===== BindingType → LuaCats.Type 変換 =====
+
+    internal static Type ToLuaCatsType(BindingType bt) => bt switch
+    {
+        BindingType.Int or BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64
+            or BindingType.Size or BindingType.UIntPtr or BindingType.IntPtr
+            => new Type.Primitive("integer"),
+        BindingType.Float or BindingType.Double
+            => new Type.Primitive("number"),
+        BindingType.Bool
+            => new Type.Primitive("boolean"),
+        BindingType.Str
+            => new Type.Primitive("string"),
+        BindingType.VoidPtr
+            => new Type.Primitive("lightuserdata?"),
+        BindingType.Void
+            => new Type.Primitive("nil"),
+        BindingType.Ptr(var inner)
+            => ToLuaCatsType(inner),
+        BindingType.ConstPtr(var inner)
+            => ToLuaCatsType(inner),
+        BindingType.Struct(_, _, var luaClassName)
+            => new Type.Class(luaClassName),
+        BindingType.Callback(var parms, var ret)
+            => new Type.Fun(
+                parms.Select(p => (p.Name, ToLuaCatsType(p.Type))).ToList(),
+                ret != null ? ToLuaCatsType(ret) : null),
+        BindingType.Custom(_, var luaCatsType, _, _, _, _)
+            => new Type.Primitive(luaCatsType),
+        _ => new Type.Primitive("any")
+    };
+
     private static string TypeToString(Type typ) => typ switch
     {
         Type.Primitive(var name) => name,

@@ -56,4 +56,11 @@ public class TypeRegistry
     public Enums GetEnum(string name) => (Enums)_decls[name];
 
     public IEnumerable<Decl> AllDecls => _module.Decls;
+
+    public IEnumerable<Structs> OwnStructs =>
+        _module.Decls.OfType<Structs>().Where(s => !s.IsDep);
+    public IEnumerable<Funcs> OwnFuncs =>
+        _module.Decls.OfType<Funcs>().Where(f => !f.IsDep);
+    public IEnumerable<Enums> OwnEnums =>
+        _module.Decls.OfType<Enums>().Where(e => !e.IsDep);
 }

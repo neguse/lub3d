@@ -1,30 +1,48 @@
 namespace Generator.Modules.Sokol;
 
-using Generator;
 using Generator.ClangAst;
-using Generator.CBinding;
-using Generator.LuaCats;
 
 /// <summary>
 /// sokol.app モジュールの生成定義
 /// </summary>
-public class App : IModule
+public class App : SokolModule
 {
-    public string ModuleName => "sokol.app";
-    public string Header => "sokol/sokol_app.h";
-    public IReadOnlyList<string> IncludeDirs => ["sokol"];
-    public string Prefix => "sapp_";
-    public IReadOnlyList<string> DepPrefixes => ["slog_"];
+    public override string ModuleName => "sokol.app";
+    public override string Header => "sokol/sokol_app.h";
+    public override string Prefix => "sapp_";
+    public override IReadOnlyList<string> DepPrefixes => ["slog_"];
 
     private const string LogFunc = "slog_func";
 
-    private static string Metatable(string moduleName, string typeName) =>
-        $"{moduleName}.{typeName}";
+    // ===== カスタマイズ hooks =====
 
-    private static string ToUnderscore(string moduleName) =>
-        moduleName.Replace('.', '_');
+    protected override bool ShouldGenerateFunc(Funcs f) => f.Name != "sapp_run";
+
+    protected override bool HasMetamethods(Structs s) => s.Name == "sapp_event";
+
+    protected override string MapFieldName(string fieldName) =>
+        CallbackNames.GetValueOrDefault(fieldName, fieldName);
+
+    protected override IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs =>
+        [("Run", "l_sapp_run")];
+
+    protected override string? ExtraCCode(TypeRegistry reg) =>
+        ContextStruct() +
+        Trampoline("init", "init") +
+        Trampoline("frame", "frame") +
+        Trampoline("cleanup", "cleanup") +
+        TrampolineEvent($"{ModuleName}.Event") +
+        RunFunc($"{ModuleName}.Desc");
 
     // ===== App 固有ヘルパー =====
+
+    private static readonly Dictionary<string, string> CallbackNames = new()
+    {
+        ["init_cb"] = "init",
+        ["frame_cb"] = "frame",
+        ["cleanup_cb"] = "cleanup",
+        ["event_cb"] = "event",
+    };
 
     private static string ContextStruct() => """
         typedef struct {
@@ -98,109 +116,4 @@ public class App : IModule
         }
 
         """;
-
-    // ===== LuaCATS ヘルパー =====
-
-    private static readonly Dictionary<string, string> CallbackNames = new()
-    {
-        ["init_cb"] = "init",
-        ["frame_cb"] = "frame",
-        ["cleanup_cb"] = "cleanup",
-        ["event_cb"] = "event",
-    };
-
-    private static string MapFieldName(string name) =>
-        CallbackNames.TryGetValue(name, out var n) ? n : name;
-
-    // ===== 生成メソッド =====
-
-    public string GenerateC(TypeRegistry reg)
-    {
-        var descMetatable = Metatable(ModuleName, "Desc");
-        var eventMetatable = Metatable(ModuleName, "Event");
-        var funcArrayName = $"{ToUnderscore(ModuleName)}_funcs";
-        var luaOpenName = ToUnderscore(ModuleName);
-
-        var descStruct = reg.GetStruct("sapp_desc");
-        var eventStruct = reg.GetStruct("sapp_event");
-        var widthFunc = reg.GetFunc("sapp_width");
-        var heightFunc = reg.GetFunc("sapp_height");
-        var eventTypeEnum = reg.GetEnum("sapp_event_type");
-
-        return CBindingGen.Header(["sokol_log.h", "sokol_app.h"]) +
-            ContextStruct() +
-            Trampoline("init", "init") +
-            Trampoline("frame", "frame") +
-            Trampoline("cleanup", "cleanup") +
-            TrampolineEvent(eventMetatable) +
-            CBindingGen.StructNew("sapp_desc", descMetatable, Pipeline.ToCFieldInits(descStruct)) +
-            CBindingGen.StructNew("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
-            CBindingGen.StructIndex("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
-            CBindingGen.StructNewindex("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
-            CBindingGen.StructPairs("sapp_event", eventMetatable, Pipeline.ToCFieldInits(eventStruct)) +
-            RunFunc(descMetatable) +
-            CBindingGen.Func("sapp_width", Pipeline.ToCParams(widthFunc), Pipeline.ToCReturnType(widthFunc), descMetatable) +
-            CBindingGen.Func("sapp_height", Pipeline.ToCParams(heightFunc), Pipeline.ToCReturnType(heightFunc), descMetatable) +
-            CBindingGen.Enum("sapp_event_type",
-                Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),
-                Pipeline.ToEnumItemsC(eventTypeEnum, Prefix)) +
-            CBindingGen.RegisterMetatables([
-                (descMetatable, null, null, null),
-                (eventMetatable, "l_sapp_event__index", "l_sapp_event__newindex", "l_sapp_event__pairs")]) +
-            CBindingGen.LuaReg(funcArrayName,
-                [("Desc", "l_sapp_desc_new"),
-                 ("Event", "l_sapp_event_new"),
-                 ("Run", "l_sapp_run"),
-                 ("Width", "l_sapp_width"),
-                 ("Height", "l_sapp_height")]) +
-            CBindingGen.LuaOpen(luaOpenName, funcArrayName);
-    }
-
-    public string GenerateLua(TypeRegistry reg, SourceLink? sourceLink = null)
-    {
-        var descStruct = reg.GetStruct("sapp_desc");
-        var eventStruct = reg.GetStruct("sapp_event");
-        var runFunc = reg.GetFunc("sapp_run");
-        var widthFunc = reg.GetFunc("sapp_width");
-        var heightFunc = reg.GetFunc("sapp_height");
-        var eventTypeEnum = reg.GetEnum("sapp_event_type");
-
-        string? Link(Decl d) => d is { } decl && sourceLink != null
-            ? (decl switch { Structs s => s.Line, Funcs f => f.Line, Enums e => e.Line, _ => null })
-                is int line ? sourceLink.GetLink(line) : null
-            : null;
-
-        var descFields = descStruct.Fields.Select(f =>
-            (MapFieldName(f.Name), Pipeline.ToLuaCatsType(f.ParsedType, ModuleName, Prefix)));
-
-        var eventFields = Pipeline.ToLuaCatsFields(eventStruct, ModuleName, Prefix);
-
-        return LuaCatsGen.Header(ModuleName) +
-            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(descStruct, ModuleName, Prefix), descFields, Link(descStruct)) +
-            LuaCatsGen.StructClass(Pipeline.ToLuaCatsClassName(eventStruct, ModuleName, Prefix), eventFields, Link(eventStruct)) +
-            LuaCatsGen.ModuleClass(ModuleName,
-                [LuaCatsGen.StructCtor("Desc", ModuleName),
-                 LuaCatsGen.StructCtor("Event", ModuleName),
-                 LuaCatsGen.FuncField(
-                     Pipeline.ToLuaCatsFuncName(runFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(runFunc, ModuleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(runFunc, ModuleName, Prefix),
-                     Link(runFunc)),
-                 LuaCatsGen.FuncField(
-                     Pipeline.ToLuaCatsFuncName(widthFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(widthFunc, ModuleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(widthFunc, ModuleName, Prefix),
-                     Link(widthFunc)),
-                 LuaCatsGen.FuncField(
-                     Pipeline.ToLuaCatsFuncName(heightFunc, Prefix),
-                     Pipeline.ToLuaCatsParams(heightFunc, ModuleName, Prefix),
-                     Pipeline.ToLuaCatsReturnType(heightFunc, ModuleName, Prefix),
-                     Link(heightFunc))]) +
-            LuaCatsGen.EnumDef(
-                Pipeline.ToLuaCatsEnumName(eventTypeEnum, ModuleName, Prefix),
-                Pipeline.ToPascalCase(Pipeline.StripPrefix(eventTypeEnum.Name, Prefix)),
-                Pipeline.ToEnumItems(eventTypeEnum, Prefix),
-                Link(eventTypeEnum)) +
-            LuaCatsGen.Footer(ModuleName);
-    }
 }

@@ -235,6 +235,120 @@ public static class CBindingGen
             """;
     }
 
+    // ===== ModuleSpec ベース生成 =====
+
+    /// <summary>
+    /// ModuleSpec から C バインディングコード全体を生成
+    /// </summary>
+    public static string Generate(ModuleSpec spec)
+    {
+        var sb = Header(spec.CIncludes);
+
+        if (spec.ExtraCCode != null)
+            sb += spec.ExtraCCode;
+
+        // Struct new / metamethods
+        foreach (var s in spec.Structs)
+        {
+            var fieldInits = s.Fields.Select(ToFieldInit).ToList();
+            sb += StructNew(s.CName, s.Metatable, fieldInits);
+            if (s.HasMetamethods)
+            {
+                sb += StructIndex(s.CName, s.Metatable, fieldInits);
+                sb += StructNewindex(s.CName, s.Metatable, fieldInits);
+                sb += StructPairs(s.CName, s.Metatable, fieldInits);
+            }
+        }
+
+        // Functions
+        foreach (var f in spec.Funcs)
+        {
+            var parms = f.Params.Select(p => new Param(p.Name, ToOldType(p.Type), null)).ToList();
+            sb += Func(f.CName, parms, ToOldType(f.ReturnType), spec.Structs.FirstOrDefault()?.Metatable ?? "");
+        }
+
+        // Enums
+        foreach (var e in spec.Enums)
+        {
+            var items = e.Items.Select(i => (i.LuaName, i.CConstName));
+            sb += Enum(e.CName, e.FieldName, items);
+        }
+
+        // Metatables
+        var metatables = spec.Structs.Select(s => s.HasMetamethods
+            ? (s.Metatable, (string?)$"l_{s.CName}__index", (string?)$"l_{s.CName}__newindex", (string?)$"l_{s.CName}__pairs")
+            : (s.Metatable, null, null, null)).ToList();
+        sb += RegisterMetatables(metatables);
+
+        // LuaReg
+        var funcArrayName = $"{spec.ModuleName.Replace('.', '_')}_funcs";
+        var luaOpenName = spec.ModuleName.Replace('.', '_');
+        var regEntries = new List<(string, string)>();
+
+        // Struct constructors
+        foreach (var s in spec.Structs)
+            regEntries.Add((s.PascalName, $"l_{s.CName}_new"));
+
+        // Extra lua regs (before functions for consistent ordering)
+        regEntries.AddRange(spec.ExtraLuaRegs);
+
+        // Functions
+        foreach (var f in spec.Funcs)
+            regEntries.Add((f.LuaName, $"l_{f.CName}"));
+
+        sb += LuaReg(funcArrayName, regEntries);
+
+        // Enum registrations in luaopen
+        var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
+        if (enumRegs.Count > 0)
+        {
+            sb += $$"""
+                MANE3D_API int luaopen_{{luaOpenName}}(lua_State *L) {
+                    register_metatables(L);
+                    luaL_newlib(L, {{funcArrayName}});
+                {{string.Join("\n", enumRegs)}}
+                    return 1;
+                }
+                """;
+        }
+        else
+        {
+            sb += LuaOpen(luaOpenName, funcArrayName);
+        }
+
+        return sb;
+    }
+
+    // ===== BindingType → 旧 CBinding.Type 変換 (内部用) =====
+
+    private static FieldInit ToFieldInit(FieldBinding f) =>
+        new(f.CName, f.LuaName, ToOldType(f.Type), null);
+
+    internal static Type ToOldType(BindingType bt) => bt switch
+    {
+        BindingType.Int => new Type.Int(),
+        BindingType.Int64 => new Type.Int64(),
+        BindingType.UInt32 => new Type.UInt32(),
+        BindingType.UInt64 => new Type.UInt64(),
+        BindingType.Size => new Type.Size(),
+        BindingType.UIntPtr => new Type.UIntPtr(),
+        BindingType.IntPtr => new Type.IntPtr(),
+        BindingType.Float => new Type.Float(),
+        BindingType.Double => new Type.Double(),
+        BindingType.Bool => new Type.Bool(),
+        BindingType.Str => new Type.String(),
+        BindingType.VoidPtr => new Type.Pointer(new Type.Void()),
+        BindingType.Void => new Type.Void(),
+        BindingType.Ptr(var inner) => new Type.Pointer(ToOldType(inner)),
+        BindingType.ConstPtr(var inner) => new Type.ConstPointer(ToOldType(inner)),
+        BindingType.Struct(var cName, _, _) => new Type.Struct(cName),
+        BindingType.Callback(var parms, var ret) => new Type.FuncPtr(
+            parms.Select(p => ToOldType(p.Type)).ToList(),
+            ret != null ? ToOldType(ret) : new Type.Void()),
+        BindingType.Custom(var cTypeName, _, _, _, _, _) => new Type.Struct(cTypeName),
+        _ => new Type.Void()
+    };
+
     // ===== ヘルパー関数 =====
 
     /// <summary>
