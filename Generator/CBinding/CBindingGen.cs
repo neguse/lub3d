@@ -257,10 +257,14 @@ public static class CBindingGen
             sb += spec.ExtraCCode;
 
         // Struct new / metamethods
+        var ownStructNames = spec.Structs.Select(s => s.CName).ToHashSet();
         foreach (var s in spec.Structs)
         {
-            var fieldInits = s.Fields.Select(ToFieldInit).ToList();
-            sb += StructNew(s.CName, s.Metatable, fieldInits);
+            var fieldInits = s.Fields.Select(f => ToFieldInit(f, ownStructNames)).ToList();
+            if (s.CName == "sg_range")
+                sb += SgRangeNew(s.CName, s.Metatable, fieldInits);
+            else
+                sb += StructNew(s.CName, s.Metatable, fieldInits);
             if (s.HasMetamethods)
             {
                 sb += StructIndex(s.CName, s.Metatable, fieldInits);
@@ -373,21 +377,84 @@ public static class CBindingGen
         return sb;
     }
 
+    /// <summary>
+    /// sg_range 専用コンストラクタ (string / table 両対応)
+    /// </summary>
+    public static string SgRangeNew(string structName, string metatable, IEnumerable<FieldInit> fields)
+    {
+        var fieldInits = string.Join("\n", fields.Select(GenFieldInit));
+        return $$"""
+            static int l_{{structName}}_new(lua_State *L) {
+                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 1);
+                memset(ud, 0, sizeof({{structName}}));
+                luaL_setmetatable(L, "{{metatable}}");
+                if (lua_isstring(L, 1)) {
+                    size_t len;
+                    const char* data = lua_tolstring(L, 1, &len);
+                    ud->ptr = data;
+                    ud->size = len;
+                    lua_pushvalue(L, 1);
+                    lua_setiuservalue(L, -2, 1);
+                } else if (lua_istable(L, 1)) {
+                    lua_pushvalue(L, 1);
+                    lua_setiuservalue(L, -2, 1);
+            {{fieldInits}}
+                }
+                return 1;
+            }
+
+            """;
+    }
+
     // ===== BindingType → 旧 CBinding.Type 変換 (内部用) =====
 
-    private static FieldInit ToFieldInit(FieldBinding f) => f.Type switch
+    private static FieldInit ToFieldInit(FieldBinding f, HashSet<string> ownStructs) => f.Type switch
     {
+        BindingType.Struct(var cName, var mt, _) when ownStructs.Contains(cName) =>
+            new(f.CName, f.LuaName, ToOldType(f.Type),
+                $"        if ({(cName == "sg_range" ? "lua_isstring(L, -1) || lua_istable(L, -1)" : "lua_istable(L, -1)")}) {{\n" +
+                $"            lua_pushcfunction(L, l_{cName}_new);\n" +
+                $"            lua_pushvalue(L, -2);\n" +
+                $"            lua_call(L, 1, 1);\n" +
+                $"            ud->{f.CName} = *({cName}*)luaL_checkudata(L, -1, \"{mt}\");\n" +
+                $"            lua_pop(L, 1);\n" +
+                $"        }} else if (lua_isuserdata(L, -1)) {{\n" +
+                $"            ud->{f.CName} = *({cName}*)luaL_checkudata(L, -1, \"{mt}\");\n" +
+                $"        }}\n" +
+                $"        lua_pop(L, 1);"),
         BindingType.Struct(var cName, var mt, _) =>
             new(f.CName, f.LuaName, ToOldType(f.Type),
                 $"        if (lua_isuserdata(L, -1)) ud->{f.CName} = *({cName}*)luaL_checkudata(L, -1, \"{mt}\");\n        lua_pop(L, 1);"),
         BindingType.FixedArray(BindingType.Struct(var cName, var mt, _), var len) =>
             new(f.CName, f.LuaName, new Type.Pointer(ToOldType(f.Type)),
-                GenerateArrayFieldInit(f.CName, cName, mt, len)),
+                GenerateArrayFieldInit(f.CName, cName, mt, len, ownStructs.Contains(cName))),
         _ => new(f.CName, f.LuaName, ToOldType(f.Type), null)
     };
 
-    private static string GenerateArrayFieldInit(string fieldName, string cName, string mt, int size) =>
-        $$"""
+    private static string GenerateArrayFieldInit(string fieldName, string cName, string mt, int size, bool autoConstruct)
+    {
+        var elementCondition = cName == "sg_range" ? "lua_isstring(L, -1) || lua_istable(L, -1)" : "lua_istable(L, -1)";
+        return autoConstruct
+        ? $$"""
+                if (lua_istable(L, -1)) {
+                    int n = (int)lua_rawlen(L, -1);
+                    for (int i = 0; i < n && i < {{size}}; i++) {
+                        lua_rawgeti(L, -1, i + 1);
+                        if ({{elementCondition}}) {
+                            lua_pushcfunction(L, l_{{cName}}_new);
+                            lua_pushvalue(L, -2);
+                            lua_call(L, 1, 1);
+                            ud->{{fieldName}}[i] = *({{cName}}*)luaL_checkudata(L, -1, "{{mt}}");
+                            lua_pop(L, 1);
+                        } else if (lua_isuserdata(L, -1)) {
+                            ud->{{fieldName}}[i] = *({{cName}}*)luaL_checkudata(L, -1, "{{mt}}");
+                        }
+                        lua_pop(L, 1);
+                    }
+                }
+                lua_pop(L, 1);
+        """
+        : $$"""
                 if (lua_istable(L, -1)) {
                     int n = (int)lua_rawlen(L, -1);
                     for (int i = 0; i < n && i < {{size}}; i++) {
@@ -398,6 +465,7 @@ public static class CBindingGen
                 }
                 lua_pop(L, 1);
         """;
+    }
 
     internal static Type ToOldType(BindingType bt) => bt switch
     {

@@ -352,22 +352,77 @@ public class CBindingGenSpecTests
         Assert.Contains("luaL_checkudata(L, 1, \"sokol.test.Other\")", code);
     }
 
-    // ===== Struct フィールド（ネスト構造体）は skip =====
+    // ===== Struct フィールド（ネスト構造体）自動構築 =====
 
     [Fact]
-    public void Generate_StructField_SkippedInInit()
+    public void Generate_StructField_AutoConstructFromTable()
     {
         var spec = new ModuleSpec(
             "sokol.test", "stest_", ["sokol_test.h"], null,
-            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
+            [new StructBinding("stest_range", "Range", "sokol.test.Range", false, [], null),
+             new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
                 [new FieldBinding("range", "range",
                     new BindingType.Struct("stest_range", "sokol.test.Range", "sokol.test.Range"))],
                 null)],
             [], [], []);
         var code = CBindingGen.Generate(spec);
         Assert.Contains("lua_getfield(L, 1, \"range\")", code);
-        Assert.Contains("lua_pop(L, 1)", code);
+        Assert.Contains("lua_istable(L, -1)", code);
+        Assert.Contains("l_stest_range_new", code);
+        Assert.Contains("lua_isuserdata(L, -1)", code);
+        Assert.Contains("luaL_checkudata(L, -1, \"sokol.test.Range\")", code);
         Assert.DoesNotContain("lua_tointeger", code);
+    }
+
+    [Fact]
+    public void Generate_StructField_FallbackForUnknownStruct()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
+                [new FieldBinding("data", "data",
+                    new BindingType.Struct("uint8_t", "uint8_t", "uint8_t"))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_isuserdata(L, -1)", code);
+        Assert.DoesNotContain("l_uint8_t_new", code);
+        Assert.DoesNotContain("lua_istable(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_ArrayOfStructField_AutoConstructFromTable()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_item", "Item", "sokol.test.Item", false, [], null),
+             new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
+                [new FieldBinding("items", "items",
+                    new BindingType.FixedArray(
+                        new BindingType.Struct("stest_item", "sokol.test.Item", "sokol.test.Item"), 4))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_istable(L, -1)", code);
+        Assert.Contains("l_stest_item_new", code);
+        Assert.Contains("lua_isuserdata(L, -1)", code);
+        Assert.Contains("luaL_checkudata(L, -1, \"sokol.test.Item\")", code);
+    }
+
+    [Fact]
+    public void Generate_ArrayOfStructField_FallbackForUnknownStruct()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
+                [new FieldBinding("data", "data",
+                    new BindingType.FixedArray(
+                        new BindingType.Struct("uint16_t", "uint16_t", "uint16_t"), 8))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_isuserdata(L, -1)", code);
+        Assert.DoesNotContain("l_uint16_t_new", code);
     }
 
     [Fact]
@@ -444,5 +499,58 @@ public class CBindingGenSpecTests
             [], []);
         var code = CBindingGen.Generate(spec);
         Assert.Contains("(void*)stest_get_context()", code);
+    }
+
+    // ===== sg_range string 対応 =====
+
+    [Fact]
+    public void Generate_SgRange_ConstructorHandlesString()
+    {
+        var spec = new ModuleSpec(
+            "sokol.gfx", "sg_", ["sokol_gfx.h"], null,
+            [new StructBinding("sg_range", "Range", "sokol.gfx.Range", false,
+                [new FieldBinding("size", "size", new BindingType.Size())],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("l_sg_range_new", code);
+        Assert.Contains("lua_isstring(L, 1)", code);
+        Assert.Contains("lua_tolstring(L, 1, &len)", code);
+        Assert.Contains("lua_setiuservalue", code);
+    }
+
+    [Fact]
+    public void Generate_SgRangeField_ChecksIsString()
+    {
+        var spec = new ModuleSpec(
+            "sokol.gfx", "sg_", ["sokol_gfx.h"], null,
+            [new StructBinding("sg_range", "Range", "sokol.gfx.Range", false,
+                [new FieldBinding("size", "size", new BindingType.Size())],
+                null),
+             new StructBinding("sg_desc", "Desc", "sokol.gfx.Desc", false,
+                [new FieldBinding("bytecode", "bytecode",
+                    new BindingType.Struct("sg_range", "sokol.gfx.Range", "sokol.gfx.Range"))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_isstring(L, -1) || lua_istable(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_SgRangeArrayField_ChecksIsString()
+    {
+        var spec = new ModuleSpec(
+            "sokol.gfx", "sg_", ["sokol_gfx.h"], null,
+            [new StructBinding("sg_range", "Range", "sokol.gfx.Range", false,
+                [new FieldBinding("size", "size", new BindingType.Size())],
+                null),
+             new StructBinding("sg_desc", "Desc", "sokol.gfx.Desc", false,
+                [new FieldBinding("mip_levels", "mip_levels",
+                    new BindingType.FixedArray(
+                        new BindingType.Struct("sg_range", "sokol.gfx.Range", "sokol.gfx.Range"), 4))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_isstring(L, -1) || lua_istable(L, -1)", code);
     }
 }

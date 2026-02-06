@@ -220,8 +220,8 @@ app.Run(app.Desc({
     height = 800,
     window_title = "hakonotaiatari",
     high_dpi = true,
-    init_cb = init_game,
-    frame_cb = update_frame,
-    event_cb = handle_event,
-    cleanup_cb = cleanup_game,
+    init = init_game,
+    frame = update_frame,
+    event = handle_event,
+    cleanup = cleanup_game,
 }))
