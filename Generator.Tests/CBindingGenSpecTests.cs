@@ -210,4 +210,239 @@ public class CBindingGenSpecTests
         var code = CBindingGen.Generate(spec);
         Assert.Contains("lua_pushnumber(L, stest_scale())", code);
     }
+
+    // ===== 追加 return 型 =====
+
+    [Fact]
+    public void Generate_DoubleReturn_PushesNumber()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_duration", "Duration", [], new BindingType.Double(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushnumber(L, (lua_Number)stest_duration())", code);
+    }
+
+    [Fact]
+    public void Generate_StringReturn_PushesString()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_name", "Name", [], new BindingType.Str(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushstring(L, stest_name())", code);
+    }
+
+    [Fact]
+    public void Generate_UInt64Return_PushesInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_count", "Count", [], new BindingType.UInt64(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushinteger(L, (lua_Integer)stest_count())", code);
+    }
+
+    [Fact]
+    public void Generate_VoidPtrReturn_PushesLightuserdata()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_userdata", "Userdata", [], new BindingType.VoidPtr(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushlightuserdata(L, (void*)stest_userdata())", code);
+    }
+
+    [Fact]
+    public void Generate_EnumReturn_PushesInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_get_mode", "GetMode", [],
+                new BindingType.Enum("stest_mode", "sokol.test.Mode"), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushinteger(L, (lua_Integer)stest_get_mode())", code);
+    }
+
+    // ===== パラメータ型 =====
+
+    [Fact]
+    public void Generate_BoolParam_ChecksBoolean()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_show", "Show",
+                [new ParamBinding("visible", new BindingType.Bool())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_toboolean(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_FloatParam_ChecksNumber()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_set_scale", "SetScale",
+                [new ParamBinding("scale", new BindingType.Float())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checknumber(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_EnumParam_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_set_mode", "SetMode",
+                [new ParamBinding("mode", new BindingType.Enum("stest_mode", "sokol.test.Mode"))],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkinteger(L, 1)", code);
+    }
+
+    // ===== Enum フィールド初期化 =====
+
+    [Fact]
+    public void Generate_EnumField_InitFromTable()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
+                [new FieldBinding("mode", "mode", new BindingType.Enum("stest_mode", "sokol.test.Mode"))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_getfield(L, 1, \"mode\")", code);
+        Assert.Contains("lua_tointeger", code);
+    }
+
+    // ===== ConstPtr(Struct) パラメータ — 正しいメタテーブル =====
+
+    [Fact]
+    public void Generate_StructParam_CorrectMetatable()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false, [], null),
+             new StructBinding("stest_other", "Other", "sokol.test.Other", false, [], null)],
+            [new FuncBinding("stest_use_other", "UseOther",
+                [new ParamBinding("other", new BindingType.ConstPtr(
+                    new BindingType.Struct("stest_other", "sokol.test.Other", "sokol.test.Other")))],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkudata(L, 1, \"sokol.test.Other\")", code);
+    }
+
+    // ===== Struct フィールド（ネスト構造体）は skip =====
+
+    [Fact]
+    public void Generate_StructField_SkippedInInit()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", false,
+                [new FieldBinding("range", "range",
+                    new BindingType.Struct("stest_range", "sokol.test.Range", "sokol.test.Range"))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_getfield(L, 1, \"range\")", code);
+        Assert.Contains("lua_pop(L, 1)", code);
+        Assert.DoesNotContain("lua_tointeger", code);
+    }
+
+    [Fact]
+    public void Generate_StructField_PushesNilInIndex()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", true,
+                [new FieldBinding("range", "range",
+                    new BindingType.Struct("stest_range", "sokol.test.Range", "sokol.test.Range"))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushnil(L)", code);
+    }
+
+    [Fact]
+    public void Generate_StructField_ErrorInNewindex()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", true,
+                [new FieldBinding("range", "range",
+                    new BindingType.Struct("stest_range", "sokol.test.Range", "sokol.test.Range"))],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_error(L, \"unsupported type for field: %s\", key)", code);
+    }
+
+    // ===== 構造体 return — userdata 生成 =====
+
+    [Fact]
+    public void Generate_StructReturn_CreatesUserdata()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_query_desc", "QueryDesc", [],
+                new BindingType.Struct("stest_desc", "sokol.test.Desc", "sokol.test.Desc"), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("stest_desc result = stest_query_desc()", code);
+        Assert.Contains("lua_newuserdatauv(L, sizeof(stest_desc), 0)", code);
+        Assert.Contains("*ud = result", code);
+        Assert.Contains("luaL_setmetatable(L, \"sokol.test.Desc\")", code);
+    }
+
+    // ===== void* return — (void*) cast =====
+
+    [Fact]
+    public void Generate_VoidPtrReturn_HasVoidCast()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_get_display", "GetDisplay", [],
+                new BindingType.VoidPtr(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(void*)stest_get_display()", code);
+    }
+
+    // ===== ConstPtr(Void) return — (void*) cast =====
+
+    [Fact]
+    public void Generate_ConstVoidPtrReturn_HasVoidCast()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [],
+            [new FuncBinding("stest_get_context", "GetContext", [],
+                new BindingType.ConstPtr(new BindingType.Void()), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(void*)stest_get_context()", code);
+    }
 }

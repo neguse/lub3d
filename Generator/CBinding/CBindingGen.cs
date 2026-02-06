@@ -70,8 +70,17 @@ public static class CBindingGen
         {
             Type.Void => $"    {funcName}({argNames});\n    return 0;",
             Type.Int => $"    lua_pushinteger(L, {funcName}({argNames}));\n    return 1;",
+            Type.Int64 or Type.UInt32 or Type.UInt64 or Type.Size or Type.UIntPtr or Type.IntPtr
+                => $"    lua_pushinteger(L, (lua_Integer){funcName}({argNames}));\n    return 1;",
             Type.Bool => $"    lua_pushboolean(L, {funcName}({argNames}));\n    return 1;",
             Type.Float => $"    lua_pushnumber(L, {funcName}({argNames}));\n    return 1;",
+            Type.Double => $"    lua_pushnumber(L, (lua_Number){funcName}({argNames}));\n    return 1;",
+            Type.String or Type.ConstPointer(Type.String)
+                => $"    lua_pushstring(L, {funcName}({argNames}));\n    return 1;",
+            Type.Pointer(Type.Void) or Type.ConstPointer(Type.Void)
+                => $"    lua_pushlightuserdata(L, (void*){funcName}({argNames}));\n    return 1;",
+            Type.Enum(_)
+                => $"    lua_pushinteger(L, (lua_Integer){funcName}({argNames}));\n    return 1;",
             _ => $"    {funcName}({argNames});\n    return 0;"
         };
         var ifdefStr = ifdef != null ? $"    #ifdef {ifdef}\n    (void)L;\n    return 0;\n    #else\n" : "";
@@ -263,8 +272,49 @@ public static class CBindingGen
         // Functions
         foreach (var f in spec.Funcs)
         {
-            var parms = f.Params.Select(p => new Param(p.Name, ToOldType(p.Type), null)).ToList();
-            sb += Func(f.CName, parms, ToOldType(f.ReturnType), spec.Structs.FirstOrDefault()?.Metatable ?? "");
+            // 構造体 return は Func() をバイパスして直接 userdata 生成
+            if (f.ReturnType is BindingType.Struct(var retCName, var retMt, _))
+            {
+                var parms = f.Params.Select((p, i) =>
+                {
+                    var idx = i + 1;
+                    var checkCode = p.Type switch
+                    {
+                        BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
+                            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+                        _ => (string?)null
+                    };
+                    return new Param(p.Name, ToOldType(p.Type), checkCode);
+                }).ToList();
+                var paramDecls = string.Join("\n", parms.Select((p, i) => GenParamDecl(p, i + 1, "")).Where(s => s != ""));
+                var argNames = string.Join(", ", parms.Select(p => p.Name));
+                sb += $$"""
+                    static int l_{{f.CName}}(lua_State *L) {
+                    {{paramDecls}}
+                        {{retCName}} result = {{f.CName}}({{argNames}});
+                        {{retCName}}* ud = ({{retCName}}*)lua_newuserdatauv(L, sizeof({{retCName}}), 0);
+                        *ud = result;
+                        luaL_setmetatable(L, "{{retMt}}");
+                        return 1;
+                    }
+
+                    """;
+            }
+            else
+            {
+                var parms = f.Params.Select((p, i) =>
+                {
+                    var idx = i + 1;
+                    var checkCode = p.Type switch
+                    {
+                        BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
+                            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+                        _ => (string?)null
+                    };
+                    return new Param(p.Name, ToOldType(p.Type), checkCode);
+                }).ToList();
+                sb += Func(f.CName, parms, ToOldType(f.ReturnType), "");
+            }
         }
 
         // Enums
@@ -342,6 +392,7 @@ public static class CBindingGen
         BindingType.Ptr(var inner) => new Type.Pointer(ToOldType(inner)),
         BindingType.ConstPtr(var inner) => new Type.ConstPointer(ToOldType(inner)),
         BindingType.Struct(var cName, _, _) => new Type.Struct(cName),
+        BindingType.Enum(var cName, _) => new Type.Enum(cName),
         BindingType.Callback(var parms, var ret) => new Type.FuncPtr(
             parms.Select(p => ToOldType(p.Type)).ToList(),
             ret != null ? ToOldType(ret) : new Type.Void()),
@@ -364,9 +415,10 @@ public static class CBindingGen
             => $"lua_pushboolean(L, self->{f.FieldName})",
         Type.String or Type.ConstPointer(Type.String)
             => $"lua_pushstring(L, self->{f.FieldName})",
-        Type.Struct(_)
+        Type.Enum(_)
             => $"lua_pushinteger(L, (lua_Integer)self->{f.FieldName})",
-        _ => $"lua_pushnil(L)"
+        Type.Struct(_) or _
+            => $"lua_pushnil(L)"
     };
 
     /// <summary>
@@ -382,9 +434,10 @@ public static class CBindingGen
             => $"self->{f.FieldName} = lua_toboolean(L, 3)",
         Type.String or Type.ConstPointer(Type.String)
             => $"self->{f.FieldName} = luaL_checkstring(L, 3)",
-        Type.Struct(var name)
+        Type.Enum(var name)
             => $"self->{f.FieldName} = ({name})luaL_checkinteger(L, 3)",
-        _ => $"luaL_error(L, \"unsupported type for field: %s\", key)"
+        Type.Struct(_) or _
+            => $"luaL_error(L, \"unsupported type for field: %s\", key)"
     };
 
     private static string TypeToString(Type typ) => typ switch
@@ -405,6 +458,7 @@ public static class CBindingGen
         Type.FuncPtr(var args, var ret) =>
             $"{TypeToString(ret)} (*)({(args.Count == 0 ? "void" : string.Join(", ", args.Select(TypeToString)))})",
         Type.Struct(var name) => name,
+        Type.Enum(var name) => name,
         Type.Void => "void",
         _ => throw new ArgumentException($"Unknown type: {typ}")
     };
@@ -446,7 +500,11 @@ public static class CBindingGen
                         if (!lua_isnil(L, -1)) ud->{{cName}} = lua_toboolean(L, -1);
                         lua_pop(L, 1);
                 """,
-            _ => "        lua_pop(L, 1);"
+            Type.Enum(var enumName) => $$"""
+                        if (!lua_isnil(L, -1)) ud->{{cName}} = ({{enumName}})lua_tointeger(L, -1);
+                        lua_pop(L, 1);
+                """,
+            Type.Struct(_) or _ => "        lua_pop(L, 1);"
         };
         return $"{getField}\n{body}";
     }
@@ -462,9 +520,18 @@ public static class CBindingGen
             Type.ConstPointer(Type.Struct(var sn)) => $"    const {sn}* {p.Name} = (const {sn}*)luaL_checkudata(L, {idx}, \"{metatable}\");",
             Type.ConstPointer(Type.String) or Type.String => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
             Type.Int => $"    int {p.Name} = (int)luaL_checkinteger(L, {idx});",
+            Type.Int64 => $"    int64_t {p.Name} = (int64_t)luaL_checkinteger(L, {idx});",
             Type.UInt32 => $"    uint32_t {p.Name} = (uint32_t)luaL_checkinteger(L, {idx});",
+            Type.UInt64 => $"    uint64_t {p.Name} = (uint64_t)luaL_checkinteger(L, {idx});",
+            Type.Size => $"    size_t {p.Name} = (size_t)luaL_checkinteger(L, {idx});",
+            Type.UIntPtr => $"    uintptr_t {p.Name} = (uintptr_t)luaL_checkinteger(L, {idx});",
+            Type.IntPtr => $"    intptr_t {p.Name} = (intptr_t)luaL_checkinteger(L, {idx});",
+            Type.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});",
+            Type.Float => $"    float {p.Name} = (float)luaL_checknumber(L, {idx});",
+            Type.Double => $"    double {p.Name} = (double)luaL_checknumber(L, {idx});",
             Type.Pointer(Type.Void) => $"    void* {p.Name} = lua_touserdata(L, {idx});",
-            _ => ""
+            Type.Enum(var sn) => $"    {sn} {p.Name} = ({sn})luaL_checkinteger(L, {idx});",
+            Type.Struct(_) or _ => ""
         };
     }
 }

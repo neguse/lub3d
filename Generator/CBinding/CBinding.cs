@@ -28,6 +28,7 @@ public abstract record Type
     public sealed record ConstPointer(Type Inner) : Type;
     public sealed record FuncPtr(List<Type> Args, Type Ret) : Type;
     public sealed record Struct(string Name) : Type;
+    public sealed record Enum(string Name) : Type;
 }
 
 /// <summary>
