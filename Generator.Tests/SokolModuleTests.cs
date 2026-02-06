@@ -40,6 +40,17 @@ file class CustomTestModule : SokolModule
     protected override string? ExtraCCode(TypeRegistry reg) => "/* custom */\n";
 }
 
+/// <summary>
+/// sokol.time テスト用モジュール（Ignores で stm_laptime を除外）
+/// </summary>
+file class TimeTestModule : SokolModule
+{
+    public override string ModuleName => "sokol.time";
+    public override string Header => "sokol/sokol_time.h";
+    public override string Prefix => "stm_";
+    protected override IReadOnlySet<string> Ignores => new HashSet<string> { "stm_laptime" };
+}
+
 public class SokolModuleTests
 {
     // ===== DefaultResolveType =====
@@ -771,5 +782,195 @@ public class SokolModuleTests
         var spec = new TestModule().BuildSpec(reg);
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "sdep_func");
         Assert.Contains(spec.Funcs, f => f.CName == "stest_init");
+    }
+
+    // ===== sokol.time モジュール =====
+
+    private const string TimeJson = """
+    {
+      "module": "sokol.time",
+      "prefix": "stm_",
+      "dep_prefixes": [],
+      "decls": [
+        { "kind": "func", "name": "stm_setup", "type": "void (void)",
+          "params": [], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_now", "type": "uint64_t (void)",
+          "params": [], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_diff", "type": "uint64_t (uint64_t, uint64_t)",
+          "params": [
+            { "name": "new_ticks", "type": "uint64_t" },
+            { "name": "old_ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_since", "type": "uint64_t (uint64_t)",
+          "params": [
+            { "name": "start_ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_laptime", "type": "uint64_t (uint64_t *)",
+          "params": [
+            { "name": "last_time", "type": "uint64_t *" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_round_to_common_refresh_rate", "type": "uint64_t (uint64_t)",
+          "params": [
+            { "name": "frame_ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_sec", "type": "double (uint64_t)",
+          "params": [
+            { "name": "ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_ms", "type": "double (uint64_t)",
+          "params": [
+            { "name": "ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_us", "type": "double (uint64_t)",
+          "params": [
+            { "name": "ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null },
+        { "kind": "func", "name": "stm_ns", "type": "double (uint64_t)",
+          "params": [
+            { "name": "ticks", "type": "uint64_t" }
+          ], "is_dep": false, "dep_prefix": null }
+      ]
+    }
+    """;
+
+    [Fact]
+    public void Time_Ignores_ExcludesLaptime()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        Assert.DoesNotContain(spec.Funcs, f => f.CName == "stm_laptime");
+    }
+
+    [Fact]
+    public void Time_NineFuncsGenerated()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        Assert.Equal(9, spec.Funcs.Count);
+    }
+
+    [Fact]
+    public void Time_NoStructsOrEnums()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        Assert.Empty(spec.Structs);
+        Assert.Empty(spec.Enums);
+    }
+
+    [Fact]
+    public void Time_ModuleNameAndPrefix()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        Assert.Equal("sokol.time", spec.ModuleName);
+        Assert.Equal("stm_", spec.Prefix);
+    }
+
+    [Fact]
+    public void Time_LuaNames()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Setup");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Now");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Diff");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Since");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Sec");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Ms");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Us");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "Ns");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "RoundToCommonRefreshRate");
+    }
+
+    [Fact]
+    public void Time_ReturnTypes()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        Assert.IsType<BindingType.Void>(spec.Funcs.First(f => f.CName == "stm_setup").ReturnType);
+        Assert.IsType<BindingType.UInt64>(spec.Funcs.First(f => f.CName == "stm_now").ReturnType);
+        Assert.IsType<BindingType.UInt64>(spec.Funcs.First(f => f.CName == "stm_diff").ReturnType);
+        Assert.IsType<BindingType.Double>(spec.Funcs.First(f => f.CName == "stm_sec").ReturnType);
+        Assert.IsType<BindingType.Double>(spec.Funcs.First(f => f.CName == "stm_ms").ReturnType);
+    }
+
+    [Fact]
+    public void Time_ParamTypes()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var diff = spec.Funcs.First(f => f.CName == "stm_diff");
+        Assert.Equal(2, diff.Params.Count);
+        Assert.IsType<BindingType.UInt64>(diff.Params[0].Type);
+        Assert.IsType<BindingType.UInt64>(diff.Params[1].Type);
+    }
+
+    [Fact]
+    public void Time_CGen_UInt64Param()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
+    public void Time_CGen_DoubleReturn()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushnumber(L, (lua_Number)stm_sec(", code);
+        Assert.Contains("lua_pushnumber(L, (lua_Number)stm_ms(", code);
+    }
+
+    [Fact]
+    public void Time_CGen_UInt64Return()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushinteger(L, (lua_Integer)stm_now())", code);
+        Assert.Contains("lua_pushinteger(L, (lua_Integer)stm_diff(", code);
+    }
+
+    [Fact]
+    public void Time_CGen_NoLaptime()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.DoesNotContain("stm_laptime", code);
+    }
+
+    [Fact]
+    public void Time_CGen_IncludesHeader()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = CBinding.CBindingGen.Generate(spec);
+        Assert.Contains("#include \"sokol_time.h\"", code);
+    }
+
+    [Fact]
+    public void Time_LuaCats_FuncSignatures()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = LuaCats.LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field Setup fun()", code);
+        Assert.Contains("---@field Now fun(): integer", code);
+        Assert.Contains("---@field Sec fun(ticks: integer): number", code);
+        Assert.Contains("---@field Ms fun(ticks: integer): number", code);
+    }
+
+    [Fact]
+    public void Time_LuaCats_NoLaptime()
+    {
+        var reg = TypeRegistry.FromJson(TimeJson);
+        var spec = new TimeTestModule().BuildSpec(reg);
+        var code = LuaCats.LuaCatsGen.Generate(spec);
+        Assert.DoesNotContain("Laptime", code);
     }
 }
