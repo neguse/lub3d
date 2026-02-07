@@ -1,4 +1,4 @@
--- Texture loading utilities for mane3d
+-- Texture loading utilities for lub3d
 local gfx = require("sokol.gfx")
 local gpu = require("lib.gpu")
 local log = require("lib.log")

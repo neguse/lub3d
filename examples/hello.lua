@@ -11,7 +11,7 @@ local frame_count = 0
 app.Run(app.Desc({
     width = 800,
     height = 600,
-    window_title = "Hello Mane3D (Lua Entry Point)",
+    window_title = "Hello Lub3d (Lua Entry Point)",
 
     init = function()
         gfx.Setup(gfx.Desc({

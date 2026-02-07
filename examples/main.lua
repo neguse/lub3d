@@ -1,11 +1,11 @@
--- mane3d example: rotating colored triangle
+-- lub3d example: rotating colored triangle
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
 local shaderMod = require("lib.shader")
 local util = require("lib.util")
-local licenses = require("mane3d.licenses")
+local licenses = require("lub3d.licenses")
 
 local t = 0
 ---@type sokol.gfx.Shader?
@@ -134,7 +134,7 @@ end
 app.Run(app.Desc({
     width = 800,
     height = 600,
-    window_title = "Mane3D - Triangle",
+    window_title = "Lub3d - Triangle",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

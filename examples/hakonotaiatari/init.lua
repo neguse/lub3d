@@ -1,5 +1,5 @@
 -- hakonotaiatari - main entry point
--- A 2D action game ported from C++ to mane3d
+-- A 2D action game ported from C++ to lub3d
 -- https://github.com/neguse/hakonotaiatari
 
 local gfx = require("sokol.gfx")

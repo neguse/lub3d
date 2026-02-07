@@ -1,4 +1,4 @@
--- mane3d example: Simple Triangle with ImGui
+-- lub3d example: Simple Triangle with ImGui
 -- Minimal example showing basic rendering pipeline
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
@@ -211,7 +211,7 @@ end
 app.Run(app.Desc({
     width = 800,
     height = 600,
-    window_title = "Mane3D - Simple Triangle with ImGui",
+    window_title = "Lub3d - Simple Triangle with ImGui",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

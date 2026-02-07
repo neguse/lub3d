@@ -23,15 +23,15 @@ public static class CBindingGen
 
             {{userIncludes}}
 
-            #ifndef MANE3D_API
+            #ifndef LUB3D_API
               #ifdef _WIN32
-                #ifdef MANE3D_EXPORTS
-                  #define MANE3D_API __declspec(dllexport)
+                #ifdef LUB3D_EXPORTS
+                  #define LUB3D_API __declspec(dllexport)
                 #else
-                  #define MANE3D_API __declspec(dllimport)
+                  #define LUB3D_API __declspec(dllimport)
                 #endif
               #else
-                #define MANE3D_API
+                #define LUB3D_API
               #endif
             #endif
 
@@ -58,15 +58,15 @@ public static class CBindingGen
             #include <stdint.h>
             #include <stdlib.h>
 
-            #ifndef MANE3D_API
+            #ifndef LUB3D_API
               #ifdef _WIN32
-                #ifdef MANE3D_EXPORTS
-                  #define MANE3D_API __declspec(dllexport)
+                #ifdef LUB3D_EXPORTS
+                  #define LUB3D_API __declspec(dllexport)
                 #else
-                  #define MANE3D_API __declspec(dllimport)
+                  #define LUB3D_API __declspec(dllimport)
                 #endif
               #else
-                #define MANE3D_API
+                #define LUB3D_API
               #endif
             #endif
 
@@ -169,7 +169,7 @@ public static class CBindingGen
     /// luaopen 関数
     /// </summary>
     public static string LuaOpen(string funcName, string regArray) => $$"""
-        MANE3D_API int luaopen_{{funcName}}(lua_State *L) {
+        LUB3D_API int luaopen_{{funcName}}(lua_State *L) {
             register_metatables(L);
             luaL_newlib(L, {{regArray}});
             return 1;
@@ -429,7 +429,7 @@ public static class CBindingGen
         if (enumRegs.Count > 0 || spec.OpaqueTypes.Count > 0)
         {
             sb += $$"""
-                MANE3D_API int luaopen_{{luaOpenName}}(lua_State *L) {
+                LUB3D_API int luaopen_{{luaOpenName}}(lua_State *L) {
                     register_metatables(L);
                     luaL_newlib(L, {{funcArrayName}});
                 {{string.Join("\n", enumRegs)}}

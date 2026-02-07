@@ -1,4 +1,4 @@
--- mane3d example: 3D Block Breaker
+-- lub3d example: 3D Block Breaker
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
@@ -454,7 +454,7 @@ end
 app.Run(app.Desc({
     width = 800,
     height = 600,
-    window_title = "Mane3D - 3D Breakout",
+    window_title = "Lub3d - 3D Breakout",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

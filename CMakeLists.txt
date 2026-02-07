@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(mane3d C CXX)
+project(lub3d C CXX)
 
 # Auto-detect sccache (use if available)
 find_program(CCACHE_PROGRAM sccache)
@@ -22,20 +22,20 @@ if(MSVC)
 endif()
 
 # Options
-option(MANE3D_BUILD_SHARED "Build as shared library" OFF)
-option(MANE3D_BUILD_SHDC "Build sokol-shdc library" ON)
-option(MANE3D_BUILD_IMGUI "Build Dear ImGui integration" ON)
-option(MANE3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
-option(MANE3D_BACKEND_GL "Use OpenGL backend" OFF)
-option(MANE3D_BACKEND_GLES3 "Use OpenGL ES3 backend" OFF)
-option(MANE3D_BACKEND_D3D11 "Use Direct3D 11 backend" OFF)
-option(MANE3D_BACKEND_METAL "Use Metal backend" OFF)
-option(MANE3D_BACKEND_WGPU "Use WebGPU backend" OFF)
-option(MANE3D_BACKEND_DUMMY "Use Dummy backend for headless testing" OFF)
-option(MANE3D_BUILD_TESTS "Build test runner" OFF)
+option(LUB3D_BUILD_SHARED "Build as shared library" OFF)
+option(LUB3D_BUILD_SHDC "Build sokol-shdc library" ON)
+option(LUB3D_BUILD_IMGUI "Build Dear ImGui integration" ON)
+option(LUB3D_USE_SYSTEM_LUA "Use system Lua instead of bundled" OFF)
+option(LUB3D_BACKEND_GL "Use OpenGL backend" OFF)
+option(LUB3D_BACKEND_GLES3 "Use OpenGL ES3 backend" OFF)
+option(LUB3D_BACKEND_D3D11 "Use Direct3D 11 backend" OFF)
+option(LUB3D_BACKEND_METAL "Use Metal backend" OFF)
+option(LUB3D_BACKEND_WGPU "Use WebGPU backend" OFF)
+option(LUB3D_BACKEND_DUMMY "Use Dummy backend for headless testing" OFF)
+option(LUB3D_BUILD_TESTS "Build test runner" OFF)
 
 # Lua 5.5
-if(MANE3D_USE_SYSTEM_LUA)
+if(LUB3D_USE_SYSTEM_LUA)
     find_package(Lua REQUIRED)
     set(LUA_TARGET ${LUA_LIBRARIES})
     set(LUA_INCLUDE ${LUA_INCLUDE_DIR})
@@ -98,7 +98,7 @@ message(STATUS "CLANGPP_EXECUTABLE: ${CLANGPP_EXECUTABLE}")
 set(SOKOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol" CACHE PATH "Path to sokol directory")
 set(BINDGEN_DIR "${SOKOL_DIR}/bindgen" CACHE PATH "Path to sokol/bindgen directory")
 
-set(MANE3D_GENERATED
+set(LUB3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_log.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_gfx.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_app.c
@@ -189,27 +189,27 @@ if(Python3_FOUND)
     )
 endif()
 
-# mane3d sources
-set(MANE3D_SOURCES
+# lub3d sources
+set(LUB3D_SOURCES
     src/sokol_impl.c
     src/miniaudio_impl.c
     src/stb_image_lua.c
-    src/mane3d_lua.c
-    ${MANE3D_GENERATED}
+    src/lub3d_lua.c
+    ${LUB3D_GENERATED}
 )
 
 # Library type
-if(MANE3D_BUILD_SHARED)
-    add_library(mane3d SHARED ${MANE3D_SOURCES})
-    target_compile_definitions(mane3d PRIVATE MANE3D_EXPORTS)
+if(LUB3D_BUILD_SHARED)
+    add_library(lub3d SHARED ${LUB3D_SOURCES})
+    target_compile_definitions(lub3d PRIVATE LUB3D_EXPORTS)
 else()
-    add_library(mane3d STATIC ${MANE3D_SOURCES})
-    # For static builds, define MANE3D_API as empty
-    target_compile_definitions(mane3d PUBLIC MANE3D_API=)
+    add_library(lub3d STATIC ${LUB3D_SOURCES})
+    # For static builds, define LUB3D_API as empty
+    target_compile_definitions(lub3d PUBLIC LUB3D_API=)
 endif()
 
 # Include directories
-target_include_directories(mane3d
+target_include_directories(lub3d
     PUBLIC ${LUA_INCLUDE}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
@@ -218,52 +218,52 @@ target_include_directories(mane3d
 )
 
 # Link Lua
-target_link_libraries(mane3d PUBLIC ${LUA_TARGET})
+target_link_libraries(lub3d PUBLIC ${LUA_TARGET})
 
 # Backend selection for sokol_impl.c
-if(MANE3D_BACKEND_DUMMY)
-    target_compile_definitions(mane3d PRIVATE SOKOL_DUMMY_BACKEND)
-elseif(MANE3D_BACKEND_GL)
-    target_compile_definitions(mane3d PRIVATE SOKOL_GLCORE)
-elseif(MANE3D_BACKEND_GLES3)
-    target_compile_definitions(mane3d PRIVATE SOKOL_GLES3)
-elseif(MANE3D_BACKEND_D3D11)
-    target_compile_definitions(mane3d PRIVATE SOKOL_D3D11)
-elseif(MANE3D_BACKEND_METAL)
-    target_compile_definitions(mane3d PRIVATE SOKOL_METAL)
-elseif(MANE3D_BACKEND_WGPU)
-    target_compile_definitions(mane3d PRIVATE SOKOL_WGPU)
+if(LUB3D_BACKEND_DUMMY)
+    target_compile_definitions(lub3d PRIVATE SOKOL_DUMMY_BACKEND)
+elseif(LUB3D_BACKEND_GL)
+    target_compile_definitions(lub3d PRIVATE SOKOL_GLCORE)
+elseif(LUB3D_BACKEND_GLES3)
+    target_compile_definitions(lub3d PRIVATE SOKOL_GLES3)
+elseif(LUB3D_BACKEND_D3D11)
+    target_compile_definitions(lub3d PRIVATE SOKOL_D3D11)
+elseif(LUB3D_BACKEND_METAL)
+    target_compile_definitions(lub3d PRIVATE SOKOL_METAL)
+elseif(LUB3D_BACKEND_WGPU)
+    target_compile_definitions(lub3d PRIVATE SOKOL_WGPU)
 else()
     # Auto-detect based on platform
     if(EMSCRIPTEN)
-        target_compile_definitions(mane3d PRIVATE SOKOL_WGPU)
+        target_compile_definitions(lub3d PRIVATE SOKOL_WGPU)
     elseif(WIN32)
-        target_compile_definitions(mane3d PRIVATE SOKOL_D3D11)
+        target_compile_definitions(lub3d PRIVATE SOKOL_D3D11)
     elseif(APPLE)
-        target_compile_definitions(mane3d PRIVATE SOKOL_METAL)
-        set_target_properties(mane3d PROPERTIES
+        target_compile_definitions(lub3d PRIVATE SOKOL_METAL)
+        set_target_properties(lub3d PROPERTIES
             COMPILE_FLAGS "-x objective-c"
         )
     else()
-        target_compile_definitions(mane3d PRIVATE SOKOL_GLCORE)
+        target_compile_definitions(lub3d PRIVATE SOKOL_GLCORE)
     endif()
 endif()
 
 # Platform-specific libraries (skip for DUMMY backend)
-if(NOT MANE3D_BACKEND_DUMMY)
+if(NOT LUB3D_BACKEND_DUMMY)
 if(EMSCRIPTEN)
     # WebGPU via emdawnwebgpu port
-    target_compile_options(mane3d PRIVATE --use-port=emdawnwebgpu)
-    target_link_options(mane3d PUBLIC --use-port=emdawnwebgpu)
+    target_compile_options(lub3d PRIVATE --use-port=emdawnwebgpu)
+    target_link_options(lub3d PUBLIC --use-port=emdawnwebgpu)
 elseif(WIN32)
-    target_link_libraries(mane3d PUBLIC
+    target_link_libraries(lub3d PUBLIC
         kernel32
         user32
         gdi32
         ole32
     )
-    if(MANE3D_BACKEND_D3D11 OR NOT (MANE3D_BACKEND_GL OR MANE3D_BACKEND_GLES3 OR MANE3D_BACKEND_METAL OR MANE3D_BACKEND_WGPU))
-        target_link_libraries(mane3d PUBLIC d3d11 dxgi)
+    if(LUB3D_BACKEND_D3D11 OR NOT (LUB3D_BACKEND_GL OR LUB3D_BACKEND_GLES3 OR LUB3D_BACKEND_METAL OR LUB3D_BACKEND_WGPU))
+        target_link_libraries(lub3d PUBLIC d3d11 dxgi)
     endif()
 elseif(APPLE)
     find_library(COCOA_LIBRARY Cocoa REQUIRED)
@@ -271,7 +271,7 @@ elseif(APPLE)
     find_library(METAL_LIBRARY Metal REQUIRED)
     find_library(METALKIT_LIBRARY MetalKit REQUIRED)
     find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox REQUIRED)
-    target_link_libraries(mane3d PUBLIC
+    target_link_libraries(lub3d PUBLIC
         ${COCOA_LIBRARY}
         ${QUARTZCORE_LIBRARY}
         ${METAL_LIBRARY}
@@ -282,7 +282,7 @@ elseif(UNIX)
     find_package(Threads REQUIRED)
     find_package(X11 REQUIRED)
     find_package(OpenGL REQUIRED)
-    target_link_libraries(mane3d PUBLIC
+    target_link_libraries(lub3d PUBLIC
         Threads::Threads
         ${X11_LIBRARIES}
         ${X11_Xi_LIB}
@@ -296,8 +296,8 @@ endif()
 endif()
 
 # Lua interpreter (optional)
-option(MANE3D_BUILD_INTERPRETER "Build Lua interpreter" OFF)
-if(MANE3D_BUILD_INTERPRETER AND NOT MANE3D_USE_SYSTEM_LUA)
+option(LUB3D_BUILD_INTERPRETER "Build Lua interpreter" OFF)
+if(LUB3D_BUILD_INTERPRETER AND NOT LUB3D_USE_SYSTEM_LUA)
     add_executable(lua deps/lua/lua.c)
     target_link_libraries(lua lua55)
     if(UNIX AND NOT EMSCRIPTEN)
@@ -306,64 +306,64 @@ if(MANE3D_BUILD_INTERPRETER AND NOT MANE3D_USE_SYSTEM_LUA)
 endif()
 
 # Example
-option(MANE3D_BUILD_EXAMPLE "Build example" ON)
-if(MANE3D_BUILD_EXAMPLE)
+option(LUB3D_BUILD_EXAMPLE "Build example" ON)
+if(LUB3D_BUILD_EXAMPLE)
     if(EMSCRIPTEN)
-        add_executable(mane3d-example examples/main.c)
+        add_executable(lub3d-example examples/main.c)
     else()
-        add_executable(mane3d-example WIN32 examples/main.c)
+        add_executable(lub3d-example WIN32 examples/main.c)
     endif()
-    target_include_directories(mane3d-example PRIVATE
+    target_include_directories(lub3d-example PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${LUA_INCLUDE}
     )
-    target_link_libraries(mane3d-example mane3d)
+    target_link_libraries(lub3d-example lub3d)
 
     # SHDC support
-    if(MANE3D_BUILD_SHDC)
-        target_compile_definitions(mane3d-example PRIVATE MANE3D_HAS_SHDC)
+    if(LUB3D_BUILD_SHDC)
+        target_compile_definitions(lub3d-example PRIVATE LUB3D_HAS_SHDC)
     endif()
 
     # Backend defines for example
-    if(MANE3D_BACKEND_DUMMY)
-        target_compile_definitions(mane3d-example PRIVATE SOKOL_DUMMY_BACKEND)
-    elseif(MANE3D_BACKEND_GL)
-        target_compile_definitions(mane3d-example PRIVATE SOKOL_GLCORE)
-    elseif(MANE3D_BACKEND_GLES3)
-        target_compile_definitions(mane3d-example PRIVATE SOKOL_GLES3)
-    elseif(MANE3D_BACKEND_D3D11)
-        target_compile_definitions(mane3d-example PRIVATE SOKOL_D3D11)
-    elseif(MANE3D_BACKEND_METAL)
-        target_compile_definitions(mane3d-example PRIVATE SOKOL_METAL)
-    elseif(MANE3D_BACKEND_WGPU)
-        target_compile_definitions(mane3d-example PRIVATE SOKOL_WGPU)
+    if(LUB3D_BACKEND_DUMMY)
+        target_compile_definitions(lub3d-example PRIVATE SOKOL_DUMMY_BACKEND)
+    elseif(LUB3D_BACKEND_GL)
+        target_compile_definitions(lub3d-example PRIVATE SOKOL_GLCORE)
+    elseif(LUB3D_BACKEND_GLES3)
+        target_compile_definitions(lub3d-example PRIVATE SOKOL_GLES3)
+    elseif(LUB3D_BACKEND_D3D11)
+        target_compile_definitions(lub3d-example PRIVATE SOKOL_D3D11)
+    elseif(LUB3D_BACKEND_METAL)
+        target_compile_definitions(lub3d-example PRIVATE SOKOL_METAL)
+    elseif(LUB3D_BACKEND_WGPU)
+        target_compile_definitions(lub3d-example PRIVATE SOKOL_WGPU)
     else()
         # Auto-detect
         if(EMSCRIPTEN)
-            target_compile_definitions(mane3d-example PRIVATE SOKOL_WGPU)
+            target_compile_definitions(lub3d-example PRIVATE SOKOL_WGPU)
         elseif(WIN32)
-            target_compile_definitions(mane3d-example PRIVATE SOKOL_D3D11)
+            target_compile_definitions(lub3d-example PRIVATE SOKOL_D3D11)
         elseif(APPLE)
-            target_compile_definitions(mane3d-example PRIVATE SOKOL_METAL)
+            target_compile_definitions(lub3d-example PRIVATE SOKOL_METAL)
         else()
-            target_compile_definitions(mane3d-example PRIVATE SOKOL_GLCORE)
+            target_compile_definitions(lub3d-example PRIVATE SOKOL_GLCORE)
         endif()
     endif()
 
     # Set working directory for Visual Studio debugger
     if(WIN32)
-        set_target_properties(mane3d-example PROPERTIES
+        set_target_properties(lub3d-example PROPERTIES
             VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
     endif()
 
     # Emscripten-specific settings
     if(EMSCRIPTEN)
-        set_target_properties(mane3d-example PROPERTIES
+        set_target_properties(lub3d-example PROPERTIES
             SUFFIX ".html"
         )
-        target_link_options(mane3d-example PRIVATE
+        target_link_options(lub3d-example PRIVATE
             # -sASYNCIFY  # disabled for faster builds
             -sALLOW_MEMORY_GROWTH=1
             -sASSERTIONS=1
@@ -373,7 +373,7 @@ if(MANE3D_BUILD_EXAMPLE)
 endif()
 
 # Install
-install(TARGETS mane3d
+install(TARGETS lub3d
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
@@ -383,7 +383,7 @@ install(DIRECTORY deps/sokol/util/ DESTINATION include/sokol FILES_MATCHING PATT
 install(DIRECTORY deps/lua/ DESTINATION include/lua FILES_MATCHING PATTERN "*.h")
 
 # Dear ImGui integration (optional)
-if(MANE3D_BUILD_IMGUI)
+if(LUB3D_BUILD_IMGUI)
     # ImGui auto-generated bindings (C# Generator output)
     set(IMGUI_GEN_SOURCE ${GEN_DIR}/imgui_gen.cpp)
 
@@ -402,17 +402,17 @@ if(MANE3D_BUILD_IMGUI)
     target_link_libraries(imgui_lib PUBLIC ${LUA_TARGET})
 
     # Backend defines for ImGui
-    if(MANE3D_BACKEND_DUMMY)
+    if(LUB3D_BACKEND_DUMMY)
         target_compile_definitions(imgui_lib PRIVATE SOKOL_DUMMY_BACKEND)
-    elseif(MANE3D_BACKEND_GL)
+    elseif(LUB3D_BACKEND_GL)
         target_compile_definitions(imgui_lib PRIVATE SOKOL_GLCORE)
-    elseif(MANE3D_BACKEND_GLES3)
+    elseif(LUB3D_BACKEND_GLES3)
         target_compile_definitions(imgui_lib PRIVATE SOKOL_GLES3)
-    elseif(MANE3D_BACKEND_D3D11)
+    elseif(LUB3D_BACKEND_D3D11)
         target_compile_definitions(imgui_lib PRIVATE SOKOL_D3D11)
-    elseif(MANE3D_BACKEND_METAL)
+    elseif(LUB3D_BACKEND_METAL)
         target_compile_definitions(imgui_lib PRIVATE SOKOL_METAL)
-    elseif(MANE3D_BACKEND_WGPU)
+    elseif(LUB3D_BACKEND_WGPU)
         target_compile_definitions(imgui_lib PRIVATE SOKOL_WGPU)
     else()
         if(EMSCRIPTEN)
@@ -427,24 +427,24 @@ if(MANE3D_BUILD_IMGUI)
     endif()
 
     # Stub sokol_app functions for dummy backend (sokol_app.h has no dummy support)
-    if(MANE3D_BACKEND_DUMMY)
+    if(LUB3D_BACKEND_DUMMY)
         target_sources(imgui_lib PRIVATE src/sapp_stub.c)
     endif()
 
-    # Link ImGui to mane3d
-    target_sources(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_imgui.c)
-    target_link_libraries(mane3d PUBLIC imgui_lib)
-    target_compile_definitions(mane3d PUBLIC MANE3D_HAS_IMGUI)
+    # Link ImGui to lub3d
+    target_sources(lub3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_imgui.c)
+    target_link_libraries(lub3d PUBLIC imgui_lib)
+    target_compile_definitions(lub3d PUBLIC LUB3D_HAS_IMGUI)
 
     # Add define if using auto-generated bindings
     if(IMGUI_GEN_SOURCE)
-        target_compile_definitions(imgui_lib PRIVATE MANE3D_GEN_IMGUI)
+        target_compile_definitions(imgui_lib PRIVATE LUB3D_GEN_IMGUI)
     endif()
 endif()
 
 # BC7 encoder library (optional)
-option(MANE3D_BUILD_BC7ENC "Build BC7 encoder library" ON)
-if(MANE3D_BUILD_BC7ENC)
+option(LUB3D_BUILD_BC7ENC "Build BC7 encoder library" ON)
+if(LUB3D_BUILD_BC7ENC)
     set(BC7ENC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/bc7enc_rdo)
 
     add_library(bc7enc_lib STATIC
@@ -475,13 +475,13 @@ if(MANE3D_BUILD_BC7ENC)
     endif()
 
     # Add Lua bindings
-    target_sources(mane3d PRIVATE src/bc7enc_lua.cpp)
-    target_compile_definitions(mane3d PUBLIC MANE3D_HAS_BC7ENC)
-    target_link_libraries(mane3d PUBLIC bc7enc_lib)
+    target_sources(lub3d PRIVATE src/bc7enc_lua.cpp)
+    target_compile_definitions(lub3d PUBLIC LUB3D_HAS_BC7ENC)
+    target_link_libraries(lub3d PUBLIC bc7enc_lib)
 endif()
 
 # sokol-shdc library (optional)
-if(MANE3D_BUILD_SHDC)
+if(LUB3D_BUILD_SHDC)
     include(cmake/sokol-shdc.cmake)
 
     # Wrapper library (C++20)
@@ -494,50 +494,50 @@ if(MANE3D_BUILD_SHDC)
     set_target_properties(shdc_wrapper PROPERTIES CXX_STANDARD 20)
 
     # Add Lua bindings and link wrapper
-    target_sources(mane3d PRIVATE src/shdc_lua.c)
-    target_include_directories(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-    target_compile_definitions(mane3d PRIVATE MANE3D_HAS_SHDC)
-    target_link_libraries(mane3d PUBLIC shdc_wrapper)
+    target_sources(lub3d PRIVATE src/shdc_lua.c)
+    target_include_directories(lub3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+    target_compile_definitions(lub3d PRIVATE LUB3D_HAS_SHDC)
+    target_link_libraries(lub3d PUBLIC shdc_wrapper)
 
 endif()
 
 # Test runner (headless)
-if(MANE3D_BUILD_TESTS)
-    add_executable(mane3d-test tests/test_runner.c)
-    target_include_directories(mane3d-test PRIVATE
+if(LUB3D_BUILD_TESTS)
+    add_executable(lub3d-test tests/test_runner.c)
+    target_include_directories(lub3d-test PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
         ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${LUA_INCLUDE}
     )
-    target_link_libraries(mane3d-test mane3d)
+    target_link_libraries(lub3d-test lub3d)
 
     # Backend defines for test runner
-    if(MANE3D_BACKEND_DUMMY)
-        target_compile_definitions(mane3d-test PRIVATE SOKOL_DUMMY_BACKEND)
-    elseif(MANE3D_BACKEND_GL)
-        target_compile_definitions(mane3d-test PRIVATE SOKOL_GLCORE)
-    elseif(MANE3D_BACKEND_GLES3)
-        target_compile_definitions(mane3d-test PRIVATE SOKOL_GLES3)
-    elseif(MANE3D_BACKEND_D3D11)
-        target_compile_definitions(mane3d-test PRIVATE SOKOL_D3D11)
-    elseif(MANE3D_BACKEND_METAL)
-        target_compile_definitions(mane3d-test PRIVATE SOKOL_METAL)
-    elseif(MANE3D_BACKEND_WGPU)
-        target_compile_definitions(mane3d-test PRIVATE SOKOL_WGPU)
+    if(LUB3D_BACKEND_DUMMY)
+        target_compile_definitions(lub3d-test PRIVATE SOKOL_DUMMY_BACKEND)
+    elseif(LUB3D_BACKEND_GL)
+        target_compile_definitions(lub3d-test PRIVATE SOKOL_GLCORE)
+    elseif(LUB3D_BACKEND_GLES3)
+        target_compile_definitions(lub3d-test PRIVATE SOKOL_GLES3)
+    elseif(LUB3D_BACKEND_D3D11)
+        target_compile_definitions(lub3d-test PRIVATE SOKOL_D3D11)
+    elseif(LUB3D_BACKEND_METAL)
+        target_compile_definitions(lub3d-test PRIVATE SOKOL_METAL)
+    elseif(LUB3D_BACKEND_WGPU)
+        target_compile_definitions(lub3d-test PRIVATE SOKOL_WGPU)
     else()
         if(EMSCRIPTEN)
-            target_compile_definitions(mane3d-test PRIVATE SOKOL_WGPU)
+            target_compile_definitions(lub3d-test PRIVATE SOKOL_WGPU)
         elseif(WIN32)
-            target_compile_definitions(mane3d-test PRIVATE SOKOL_D3D11)
+            target_compile_definitions(lub3d-test PRIVATE SOKOL_D3D11)
         elseif(APPLE)
-            target_compile_definitions(mane3d-test PRIVATE SOKOL_METAL)
+            target_compile_definitions(lub3d-test PRIVATE SOKOL_METAL)
         else()
-            target_compile_definitions(mane3d-test PRIVATE SOKOL_GLCORE)
+            target_compile_definitions(lub3d-test PRIVATE SOKOL_GLCORE)
         endif()
     endif()
 
-    if(MANE3D_BUILD_SHDC)
-        target_compile_definitions(mane3d-test PRIVATE MANE3D_HAS_SHDC)
+    if(LUB3D_BUILD_SHDC)
+        target_compile_definitions(lub3d-test PRIVATE LUB3D_HAS_SHDC)
     endif()
 endif()

@@ -1,4 +1,4 @@
--- mane3d example: Model loading with normal mapping
+-- lub3d example: Model loading with normal mapping
 -- Based on lettier/3d-game-shaders-for-beginners
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
@@ -549,7 +549,7 @@ end
 app.Run(app.Desc({
     width = 1024,
     height = 768,
-    window_title = "Mane3D - Model Loading",
+    window_title = "Lub3d - Model Loading",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

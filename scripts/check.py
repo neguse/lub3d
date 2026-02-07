@@ -80,7 +80,7 @@ def main() -> int:
     subprocess.run([lua_ls, "--version"], cwd=PROJECT_ROOT)
 
     # --check
-    print("Checking mane3d...")
+    print("Checking lub3d...")
     result = subprocess.run(
         [lua_ls, "--configpath", ".luarc.json", "--check", "."],
         cwd=PROJECT_ROOT,

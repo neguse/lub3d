@@ -1,4 +1,4 @@
-// ImGui Lua bindings for mane3d
+// ImGui Lua bindings for lub3d
 // Sokol integration functions only
 // All ImGui functions are auto-generated in gen/bindings/imgui_gen.cpp
 

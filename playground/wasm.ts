@@ -65,7 +65,7 @@ export function initWasm(canvas: HTMLCanvasElement): Promise<void> {
 
   // Load the WASM JS file
   const script = document.createElement('script')
-  script.src = '/mane3d-example.js'
+  script.src = '/lub3d-example.js'
   script.async = true
   document.body.appendChild(script)
 

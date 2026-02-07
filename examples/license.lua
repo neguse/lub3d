@@ -3,7 +3,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local imgui = require("imgui")
-local licenses = require("mane3d.licenses")
+local licenses = require("lub3d.licenses")
 
 local license_text = ""
 
@@ -16,7 +16,7 @@ local function init_game()
     imgui.Setup()
 
     -- Build license text
-    local parts = { "=== Mane3D Third-Party Licenses ===\n\n" }
+    local parts = { "=== Lub3d Third-Party Licenses ===\n\n" }
 
     for _, lib in ipairs(licenses.libraries()) do
         table.insert(parts, string.format(">> %s (%s)\n", lib.name, lib.type))
@@ -52,7 +52,7 @@ local function update_frame()
     imgui.SetNextWindowPos({ w * 0.1, h * 0.05 })
     imgui.SetNextWindowSize({ w * 0.8, h * 0.9 })
     local flags = imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse
-    if imgui.Begin("Mane3D Licenses", nil, flags) then
+    if imgui.Begin("Lub3d Licenses", nil, flags) then
         imgui.TextUnformatted(license_text)
     end
     imgui.End()
@@ -75,7 +75,7 @@ end
 app.Run(app.Desc({
     width = 1024,
     height = 768,
-    window_title = "Mane3D - Licenses",
+    window_title = "Lub3d - Licenses",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

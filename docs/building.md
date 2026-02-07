@@ -11,15 +11,15 @@
 
 ```bash
 # Clone with submodules
-git clone --recursive https://github.com/neguse/mane3d.git
-cd mane3d
+git clone --recursive https://github.com/neguse/lub3d.git
+cd lub3d
 
 # Configure and build
 cmake --preset win-d3d11-debug
 cmake --build --preset win-d3d11-debug
 
 # Run example
-./build/win-d3d11-debug/mane3d-example.exe examples/breakout.lua
+./build/win-d3d11-debug/lub3d-example.exe examples/breakout.lua
 ```
 
 ## CMake Presets
@@ -36,12 +36,12 @@ cmake --build --preset win-d3d11-debug
 
 | Option                  | Default | Description                                     |
 | ----------------------- | ------- | ----------------------------------------------- |
-| `MANE3D_BUILD_EXAMPLE`  | ON      | Build example executable                        |
-| `MANE3D_BUILD_SHDC`     | ON      | Build sokol-shdc for runtime shader compilation |
-| `MANE3D_BUILD_SHARED`   | OFF     | Build as shared library                         |
-| `MANE3D_BUILD_IMGUI`    | ON      | Build Dear ImGui integration                    |
-| `MANE3D_BUILD_BC7ENC`   | ON      | Build BC7 encoder library                       |
-| `MANE3D_USE_SYSTEM_LUA` | OFF     | Use system Lua instead of bundled               |
+| `LUB3D_BUILD_EXAMPLE`  | ON      | Build example executable                        |
+| `LUB3D_BUILD_SHDC`     | ON      | Build sokol-shdc for runtime shader compilation |
+| `LUB3D_BUILD_SHARED`   | OFF     | Build as shared library                         |
+| `LUB3D_BUILD_IMGUI`    | ON      | Build Dear ImGui integration                    |
+| `LUB3D_BUILD_BC7ENC`   | ON      | Build BC7 encoder library                       |
+| `LUB3D_USE_SYSTEM_LUA` | OFF     | Use system Lua instead of bundled               |
 
 ## Backends
 
@@ -52,7 +52,7 @@ Auto-selected per platform:
 - **Linux**: OpenGL
 - **Web (WASM)**: WebGPU
 
-Override with `MANE3D_BACKEND_*` options.
+Override with `LUB3D_BACKEND_*` options.
 
 ## WASM Build
 

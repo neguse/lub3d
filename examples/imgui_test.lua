@@ -24,7 +24,7 @@ local function update_frame()
 
     -- Main debug window
     if imgui.Begin("Debug Menu") then
-        imgui.TextUnformatted("Mane3D ImGui Test")
+        imgui.TextUnformatted("Lub3d ImGui Test")
         imgui.Separator()
 
         local clicked, new_val = imgui.Checkbox("Enable Feature", checkbox_val)
@@ -76,7 +76,7 @@ end
 app.Run(app.Desc({
     width = 800,
     height = 600,
-    window_title = "Mane3D - ImGui Test",
+    window_title = "Lub3d - ImGui Test",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

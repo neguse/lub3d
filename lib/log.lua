@@ -1,4 +1,4 @@
--- Logging utilities for mane3d
+-- Logging utilities for lub3d
 local slog = require("sokol.log")
 
 local M = {}

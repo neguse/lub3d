@@ -1,4 +1,4 @@
--- Utility functions for mane3d examples
+-- Utility functions for lub3d examples
 local stm = require("sokol.time")
 local log = require("lib.log")
 

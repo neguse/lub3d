@@ -18,7 +18,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_D3D11": "ON"
+        "LUB3D_BACKEND_D3D11": "ON"
       }
     },
     {
@@ -33,7 +33,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_D3D11": "ON"
+        "LUB3D_BACKEND_D3D11": "ON"
       }
     },
     {
@@ -48,8 +48,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_D3D11": "ON",
-        "MANE3D_BUILD_SHARED": "ON"
+        "LUB3D_BACKEND_D3D11": "ON",
+        "LUB3D_BUILD_SHARED": "ON"
       }
     },
     {
@@ -64,7 +64,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GL": "ON"
+        "LUB3D_BACKEND_GL": "ON"
       }
     },
     {
@@ -79,7 +79,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_METAL": "ON"
+        "LUB3D_BACKEND_METAL": "ON"
       }
     },
     {
@@ -94,7 +94,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GL": "ON"
+        "LUB3D_BACKEND_GL": "ON"
       }
     },
     {
@@ -109,7 +109,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GL": "ON"
+        "LUB3D_BACKEND_GL": "ON"
       }
     },
     {
@@ -124,7 +124,7 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_GLES3": "ON"
+        "LUB3D_BACKEND_GLES3": "ON"
       }
     },
     {
@@ -154,11 +154,11 @@
       "binaryDir": "${sourceDir}/build/dummy-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_DUMMY": "ON",
-        "MANE3D_BUILD_TESTS": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON",
-        "MANE3D_BUILD_EXAMPLE": "OFF"
+        "LUB3D_BACKEND_DUMMY": "ON",
+        "LUB3D_BUILD_TESTS": "ON",
+        "LUB3D_BUILD_SHDC": "ON",
+        "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     },
     {
@@ -168,11 +168,11 @@
       "binaryDir": "${sourceDir}/build/dummy-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_DUMMY": "ON",
-        "MANE3D_BUILD_TESTS": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON",
-        "MANE3D_BUILD_EXAMPLE": "OFF"
+        "LUB3D_BACKEND_DUMMY": "ON",
+        "LUB3D_BUILD_TESTS": "ON",
+        "LUB3D_BUILD_SHDC": "ON",
+        "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     },
     {
@@ -182,11 +182,11 @@
       "binaryDir": "${sourceDir}/build/dummy-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "MANE3D_BACKEND_DUMMY": "ON",
-        "MANE3D_BUILD_TESTS": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON",
-        "MANE3D_BUILD_EXAMPLE": "OFF"
+        "LUB3D_BACKEND_DUMMY": "ON",
+        "LUB3D_BUILD_TESTS": "ON",
+        "LUB3D_BUILD_SHDC": "ON",
+        "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     },
     {
@@ -196,11 +196,11 @@
       "binaryDir": "${sourceDir}/build/dummy-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MANE3D_BACKEND_DUMMY": "ON",
-        "MANE3D_BUILD_TESTS": "ON",
-        "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "ON",
-        "MANE3D_BUILD_EXAMPLE": "OFF"
+        "LUB3D_BACKEND_DUMMY": "ON",
+        "LUB3D_BUILD_TESTS": "ON",
+        "LUB3D_BUILD_SHDC": "ON",
+        "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     }
   ],

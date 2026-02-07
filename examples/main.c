@@ -1,4 +1,4 @@
-/* mane3d example: runs a Lua script with sokol bindings
+/* lub3d example: runs a Lua script with sokol bindings
  * Lua controls entry point - scripts call app.run() directly
  */
 #include "sokol_app.h"
@@ -77,9 +77,9 @@ EM_JS(double, js_get_display_scale_y, (void), {
 #endif
 
 /* Shared Lua module registration */
-#include "mane3d_lua.h"
+#include "lub3d_lua.h"
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
 extern void shdc_init(void);
 extern void shdc_shutdown(void);
 #endif
@@ -277,9 +277,9 @@ static void setup_fetch_searcher(lua_State *L)
 }
 #endif
 
-static int mane3d_main(int argc, char *argv[])
+static int lub3d_main(int argc, char *argv[])
 {
-    slog_func("main", 3, 0, "=== mane3d starting (Lua entry point) ===", 0, "", 0);
+    slog_func("main", 3, 0, "=== lub3d starting (Lua entry point) ===", 0, "", 0);
     L = luaL_newstate();
     luaL_openlibs(L);
 
@@ -295,12 +295,12 @@ static int mane3d_main(int argc, char *argv[])
     lua_setglobal(L, "get_display_scale");
 #endif
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
     shdc_init();
 #endif
 
-    /* Register all sokol and mane3d modules */
-    mane3d_lua_register_all(L);
+    /* Register all sokol and lub3d modules */
+    lub3d_lua_register_all(L);
 
     /* Load script */
 #ifdef __EMSCRIPTEN__
@@ -379,7 +379,7 @@ static int mane3d_main(int argc, char *argv[])
         return 1;
     }
     /* Non-Emscripten: sapp_run blocks until app closes, then script returns here */
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
     shdc_shutdown();
 #endif
     lua_close(L);
@@ -395,11 +395,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     (void)hInstance;
     (void)hPrevInstance;
     (void)nCmdShow;
-    return mane3d_main(__argc, __argv);
+    return lub3d_main(__argc, __argv);
 }
 #else
 int main(int argc, char *argv[])
 {
-    return mane3d_main(argc, argv);
+    return lub3d_main(argc, argv);
 }
 #endif

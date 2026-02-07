@@ -20,7 +20,7 @@ export async function saveGist(code: string): Promise<string | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        description: 'Måne3D Playground',
+        description: 'Lübertà3d Playground',
         public: true,
         files: {
           'main.lua': { content: code },

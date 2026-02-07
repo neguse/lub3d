@@ -10,9 +10,9 @@ if "%BUILD_DIR%"=="" set BUILD_DIR=build\dummy-debug
 set NUM_FRAMES=%2
 if "%NUM_FRAMES%"=="" set NUM_FRAMES=10
 
-set TEST_RUNNER=%BUILD_DIR%\mane3d-test.exe
+set TEST_RUNNER=%BUILD_DIR%\lub3d-test.exe
 if not exist "%TEST_RUNNER%" (
-    echo Error: mane3d-test.exe not found in %BUILD_DIR%
+    echo Error: lub3d-test.exe not found in %BUILD_DIR%
     exit /b 1
 )
 
