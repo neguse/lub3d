@@ -99,42 +99,42 @@ set(SOKOL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol" CACHE PATH "Path to sokol
 set(BINDGEN_DIR "${SOKOL_DIR}/bindgen" CACHE PATH "Path to sokol/bindgen directory")
 
 set(MANE3D_GENERATED
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_log.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_gfx.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_app.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_glue.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_time.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_audio.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_gl.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_debugtext.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_shape.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/miniaudio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_log.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_gfx.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_app.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_glue.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_time.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_audio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_gl.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_debugtext.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_shape.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/miniaudio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
 # C# Generator for all Sokol modules
 set(GENERATOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Generator")
-set(NEWGEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/newgen")
+set(GEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gen")
 find_program(DOTNET_EXECUTABLE dotnet REQUIRED)
 find_program(CLANG_EXECUTABLE NAMES clang clang.exe
     HINTS "${CLANGPP_EXECUTABLE}/.."
     REQUIRED)
 
 add_custom_command(
-    OUTPUT ${NEWGEN_DIR}/sokol_app.c ${NEWGEN_DIR}/sokol_app.lua
-           ${NEWGEN_DIR}/sokol_log.c ${NEWGEN_DIR}/sokol_log.lua
-           ${NEWGEN_DIR}/sokol_time.c ${NEWGEN_DIR}/sokol_time.lua
-           ${NEWGEN_DIR}/sokol_gfx.c ${NEWGEN_DIR}/sokol_gfx.lua
-           ${NEWGEN_DIR}/sokol_glue.c ${NEWGEN_DIR}/sokol_glue.lua
-           ${NEWGEN_DIR}/sokol_audio.c ${NEWGEN_DIR}/sokol_audio.lua
-           ${NEWGEN_DIR}/sokol_gl.c ${NEWGEN_DIR}/sokol_gl.lua
-           ${NEWGEN_DIR}/sokol_debugtext.c ${NEWGEN_DIR}/sokol_debugtext.lua
-           ${NEWGEN_DIR}/sokol_shape.c ${NEWGEN_DIR}/sokol_shape.lua
-           ${NEWGEN_DIR}/sokol_imgui.c ${NEWGEN_DIR}/sokol_imgui.lua
-           ${NEWGEN_DIR}/miniaudio.c ${NEWGEN_DIR}/miniaudio.lua
-           ${NEWGEN_DIR}/imgui_gen.cpp ${NEWGEN_DIR}/imgui.lua
+    OUTPUT ${GEN_DIR}/sokol_app.c ${GEN_DIR}/sokol_app.lua
+           ${GEN_DIR}/sokol_log.c ${GEN_DIR}/sokol_log.lua
+           ${GEN_DIR}/sokol_time.c ${GEN_DIR}/sokol_time.lua
+           ${GEN_DIR}/sokol_gfx.c ${GEN_DIR}/sokol_gfx.lua
+           ${GEN_DIR}/sokol_glue.c ${GEN_DIR}/sokol_glue.lua
+           ${GEN_DIR}/sokol_audio.c ${GEN_DIR}/sokol_audio.lua
+           ${GEN_DIR}/sokol_gl.c ${GEN_DIR}/sokol_gl.lua
+           ${GEN_DIR}/sokol_debugtext.c ${GEN_DIR}/sokol_debugtext.lua
+           ${GEN_DIR}/sokol_shape.c ${GEN_DIR}/sokol_shape.lua
+           ${GEN_DIR}/sokol_imgui.c ${GEN_DIR}/sokol_imgui.lua
+           ${GEN_DIR}/miniaudio.c ${GEN_DIR}/miniaudio.lua
+           ${GEN_DIR}/imgui_gen.cpp ${GEN_DIR}/imgui.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
-        ${NEWGEN_DIR}
+        ${GEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
         --clang ${CLANG_EXECUTABLE}
     DEPENDS
@@ -385,7 +385,7 @@ install(DIRECTORY deps/lua/ DESTINATION include/lua FILES_MATCHING PATTERN "*.h"
 # Dear ImGui integration (optional)
 if(MANE3D_BUILD_IMGUI)
     # ImGui auto-generated bindings (C# Generator output)
-    set(IMGUI_GEN_SOURCE ${NEWGEN_DIR}/imgui_gen.cpp)
+    set(IMGUI_GEN_SOURCE ${GEN_DIR}/imgui_gen.cpp)
 
     # ImGui library (C++)
     add_library(imgui_lib STATIC
@@ -427,7 +427,7 @@ if(MANE3D_BUILD_IMGUI)
     endif()
 
     # Link ImGui to mane3d
-    target_sources(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_imgui.c)
+    target_sources(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_imgui.c)
     target_link_libraries(mane3d PUBLIC imgui_lib)
     target_compile_definitions(mane3d PUBLIC MANE3D_HAS_IMGUI)
 

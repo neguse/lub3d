@@ -1,6 +1,6 @@
 {
   "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
-  "workspace.library": ["newgen"],
+  "workspace.library": ["gen"],
   "workspace.ignoreDir": ["build", "lib", "out", "deps", "types", "examples"],
   "runtime.version": "Lua 5.5",
   "diagnostics.globals": [

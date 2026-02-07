@@ -12,19 +12,16 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
-          python-version: "3.12"
+          dotnet-version: "10.0.x"
 
-      - name: Install clang++
+      - name: Install clang
         run: sudo apt-get install -y clang
 
-      - name: Generate Lua bindings
-        run: python scripts/gen_lua.py
-
-      - name: Generate ImGui bindings
-        run: python scripts/gen_imgui.py deps/imgui/imgui.h gen/bindings/imgui_gen.cpp
+      - name: Generate bindings (C# Generator)
+        run: dotnet run --project Generator -- gen --deps deps --clang clang
 
       - name: Setup Lua Language Server
         run: |

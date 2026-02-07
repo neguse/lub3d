@@ -5,7 +5,6 @@ install/
 
 # Generated code
 gen/
-newgen/
 
 # External assets (not licensed for redistribution)
 assets/
