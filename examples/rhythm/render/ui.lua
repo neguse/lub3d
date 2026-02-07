@@ -1,17 +1,52 @@
---- UI rendering
+--- UI rendering (ImGui-based)
+local imgui = require("imgui")
 local const = require("examples.rhythm.const")
 
+-- ImGui constants
+local WindowFlags_NoTitleBar = 1
+local WindowFlags_NoResize = 2
+local WindowFlags_NoMove = 4
+local WindowFlags_NoScrollbar = 8
+local WindowFlags_NoBackground = 128
+local WindowFlags_NoBringToFrontOnFocus = 8192
+local WindowFlags_NoInputs = 262144 + 524288 -- NoMouseInputs + NoNav
+local Cond_Always = 1
+local Col_Text = 0
+
+local hud_flags = WindowFlags_NoTitleBar + WindowFlags_NoResize + WindowFlags_NoMove
+    + WindowFlags_NoScrollbar + WindowFlags_NoInputs + WindowFlags_NoBringToFrontOnFocus
+    + WindowFlags_NoBackground
+
+local shadow_color = {0.0, 0.0, 0.0, 1.0}
+local shadow_offsets = {{1,0},{-1,0},{0,1},{0,-1}}
+
+--- Draw text with outline (shadow in 4 directions)
+---@param text string
+---@param color number[]
+local function outlined_text(text, color)
+    local pos = imgui.GetCursorPos()
+    -- Shadow
+    imgui.PushStyleColor_X_Vec4(Col_Text, shadow_color)
+    for _, off in ipairs(shadow_offsets) do
+        imgui.SetCursorPos({pos[1] + off[1], pos[2] + off[2]})
+        imgui.TextUnformatted(text)
+    end
+    imgui.PopStyleColor(1)
+    -- Foreground
+    imgui.SetCursorPos(pos)
+    imgui.PushStyleColor_X_Vec4(Col_Text, color)
+    imgui.TextUnformatted(text)
+    imgui.PopStyleColor(1)
+end
+
 ---@class UIRenderer
----@field sdtx any sokol.debugtext module
 local UIRenderer = {}
 UIRenderer.__index = UIRenderer
 
 --- Create a new UIRenderer
----@param sdtx any sokol.debugtext module
 ---@return UIRenderer
-function UIRenderer.new(sdtx)
+function UIRenderer.new()
     local self = setmetatable({}, UIRenderer)
-    self.sdtx = sdtx
     return self
 end
 
@@ -22,12 +57,10 @@ function UIRenderer:draw_combo(combo)
         return
     end
 
-    local sdtx = self.sdtx
-    sdtx.Canvas(const.SCREEN_WIDTH / 2, const.SCREEN_HEIGHT / 2)
-    sdtx.Origin(0, 0)
-    sdtx.Pos(40, 20)
-    sdtx.Color3b(255, 255, 0)
-    sdtx.Puts(string.format("COMBO: %d", combo))
+    imgui.SetNextWindowPos({const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4}, Cond_Always, {0.5, 0.5})
+    imgui.Begin("##hud_combo", nil, hud_flags)
+    outlined_text(string.format("COMBO: %d", combo), {1.0, 1.0, 0.0, 1.0})
+    imgui.End()
 end
 
 --- Draw song info
@@ -35,38 +68,29 @@ end
 ---@param artist string
 ---@param bpm number
 function UIRenderer:draw_song_info(title, artist, bpm)
-    local sdtx = self.sdtx
-    sdtx.Canvas(const.SCREEN_WIDTH / 2, const.SCREEN_HEIGHT / 2)
-    sdtx.Origin(0, 0)
-    sdtx.Pos(2, 2)
-    sdtx.Color3b(200, 200, 200)
-    sdtx.Puts(title)
-    sdtx.Pos(2, 3)
-    sdtx.Color3b(150, 150, 150)
-    sdtx.Puts(artist)
-    sdtx.Pos(2, 4)
-    sdtx.Color3b(100, 100, 100)
-    sdtx.Puts(string.format("BPM: %.1f", bpm))
+    imgui.SetNextWindowPos({10, 10}, Cond_Always)
+    imgui.Begin("##hud_song", nil, hud_flags)
+    outlined_text(title, {0.78, 0.78, 0.78, 1.0})
+    outlined_text(artist, {0.59, 0.59, 0.59, 1.0})
+    outlined_text(string.format("BPM: %.1f", bpm), {0.39, 0.39, 0.39, 1.0})
+    imgui.End()
 end
 
 --- Draw state indicator
 ---@param state string
 function UIRenderer:draw_state(state)
-    local sdtx = self.sdtx
-    sdtx.Canvas(const.SCREEN_WIDTH / 2, const.SCREEN_HEIGHT / 2)
-    sdtx.Origin(0, 0)
-    sdtx.Pos(2, 70)
+    imgui.SetNextWindowPos({10, const.SCREEN_HEIGHT - 40}, Cond_Always)
+    imgui.Begin("##hud_state", nil, hud_flags)
 
     if state == "loading" then
-        sdtx.Color3b(255, 255, 0)
-        sdtx.Puts("LOADING...")
+        outlined_text("LOADING...", {1.0, 1.0, 0.0, 1.0})
     elseif state == "finished" then
-        sdtx.Color3b(0, 255, 0)
-        sdtx.Puts("COMPLETE!")
+        outlined_text("COMPLETE!", {0.0, 1.0, 0.0, 1.0})
     elseif state == "paused" then
-        sdtx.Color3b(255, 128, 0)
-        sdtx.Puts("PAUSED")
+        outlined_text("PAUSED", {1.0, 0.5, 0.0, 1.0})
     end
+
+    imgui.End()
 end
 
 --- Draw timing debug info
@@ -75,23 +99,18 @@ end
 ---@param bpm number
 ---@param hispeed number|nil
 function UIRenderer:draw_debug(current_beat, current_time_us, bpm, hispeed)
-    local sdtx = self.sdtx
-    sdtx.Canvas(const.SCREEN_WIDTH / 2, const.SCREEN_HEIGHT / 2)
-    sdtx.Origin(0, 0)
-    sdtx.Pos(70, 2)
-    sdtx.Color3b(100, 100, 100)
-    sdtx.Puts(string.format("Beat: %.2f", current_beat))
-    sdtx.Pos(70, 3)
-    sdtx.Puts(string.format("Time: %.2fs", current_time_us / 1000000))
-    sdtx.Pos(70, 4)
-    sdtx.Puts(string.format("BPM: %.1f", bpm))
+    imgui.SetNextWindowPos({const.SCREEN_WIDTH - 200, 10}, Cond_Always)
+    imgui.Begin("##hud_debug", nil, hud_flags)
 
-    -- Hi-Speed display
+    outlined_text(string.format("Beat: %.2f", current_beat), {0.39, 0.39, 0.39, 1.0})
+    outlined_text(string.format("Time: %.2fs", current_time_us / 1000000), {0.39, 0.39, 0.39, 1.0})
+    outlined_text(string.format("BPM: %.1f", bpm), {0.39, 0.39, 0.39, 1.0})
+
     if hispeed then
-        sdtx.Pos(70, 6)
-        sdtx.Color3b(0, 255, 255)
-        sdtx.Puts(string.format("HS: %.2f (1/2)", hispeed))
+        outlined_text(string.format("HS: %.2f (1/2)", hispeed), {0.0, 1.0, 1.0, 1.0})
     end
+
+    imgui.End()
 end
 
 --- Draw gauge bar
@@ -168,42 +187,32 @@ end
 ---@param max_ex_score integer
 ---@param stats JudgeStats
 function UIRenderer:draw_score(ex_score, max_ex_score, stats)
-    local sdtx = self.sdtx
-    sdtx.Canvas(const.SCREEN_WIDTH / 2, const.SCREEN_HEIGHT / 2)
-    sdtx.Origin(0, 0)
+    imgui.SetNextWindowPos({10, 100}, Cond_Always)
+    imgui.Begin("##hud_score", nil, hud_flags)
 
     -- EX Score
-    sdtx.Pos(2, 8)
-    sdtx.Color3b(255, 255, 255)
-    sdtx.Puts(string.format("EX: %d / %d", ex_score, max_ex_score))
+    outlined_text(string.format("EX: %d / %d", ex_score, max_ex_score), {1.0, 1.0, 1.0, 1.0})
 
     -- Score rate
     local rate = 0
     if max_ex_score > 0 then
         rate = (ex_score / max_ex_score) * 100
     end
-    sdtx.Pos(2, 9)
-    sdtx.Color3b(200, 200, 200)
-    sdtx.Puts(string.format("%.2f%%", rate))
+    outlined_text(string.format("%.2f%%", rate), {0.78, 0.78, 0.78, 1.0})
 
-    -- Judgment counts (compact)
-    sdtx.Pos(2, 11)
-    sdtx.Color3b(255, 255, 100)
-    sdtx.Puts(string.format("PG:%d G:%d", stats.pgreat, stats.great))
-    sdtx.Pos(2, 12)
-    sdtx.Color3b(100, 255, 100)
-    sdtx.Puts(string.format("GD:%d BD:%d", stats.good, stats.bad))
-    sdtx.Pos(2, 13)
-    sdtx.Color3b(255, 100, 100)
-    sdtx.Puts(string.format("PR:%d MS:%d", stats.empty_poor, stats.miss))
+    imgui.Spacing()
+
+    -- Judgment counts
+    outlined_text(string.format("PG:%d G:%d", stats.pgreat, stats.great), {1.0, 1.0, 0.39, 1.0})
+    outlined_text(string.format("GD:%d BD:%d", stats.good, stats.bad), {0.39, 1.0, 0.39, 1.0})
+    outlined_text(string.format("PR:%d MS:%d", stats.empty_poor, stats.miss), {1.0, 0.39, 0.39, 1.0})
+
+    imgui.Spacing()
 
     -- FAST/SLOW
-    sdtx.Pos(2, 15)
-    sdtx.Color3b(100, 200, 255)
-    sdtx.Puts(string.format("FAST:%d", stats.fast))
-    sdtx.Pos(10, 15)
-    sdtx.Color3b(255, 150, 100)
-    sdtx.Puts(string.format("SLOW:%d", stats.slow))
+    outlined_text(string.format("FAST:%d  SLOW:%d", stats.fast, stats.slow), {0.39, 0.78, 1.0, 1.0})
+
+    imgui.End()
 end
 
 return UIRenderer

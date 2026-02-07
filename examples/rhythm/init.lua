@@ -82,8 +82,8 @@ local function init_game(bms_path)
     state = GameState.new()
     lane_renderer = LaneRenderer.new(sgl)
     note_renderer = NoteRenderer.new(sgl, lane_renderer)
-    ui_renderer = UIRenderer.new(sdtx)
-    effect_renderer = EffectRenderer.new(sdtx, sgl)
+    ui_renderer = UIRenderer.new()
+    effect_renderer = EffectRenderer.new()
 
     conductor = Conductor.new(chart.timing_map, const.LEAD_TIME_US)
     state:load_chart(chart, conductor)
@@ -193,7 +193,7 @@ local function init()
     end
 
     -- Initialize result renderer (shared)
-    result_renderer = ResultRenderer.new(sdtx, sgl)
+    result_renderer = ResultRenderer.new()
 
     -- Initialize song scanner and select screen
     select_screen = SelectScreen.new()
@@ -309,6 +309,7 @@ local function frame()
         -- Draw lanes
         if lane_renderer and input_handler then
             lane_renderer:draw_lanes(input_handler:get_states())
+            lane_renderer:draw_key_beams(input_handler:get_states())
             lane_renderer:draw_judgment_line()
         end
 
@@ -329,7 +330,9 @@ local function frame()
         -- Draw sokol-gl
         sgl.Draw()
 
-        -- Draw UI
+        -- Draw HUD with ImGui
+        imgui.NewFrame()
+
         if chart and ui_renderer then
             ui_renderer:draw_song_info(chart.meta.title, chart.meta.artist, chart.meta.bpm)
         end
@@ -354,28 +357,22 @@ local function frame()
             )
         end
 
-        -- Draw judgment effects
+        -- Draw judgment effects (ImGui)
         if effect_renderer then
             effect_renderer:draw(current_time_us)
         end
 
-        -- Draw debug text
-        sdtx.Draw()
+        imgui.Render()
 
     elseif app_state == "finished" then
-        -- Setup sokol-gl for result screen
-        sgl.Defaults()
-        sgl.MatrixModeProjection()
-        sgl.Ortho(0, const.SCREEN_WIDTH, const.SCREEN_HEIGHT, 0, -1, 1)
-        sgl.MatrixModeModelview()
+        -- Draw result screen with ImGui
+        imgui.NewFrame()
 
-        -- Draw result screen
         if result_data and result_renderer then
             result_renderer:draw(result_data)
         end
 
-        -- Draw debug text
-        sdtx.Draw()
+        imgui.Render()
     end
 
     gfx.EndPass()
@@ -431,6 +428,8 @@ local function event(ev)
     end
 
     if app_state == "finished" then
+        imgui.HandleEvent(ev)
+
         if ev.type == app.EventType.KEY_DOWN then
             if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.ENTER then
                 return_to_select()

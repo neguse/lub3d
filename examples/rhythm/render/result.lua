@@ -1,5 +1,13 @@
---- Result screen rendering
+--- Result screen rendering (ImGui-based)
+local imgui = require("imgui")
 local const = require("examples.rhythm.const")
+
+-- ImGui constants
+local WindowFlags_NoResize = 2
+local WindowFlags_NoMove = 4
+local WindowFlags_NoCollapse = 32
+local Cond_Always = 1
+local Col_Text = 0
 
 ---@class ResultData
 ---@field title string
@@ -15,163 +23,180 @@ local const = require("examples.rhythm.const")
 ---@field total_notes integer
 
 ---@class ResultRenderer
----@field sdtx any sokol.debugtext module
----@field sgl any|nil sokol.gl module
 local ResultRenderer = {}
 ResultRenderer.__index = ResultRenderer
 
 --- Create a new ResultRenderer
----@param sdtx any sokol.debugtext module
----@param sgl any|nil sokol.gl module
 ---@return ResultRenderer
-function ResultRenderer.new(sdtx, sgl)
+function ResultRenderer.new()
     local self = setmetatable({}, ResultRenderer)
-    self.sdtx = sdtx
-    self.sgl = sgl
     return self
+end
+
+--- Get color for DJ LEVEL (returns normalized RGBA)
+---@param level string
+---@return number[]
+local function get_level_color(level)
+    if level == "AAA" then
+        return {1.0, 0.84, 0.0, 1.0}     -- Gold
+    elseif level == "AA" then
+        return {1.0, 1.0, 0.39, 1.0}      -- Yellow
+    elseif level == "A" then
+        return {0.39, 1.0, 0.39, 1.0}     -- Green
+    elseif level == "B" then
+        return {0.39, 0.78, 1.0, 1.0}     -- Light blue
+    elseif level == "C" then
+        return {0.59, 0.59, 1.0, 1.0}     -- Blue
+    elseif level == "D" then
+        return {0.78, 0.59, 1.0, 1.0}     -- Purple
+    elseif level == "E" then
+        return {0.78, 0.78, 0.78, 1.0}    -- Gray
+    else -- F
+        return {0.59, 0.39, 0.39, 1.0}    -- Dark gray
+    end
 end
 
 --- Draw the result screen
 ---@param data ResultData
 function ResultRenderer:draw(data)
-    local sdtx = self.sdtx
-    sdtx.Canvas(const.SCREEN_WIDTH / 2, const.SCREEN_HEIGHT / 2)
-    sdtx.Origin(0, 0)
+    local window_flags = WindowFlags_NoResize + WindowFlags_NoMove + WindowFlags_NoCollapse
 
-    -- Title
-    sdtx.Pos(30, 5)
-    sdtx.Color3b(255, 255, 255)
-    sdtx.Puts("=== RESULT ===")
+    imgui.SetNextWindowPos({0, 0}, Cond_Always)
+    imgui.SetNextWindowSize({const.SCREEN_WIDTH, const.SCREEN_HEIGHT}, Cond_Always)
 
-    -- Clear status
-    sdtx.Pos(35, 8)
-    if data.cleared then
-        sdtx.Color3b(0, 255, 100)
-        sdtx.Puts("CLEAR!")
-    else
-        sdtx.Color3b(255, 50, 50)
-        sdtx.Puts("FAILED")
+    if imgui.Begin("Result", nil, window_flags) then
+        imgui.Spacing()
+
+        -- Title
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 1.0, 1.0, 1.0})
+        imgui.TextUnformatted("=== RESULT ===")
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        -- Clear status
+        if data.cleared then
+            imgui.PushStyleColor_X_Vec4(Col_Text, {0.0, 1.0, 0.39, 1.0})
+            imgui.TextUnformatted("CLEAR!")
+        else
+            imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 0.2, 0.2, 1.0})
+            imgui.TextUnformatted("FAILED")
+        end
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+
+        -- Song info
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.78, 0.78, 0.78, 1.0})
+        imgui.TextUnformatted(data.title)
+        imgui.PopStyleColor(1)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.59, 0.59, 0.59, 1.0})
+        imgui.TextUnformatted(data.artist)
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        -- DJ LEVEL
+        local level_color = get_level_color(data.dj_level)
+        imgui.PushStyleColor_X_Vec4(Col_Text, level_color)
+        imgui.TextUnformatted(string.format("DJ LEVEL: %s", data.dj_level))
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+
+        -- EX Score
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 1.0, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("EX SCORE: %d / %d", data.ex_score, data.max_ex_score))
+        imgui.PopStyleColor(1)
+
+        -- Score rate
+        local rate = 0
+        if data.max_ex_score > 0 then
+            rate = (data.ex_score / data.max_ex_score) * 100
+        end
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.78, 0.78, 0.78, 1.0})
+        imgui.TextUnformatted(string.format("(%.2f%%)", rate))
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+
+        -- Max combo
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 0.78, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("MAX COMBO: %d", data.max_combo))
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        -- Judgment breakdown
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.59, 0.59, 0.59, 1.0})
+        imgui.TextUnformatted("--- JUDGMENT ---")
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+
+        local stats = data.stats
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 1.0, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("PGREAT: %4d", stats.pgreat))
+        imgui.PopStyleColor(1)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 0.78, 0.2, 1.0})
+        imgui.TextUnformatted(string.format("GREAT:  %4d", stats.great))
+        imgui.PopStyleColor(1)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.39, 1.0, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("GOOD:   %4d", stats.good))
+        imgui.PopStyleColor(1)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.39, 0.39, 1.0, 1.0})
+        imgui.TextUnformatted(string.format("BAD:    %4d", stats.bad))
+        imgui.PopStyleColor(1)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.59, 0.39, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("POOR:   %4d", stats.empty_poor))
+        imgui.PopStyleColor(1)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 0.39, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("MISS:   %4d", stats.miss))
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+
+        -- FAST/SLOW
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.39, 0.78, 1.0, 1.0})
+        imgui.TextUnformatted(string.format("FAST: %d", stats.fast))
+        imgui.PopStyleColor(1)
+
+        imgui.SameLine(0, 20)
+
+        imgui.PushStyleColor_X_Vec4(Col_Text, {1.0, 0.59, 0.39, 1.0})
+        imgui.TextUnformatted(string.format("SLOW: %d", stats.slow))
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+
+        -- Gauge info
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.59, 0.59, 0.59, 1.0})
+        imgui.TextUnformatted(string.format("GAUGE: %s %.1f%%", data.gauge_type:upper(), data.final_gauge))
+        imgui.PopStyleColor(1)
+
+        imgui.Spacing()
+        imgui.Separator()
+        imgui.Spacing()
+
+        -- Instructions
+        imgui.PushStyleColor_X_Vec4(Col_Text, {0.39, 0.39, 0.39, 1.0})
+        imgui.TextUnformatted("Press ENTER or ESC to exit")
+        imgui.PopStyleColor(1)
     end
-
-    -- Song info
-    sdtx.Pos(20, 12)
-    sdtx.Color3b(200, 200, 200)
-    sdtx.Puts(data.title)
-    sdtx.Pos(20, 13)
-    sdtx.Color3b(150, 150, 150)
-    sdtx.Puts(data.artist)
-
-    -- DJ LEVEL (big)
-    sdtx.Pos(35, 17)
-    local level_color = self:get_level_color(data.dj_level)
-    sdtx.Color3b(level_color[1], level_color[2], level_color[3])
-    sdtx.Puts(string.format("DJ LEVEL: %s", data.dj_level))
-
-    -- EX Score
-    sdtx.Pos(25, 21)
-    sdtx.Color3b(255, 255, 100)
-    sdtx.Puts(string.format("EX SCORE: %d / %d", data.ex_score, data.max_ex_score))
-
-    -- Score rate
-    local rate = 0
-    if data.max_ex_score > 0 then
-        rate = (data.ex_score / data.max_ex_score) * 100
-    end
-    sdtx.Pos(30, 22)
-    sdtx.Color3b(200, 200, 200)
-    sdtx.Puts(string.format("(%.2f%%)", rate))
-
-    -- Max combo
-    sdtx.Pos(30, 24)
-    sdtx.Color3b(255, 200, 100)
-    sdtx.Puts(string.format("MAX COMBO: %d", data.max_combo))
-
-    -- Judgment breakdown
-    sdtx.Pos(20, 28)
-    sdtx.Color3b(150, 150, 150)
-    sdtx.Puts("--- JUDGMENT ---")
-
-    local stats = data.stats
-    local y = 30
-
-    -- PGREAT
-    sdtx.Pos(25, y)
-    sdtx.Color3b(255, 255, 100)
-    sdtx.Puts(string.format("PGREAT: %4d", stats.pgreat))
-    y = y + 1
-
-    -- GREAT
-    sdtx.Pos(25, y)
-    sdtx.Color3b(255, 200, 50)
-    sdtx.Puts(string.format("GREAT:  %4d", stats.great))
-    y = y + 1
-
-    -- GOOD
-    sdtx.Pos(25, y)
-    sdtx.Color3b(100, 255, 100)
-    sdtx.Puts(string.format("GOOD:   %4d", stats.good))
-    y = y + 1
-
-    -- BAD
-    sdtx.Pos(25, y)
-    sdtx.Color3b(100, 100, 255)
-    sdtx.Puts(string.format("BAD:    %4d", stats.bad))
-    y = y + 1
-
-    -- POOR (empty)
-    sdtx.Pos(25, y)
-    sdtx.Color3b(150, 100, 100)
-    sdtx.Puts(string.format("POOR:   %4d", stats.empty_poor))
-    y = y + 1
-
-    -- MISS
-    sdtx.Pos(25, y)
-    sdtx.Color3b(255, 100, 100)
-    sdtx.Puts(string.format("MISS:   %4d", stats.miss))
-    y = y + 2
-
-    -- FAST/SLOW
-    sdtx.Pos(25, y)
-    sdtx.Color3b(100, 200, 255)
-    sdtx.Puts(string.format("FAST: %d", stats.fast))
-    sdtx.Pos(40, y)
-    sdtx.Color3b(255, 150, 100)
-    sdtx.Puts(string.format("SLOW: %d", stats.slow))
-    y = y + 2
-
-    -- Gauge info
-    sdtx.Pos(25, y)
-    sdtx.Color3b(150, 150, 150)
-    sdtx.Puts(string.format("GAUGE: %s %.1f%%", data.gauge_type:upper(), data.final_gauge))
-    y = y + 3
-
-    -- Instructions
-    sdtx.Pos(25, y)
-    sdtx.Color3b(100, 100, 100)
-    sdtx.Puts("Press ENTER or ESC to exit")
-end
-
---- Get color for DJ LEVEL
----@param level string
----@return integer[]
-function ResultRenderer:get_level_color(level)
-    if level == "AAA" then
-        return { 255, 215, 0 }   -- Gold
-    elseif level == "AA" then
-        return { 255, 255, 100 } -- Yellow
-    elseif level == "A" then
-        return { 100, 255, 100 } -- Green
-    elseif level == "B" then
-        return { 100, 200, 255 } -- Light blue
-    elseif level == "C" then
-        return { 150, 150, 255 } -- Blue
-    elseif level == "D" then
-        return { 200, 150, 255 } -- Purple
-    elseif level == "E" then
-        return { 200, 200, 200 } -- Gray
-    else -- F
-        return { 150, 100, 100 } -- Dark gray
-    end
+    imgui.End()
 end
 
 return ResultRenderer

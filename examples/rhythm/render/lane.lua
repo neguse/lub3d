@@ -63,6 +63,40 @@ function LaneRenderer:draw_lanes(key_states)
     sgl.End()
 end
 
+--- Draw key beams (bright gradient pillars on pressed lanes)
+---@param key_states table<integer, boolean> lane -> pressed
+function LaneRenderer:draw_key_beams(key_states)
+    local sgl = self.sgl
+    local total_width = const.NUM_LANES * const.LANE_WIDTH
+    local start_x = (const.SCREEN_WIDTH - total_width) / 2
+    local top_y = const.JUDGMENT_LINE_Y - const.LANE_HEIGHT
+    local bottom_y = const.JUDGMENT_LINE_Y
+
+    for lane = 1, const.NUM_LANES do
+        if key_states[lane] then
+            local x = start_x + (lane - 1) * const.LANE_WIDTH
+            local color = const.LANE_COLORS[lane]
+            -- Brighten: blend lane color toward white
+            local r = math.min(1.0, color[1] + 0.3)
+            local g = math.min(1.0, color[2] + 0.3)
+            local b = math.min(1.0, color[3] + 0.3)
+
+            sgl.BeginQuads()
+            -- Top two vertices: transparent
+            sgl.C4f(r, g, b, 0.0)
+            sgl.V2f(x, top_y)
+            sgl.C4f(r, g, b, 0.0)
+            sgl.V2f(x + const.LANE_WIDTH, top_y)
+            -- Bottom two vertices: bright
+            sgl.C4f(r, g, b, 0.6)
+            sgl.V2f(x + const.LANE_WIDTH, bottom_y)
+            sgl.C4f(r, g, b, 0.6)
+            sgl.V2f(x, bottom_y)
+            sgl.End()
+        end
+    end
+end
+
 --- Draw judgment line
 function LaneRenderer:draw_judgment_line()
     local sgl = self.sgl
