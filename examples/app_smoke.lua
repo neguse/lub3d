@@ -74,34 +74,35 @@ local function smoke_test()
     if fail_count > 0 then error(string.format("%d tests failed", fail_count)) end
 end
 
-app.Run(app.Desc({
-    width = 800,
-    height = 600,
-    window_title = "sokol.app smoke test",
-    enable_clipboard = true,
+local M = {}
+M.width = 800
+M.height = 600
+M.window_title = "sokol.app smoke test"
+M.enable_clipboard = true
 
-    init = function()
-        info("init")
-    end,
+function M.init()
+    info("init")
+end
 
-    frame = function()
-        if not tested then
-            tested = true
-            smoke_test()
-            app.RequestQuit()
-        end
-    end,
+function M.frame()
+    if not tested then
+        tested = true
+        smoke_test()
+        app.RequestQuit()
+    end
+end
 
-    cleanup = function()
-        info("cleanup")
-    end,
+function M.cleanup()
+    info("cleanup")
+end
 
-    event = function(ev)
-        -- Exercise event struct metamethods
-        if ev then
-            local _ = ev.type
-            local _ = ev.mouse_x
-            for k, v in pairs(ev) do end
-        end
-    end,
-}))
+function M.event(ev)
+    -- Exercise event struct metamethods
+    if ev then
+        local _ = ev.type
+        local _ = ev.mouse_x
+        for k, v in pairs(ev) do end
+    end
+end
+
+return M

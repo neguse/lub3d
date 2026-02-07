@@ -25,30 +25,25 @@ PASSED=0
 FAILED=0
 SKIPPED=0
 
-# Examples to test (add more as needed)
-# Note: rendering/init.lua excluded - requires assets/mill-scene which is gitignored
-EXAMPLES=(
-    "examples/main.lua"
-    "examples/breakout.lua"
-    "examples/raytracer.lua"
-    "examples/lighting.lua"
-    "examples/triangle.lua"
-    "examples/hakonotaiatari/init.lua"
+# Module names to test
+# Note: examples.rendering excluded - requires assets/mill-scene which is gitignored
+MODULES=(
+    "examples.main"
+    "examples.breakout"
+    "examples.raytracer"
+    "examples.lighting"
+    "examples.triangle"
+    "examples.hakonotaiatari"
 )
 
-for script in "${EXAMPLES[@]}"; do
-    if [ -f "$script" ]; then
-        echo "----------------------------------------"
-        echo "Testing: $script"
-        if "$TEST_RUNNER" "$script" "$NUM_FRAMES"; then
-            ((PASSED++)) || true
-        else
-            echo "FAILED with exit code: $?"
-            ((FAILED++)) || true
-        fi
+for mod in "${MODULES[@]}"; do
+    echo "----------------------------------------"
+    echo "Testing: $mod"
+    if "$TEST_RUNNER" "$mod" "$NUM_FRAMES"; then
+        ((PASSED++)) || true
     else
-        echo "Skipped (not found): $script"
-        ((SKIPPED++)) || true
+        echo "FAILED with exit code: $?"
+        ((FAILED++)) || true
     fi
 done
 

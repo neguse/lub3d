@@ -1,12 +1,9 @@
 -- Simple Triangle - Basic rendering example
+-- Hot-reload safe: uses self.xxx for runtime state
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local shader = require("lib.shader")
-
-local pip, bind
-local shd
-local time = 0
 
 local shader_source = [[
 @vs vs
@@ -42,26 +39,35 @@ void main() {
 @program triangle vs fs
 ]]
 
-local function init_game()
-    -- Initialize sokol.gfx
+local M = {}
+
+M.width = 800
+M.height = 600
+M.window_title = "Lub3d - Simple Triangle"
+
+function M:init()
+    -- Initialize sokol.gfx (once only, cannot be called twice)
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
     }))
+    self:create_resources()
+end
 
+function M:create_resources()
     -- Compile shader using lib.shader (auto-detects backend language)
-    shd = shader.compile(shader_source, "triangle", {
+    self.shd = shader.compile(shader_source, "triangle", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 16, -- rotation (float) padded to 16 bytes
         }
     })
-    if not shd then
+    if not self.shd then
         print("Shader compile error")
         return
     end
 
-    pip = gfx.MakePipeline(gfx.PipelineDesc({
-        shader = shd,
+    self.pip = gfx.MakePipeline(gfx.PipelineDesc({
+        shader = self.shd,
         layout = {
             attrs = {
                 { format = gfx.VertexFormat.FLOAT2 }, -- position
@@ -77,13 +83,14 @@ local function init_game()
         -0.5, -0.5, 0.0, 0.0, 1.0, -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
-    bind = {
+    self.bind = {
         vertex_buffers = { gfx.MakeBuffer(gfx.BufferDesc({ data = gfx.Range(data) })) }
     }
+    self.time = self.time or 0
 end
 
-local function update_frame()
-    time = time + 1 / 60
+function M:frame()
+    self.time = (self.time or 0) + 1 / 60
 
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
@@ -95,11 +102,11 @@ local function update_frame()
         swapchain = glue.Swapchain()
     }))
 
-    gfx.ApplyPipeline(pip)
-    gfx.ApplyBindings(gfx.Bindings(bind))
+    gfx.ApplyPipeline(self.pip)
+    gfx.ApplyBindings(gfx.Bindings(self.bind))
 
     -- Pack uniform: rotation (float) padded to 16 bytes
-    local uniform_data = string.pack("ffff", time, 0, 0, 0)
+    local uniform_data = string.pack("ffff", self.time, 0, 0, 0)
     gfx.ApplyUniforms(0, gfx.Range(uniform_data))
 
     gfx.Draw(0, 3, 1)
@@ -107,23 +114,18 @@ local function update_frame()
     gfx.Commit()
 end
 
-local function cleanup_game()
+function M:cleanup()
     gfx.Shutdown()
 end
 
-local function handle_event(ev)
+function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
         app.Quit()
     end
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 800,
-    height = 600,
-    window_title = "Lub3d - Simple Triangle",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+function M:on_reload()
+    self:create_resources()
+end
+
+return M

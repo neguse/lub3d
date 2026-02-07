@@ -23,16 +23,17 @@ echo.
 set PASSED=0
 set FAILED=0
 
-REM Run all top-level examples
+REM Run all top-level examples (examples\foo.lua → examples.foo)
 for %%s in (examples\*.lua) do (
     set BASENAME=%%~ns
     REM Skip model (crashes in dummy backend with shdc, needs investigation)
     if /i "!BASENAME!"=="model" (
         echo Skipped: %%s [dummy-backend issue]
     ) else (
+        set MODNAME=examples.!BASENAME!
         echo ----------------------------------------
-        echo Testing: %%s
-        "%TEST_RUNNER%" "%%s" %NUM_FRAMES%
+        echo Testing: !MODNAME!
+        "%TEST_RUNNER%" "!MODNAME!" %NUM_FRAMES%
         set EC=!errorlevel!
         if !EC! equ 0 (
             set /a PASSED+=1
@@ -43,17 +44,18 @@ for %%s in (examples\*.lua) do (
     )
 )
 
-REM Run subdirectory examples (init.lua)
+REM Run subdirectory examples (examples\foo\init.lua → examples.foo)
 for /d %%d in (examples\*) do (
     if exist "%%d\init.lua" (
         set DIRNAME=%%~nxd
         REM Skip rendering (asset-dependent, crashes without model files)
         if /i "!DIRNAME!"=="rendering" (
-            echo Skipped: %%d\init.lua [asset-dependent]
+            echo Skipped: examples.!DIRNAME! [asset-dependent]
         ) else (
+            set MODNAME=examples.!DIRNAME!
             echo ----------------------------------------
-            echo Testing: %%d\init.lua
-            "%TEST_RUNNER%" "%%d\init.lua" %NUM_FRAMES%
+            echo Testing: !MODNAME!
+            "%TEST_RUNNER%" "!MODNAME!" %NUM_FRAMES%
             set EC=!errorlevel!
             if !EC! equ 0 (
                 set /a PASSED+=1

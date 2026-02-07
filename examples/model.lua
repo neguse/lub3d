@@ -9,6 +9,11 @@ local texture = require("lib.texture")
 local util = require("lib.util")
 local glm = require("lib.glm")
 
+local M = {}
+M.width = 1024
+M.height = 768
+M.window_title = "Lub3d - Model Loading"
+
 -- Camera
 local camera_pos = glm.vec3(0, -20, 10)
 local camera_yaw = 0
@@ -241,7 +246,7 @@ end
 local default_diffuse_view, default_diffuse_smp
 local default_normal_view, default_normal_smp
 
-local function init_game()
+function M.init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -388,7 +393,7 @@ local function init_game()
 end
 
 local frame_count = 0
-local function update_frame()
+function M.frame()
     frame_count = frame_count + 1
     if frame_count == 1 then
         log.info("First frame!")
@@ -468,7 +473,7 @@ local function update_frame()
 end
 
 local event_logged = false
-local function handle_event(ev)
+function M.event(ev)
     if not event_logged then
         log.info("Lua event() called!")
         event_logged = true
@@ -532,7 +537,7 @@ local function handle_event(ev)
     end
 end
 
-local function cleanup_game()
+function M.cleanup()
     -- Destroy cached textures
     for _, tex in pairs(textures_cache) do
         tex.smp:destroy()
@@ -545,13 +550,4 @@ local function cleanup_game()
     gfx.Shutdown()
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 1024,
-    height = 768,
-    window_title = "Lub3d - Model Loading",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M

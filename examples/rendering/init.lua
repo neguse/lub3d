@@ -1,6 +1,5 @@
 -- Rendering Pipeline
 
-local hotreload = require("lib.hotreload")
 local gfx = require("sokol.gfx")
 local glue = require("sokol.glue")
 local app = require("sokol.app")
@@ -19,6 +18,11 @@ local camera = require("examples.rendering.camera")
 local light = require("examples.rendering.light")
 local geometry_pass = require("examples.rendering.geometry")
 local lighting_pass = require("examples.rendering.lighting")
+
+local M = {}
+M.width = 1280
+M.height = 720
+M.window_title = "Lub3d - Rendering Pipeline"
 
 -- Scene data
 local meshes = {}
@@ -398,7 +402,7 @@ local function load_model()
     log.info("Loaded " .. #meshes .. " meshes")
 end
 
-local function init_game()
+function M.init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -421,9 +425,7 @@ local function init_game()
     load_model()
 end
 
-local function update_frame()
-    hotreload.update()
-
+function M.frame()
     local width, height = app.Width(), app.Height()
     ctx.ensure_size(width, height)
 
@@ -456,7 +458,7 @@ local function update_frame()
     pipeline.execute(ctx, frame_data)
 end
 
-local function cleanup_game()
+function M.cleanup()
     imgui.Shutdown()
     notify.shutdown()
 
@@ -495,7 +497,7 @@ local function cleanup_game()
     gfx.Shutdown()
 end
 
-local function handle_event(ev)
+function M.event(ev)
     if imgui.HandleEvent(ev) then
         return
     end
@@ -509,13 +511,4 @@ local function handle_event(ev)
     end
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 1280,
-    height = 720,
-    window_title = "Lub3d - Rendering Pipeline",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M

@@ -173,73 +173,6 @@ local function init_blocks()
     end
 end
 
-local function init_game()
-    log.info("3D Block Breaker starting...")
-
-    -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
-    }))
-
-    -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
-    shader = shaderMod.compile(shader_source, "breakout", {
-        {
-            stage = gfx.ShaderStage.VERTEX,
-            size = 144,
-            glsl_uniforms = {
-                { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
-                { type = gfx.UniformType.MAT4,   glsl_name = "model" },
-                { type = gfx.UniformType.FLOAT4, glsl_name = "color" },
-            }
-        }
-    }, {
-        -- D3D11 vertex attribute semantics: pos, normal
-        { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
-        { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
-    })
-    if not shader then
-        log.error("Shader compilation failed!")
-        return
-    end
-
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
-        shader = shader,
-        layout = {
-            attrs = {
-                { format = gfx.VertexFormat.FLOAT3 }, -- pos
-                { format = gfx.VertexFormat.FLOAT3 }, -- normal
-            }
-        },
-        index_type = gfx.IndexType.UINT16,
-        cull_mode = gfx.CullMode.BACK,
-        depth = {
-            compare = gfx.CompareFunc.LESS_EQUAL,
-            write_enabled = true,
-        },
-        primitive_type = gfx.PrimitiveType.TRIANGLES,
-    }))
-
-    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
-        log.error("Pipeline creation failed!")
-        return
-    end
-
-    -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
-    local vertices = make_cube_vertices()
-    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.pack_floats(vertices))
-    }))
-
-    local indices = make_cube_indices()
-    ibuf = gfx.MakeBuffer(gfx.BufferDesc({
-        usage = { index_buffer = true },
-        data = gfx.Range(pack_indices(indices))
-    }))
-
-    init_blocks()
-    log.info(string.format("Game initialized with %d blocks", #blocks))
-end
-
 local function update_game_logic(dt)
     if game_over then return end
 
@@ -347,7 +280,79 @@ local function draw_cube(proj, view, pos, scale, color)
     gfx.Draw(0, 36, 1)
 end
 
-local function update_frame()
+local M = {}
+M.width = 800
+M.height = 600
+M.window_title = "Lub3d - 3D Breakout"
+
+function M.init()
+    log.info("3D Block Breaker starting...")
+
+    -- Initialize sokol.gfx
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
+    }))
+
+    -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
+    shader = shaderMod.compile(shader_source, "breakout", {
+        {
+            stage = gfx.ShaderStage.VERTEX,
+            size = 144,
+            glsl_uniforms = {
+                { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "model" },
+                { type = gfx.UniformType.FLOAT4, glsl_name = "color" },
+            }
+        }
+    }, {
+        -- D3D11 vertex attribute semantics: pos, normal
+        { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
+        { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
+    })
+    if not shader then
+        log.error("Shader compilation failed!")
+        return
+    end
+
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+        shader = shader,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
+            }
+        },
+        index_type = gfx.IndexType.UINT16,
+        cull_mode = gfx.CullMode.BACK,
+        depth = {
+            compare = gfx.CompareFunc.LESS_EQUAL,
+            write_enabled = true,
+        },
+        primitive_type = gfx.PrimitiveType.TRIANGLES,
+    }))
+
+    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
+        log.error("Pipeline creation failed!")
+        return
+    end
+
+    -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
+    local vertices = make_cube_vertices()
+    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
+        data = gfx.Range(util.pack_floats(vertices))
+    }))
+
+    local indices = make_cube_indices()
+    ibuf = gfx.MakeBuffer(gfx.BufferDesc({
+        usage = { index_buffer = true },
+        data = gfx.Range(pack_indices(indices))
+    }))
+
+    init_blocks()
+    log.info(string.format("Game initialized with %d blocks", #blocks))
+end
+
+function M.frame()
     t = t + 1.0 / 60.0
     local dt = 1.0 / 60.0
 
@@ -425,11 +430,11 @@ local function update_frame()
     gfx.Commit()
 end
 
-local function cleanup_game()
+function M.cleanup()
     gfx.Shutdown()
 end
 
-local function handle_event(ev)
+function M.event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         keys_down[ev.key_code] = true
         if ev.key_code == app.Keycode.Q then
@@ -450,13 +455,4 @@ local function handle_event(ev)
     end
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 800,
-    height = 600,
-    window_title = "Lub3d - 3D Breakout",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M
