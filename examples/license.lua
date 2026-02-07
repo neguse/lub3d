@@ -51,8 +51,8 @@ local function update_frame()
 
     imgui.SetNextWindowPos({ w * 0.1, h * 0.05 })
     imgui.SetNextWindowSize({ w * 0.8, h * 0.9 })
-    -- flags: NoResize(2) + NoMove(4) + NoCollapse(32) = 38
-    if imgui.Begin("Mane3D Licenses", nil, 38) then
+    local flags = imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse
+    if imgui.Begin("Mane3D Licenses", nil, flags) then
         imgui.TextUnformatted(license_text)
     end
     imgui.End()

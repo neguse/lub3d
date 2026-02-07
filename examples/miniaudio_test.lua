@@ -7,8 +7,8 @@ local glue = require("sokol.glue")
 local gl = require("sokol.gl")
 local ma = require("miniaudio")
 
-local engine ---@type miniaudio.Engine
-local sound ---@type miniaudio.Sound
+local engine ---@type miniaudio.Engine?
+local sound ---@type miniaudio.Sound?
 local wav_path = "test_sine.wav"
 
 -- Generate a simple WAV file with a sine wave
