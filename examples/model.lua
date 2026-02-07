@@ -21,9 +21,9 @@ local ambient_color = glm.vec3(0.2, 0.2, 0.25)
 
 -- Graphics resources
 local shader = nil
----@type gfx.Pipeline
+---@type sokol.gfx.Pipeline
 local pipeline = nil
-local meshes = {}  -- { vbuf, index_count, diffuse_img, diffuse_smp, normal_img, normal_smp, material }
+local meshes = {} -- { vbuf, index_count, diffuse_img, diffuse_smp, normal_img, normal_smp, material }
 ---@type table<string, {img: gpu.Image, view: gpu.View, smp: gpu.Sampler}>
 local textures_cache = {}
 
@@ -148,9 +148,9 @@ local function compute_tangent(p1, p2, p3, uv1, uv2, uv3)
     local ty = f * (duv2[2] * edge1[2] - duv1[2] * edge2[2])
     local tz = f * (duv2[2] * edge1[3] - duv1[2] * edge2[3])
 
-    local len = math.sqrt(tx*tx + ty*ty + tz*tz)
+    local len = math.sqrt(tx * tx + ty * ty + tz * tz)
     if len > 0.0001 then
-        tx, ty, tz = tx/len, ty/len, tz/len
+        tx, ty, tz = tx / len, ty / len, tz / len
     else
         tx, ty, tz = 1, 0, 0
     end
@@ -163,7 +163,7 @@ end
 -- Output: flat array of (x,y,z,nx,ny,nz,u,v,tx,ty,tz) * N
 local function add_tangents(vertices)
     local result = {}
-    local stride = 8  -- input stride
+    local stride = 8 -- input stride
     local vertex_count = #vertices / stride
 
     -- Process triangles (assuming triangle list)
@@ -199,7 +199,7 @@ local function add_tangents(vertices)
 end
 
 -- Load texture with caching (returns raw handles for bindings)
----@return gfx.View?, gfx.Sampler?
+---@return sokol.gfx.View?, sokol.gfx.Sampler?
 local function load_texture_cached(path)
     if textures_cache[path] then
         return textures_cache[path].view.handle, textures_cache[path].smp.handle
@@ -222,16 +222,16 @@ local function create_default_texture(r, g, b)
         math.floor(b * 255),
         255
     )
-    local img = gfx.make_image(gfx.ImageDesc({
+    local img = gfx.MakeImage(gfx.ImageDesc({
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { pixels } },
     }))
-    local view = gfx.make_view(gfx.ViewDesc({
+    local view = gfx.MakeView(gfx.ViewDesc({
         texture = { image = img },
     }))
-    local smp = gfx.make_sampler(gfx.SamplerDesc({
+    local smp = gfx.MakeSampler(gfx.SamplerDesc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
     }))
@@ -243,15 +243,15 @@ local default_normal_view, default_normal_smp
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     log.info("Model loading example init")
 
     -- Create default textures
     default_diffuse_view, default_diffuse_smp = create_default_texture(0.8, 0.8, 0.8)
-    default_normal_view, default_normal_smp = create_default_texture(0.5, 0.5, 1.0)  -- flat normal
+    default_normal_view, default_normal_smp = create_default_texture(0.5, 0.5, 1.0) -- flat normal
 
     -- Compile shader
     -- vs_params: 2 mat4 + 5 vec4 = 128 + 80 = 208 bytes
@@ -261,8 +261,8 @@ local function init_game()
                 stage = gfx.ShaderStage.VERTEX,
                 size = 208,
                 glsl_uniforms = {
-                    { type = gfx.UniformType.MAT4, glsl_name = "mvp" },
-                    { type = gfx.UniformType.MAT4, glsl_name = "model" },
+                    { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                    { type = gfx.UniformType.MAT4,   glsl_name = "model" },
                     { type = gfx.UniformType.FLOAT4, glsl_name = "light_pos" },
                     { type = gfx.UniformType.FLOAT4, glsl_name = "light_color" },
                     { type = gfx.UniformType.FLOAT4, glsl_name = "ambient_color" },
@@ -298,14 +298,14 @@ local function init_game()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT3 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- normal
-                { format = gfx.VertexFormat.FLOAT2 },  -- uv
-                { format = gfx.VertexFormat.FLOAT3 },  -- tangent
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
+                { format = gfx.VertexFormat.FLOAT2 }, -- uv
+                { format = gfx.VertexFormat.FLOAT3 }, -- tangent
             },
         },
         cull_mode = gfx.CullMode.FRONT,
@@ -317,7 +317,7 @@ local function init_game()
 
     -- Load model
     log.info("Loading mill-scene...")
-    local model_path = "mill-scene.lua"  -- same directory as exe
+    local model_path = "mill-scene.lua" -- same directory as exe
     local model_func, err = loadfile(model_path)
     if not model_func then
         log.error("Failed to load model: " .. tostring(err))
@@ -335,14 +335,14 @@ local function init_game()
             local verts_with_tangents = add_tangents(mesh.vertices)
 
             if #verts_with_tangents > 0 then
-                local vbuf = gfx.make_buffer(gfx.BufferDesc({
+                local vbuf = gfx.MakeBuffer(gfx.BufferDesc({
                     data = gfx.Range(util.pack_floats(verts_with_tangents)),
                 }))
 
                 -- Get textures (views)
-                ---@type gfx.View, gfx.Sampler
+                ---@type sokol.gfx.View, sokol.gfx.Sampler
                 local diffuse_view, diffuse_smp = default_diffuse_view, default_diffuse_smp
-                ---@type gfx.View, gfx.Sampler
+                ---@type sokol.gfx.View, sokol.gfx.Sampler
                 local normal_view, normal_smp = default_normal_view, default_normal_smp
 
                 if mesh.textures and #mesh.textures > 0 then
@@ -366,11 +366,11 @@ local function init_game()
                 end
 
                 -- Get material
-                local mat = scene.materials[name] or { diffuse = {0.8, 0.8, 0.8}, shininess = 32 }
+                local mat = scene.materials[name] or { diffuse = { 0.8, 0.8, 0.8 }, shininess = 32 }
 
                 table.insert(meshes, {
                     vbuf = vbuf,
-                    vertex_count = #verts_with_tangents / 11,  -- 11 floats per vertex now
+                    vertex_count = #verts_with_tangents / 11, -- 11 floats per vertex now
                     diffuse_view = diffuse_view,
                     diffuse_smp = diffuse_smp,
                     normal_view = normal_view,
@@ -393,7 +393,7 @@ local function update_frame()
     if frame_count == 1 then
         log.info("First frame!")
     end
-    t = t + 1/60
+    t = t + 1 / 60
 
     -- Camera controls
     local move_speed = 0.3
@@ -413,38 +413,38 @@ local function update_frame()
     if keys_down["Q"] or keys_down["LEFT_SHIFT"] then camera_pos = camera_pos - camera_up * move_speed end
 
     -- Matrices
-    local w = app.width()
-    local h = app.height()
+    local w = app.Width()
+    local h = app.Height()
     local aspect = w / h
 
     local proj = glm.perspective(math.rad(60), aspect, 0.1, 500)
     local center = camera_pos + forward
     local view = glm.lookat(camera_pos, center, camera_up)
 
-    local model = glm.mat4()  -- identity
+    local model = glm.mat4() -- identity
 
     -- Begin pass
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
-                clear_value = { r = 0.4, g = 0.6, b = 0.9, a = 1.0 }  -- sky blue
-            }},
+                clear_value = { r = 0.4, g = 0.6, b = 0.9, a = 1.0 } -- sky blue
+            } },
             depth = {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = 1.0
             },
         }),
-        swapchain = glue.swapchain(),
+        swapchain = glue.Swapchain(),
     }))
 
-    gfx.apply_pipeline(pipeline)
+    gfx.ApplyPipeline(pipeline)
 
     local mvp = proj * view * model
 
     -- Draw all meshes
     for _, mesh in ipairs(meshes) do
-        gfx.apply_bindings(gfx.Bindings({
+        gfx.ApplyBindings(gfx.Bindings({
             vertex_buffers = { mesh.vbuf },
             views = { mesh.diffuse_view, mesh.normal_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp },
@@ -459,12 +459,12 @@ local function update_frame()
             mat.diffuse[1], mat.diffuse[2], mat.diffuse[3], mat.shininess or 32,
         })
 
-        gfx.apply_uniforms(0, gfx.Range(uniforms))
-        gfx.draw(0, mesh.vertex_count, 1)
+        gfx.ApplyUniforms(0, gfx.Range(uniforms))
+        gfx.Draw(0, mesh.vertex_count, 1)
     end
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local event_logged = false
@@ -479,32 +479,48 @@ local function handle_event(ev)
         log.info("KEY_DOWN: " .. tostring(key))
         if key == app.Keycode.ESCAPE then
             mouse_captured = false
-            app.show_mouse(true)
-            app.lock_mouse(false)
-        elseif key == app.Keycode.W then keys_down["W"] = true
-        elseif key == app.Keycode.S then keys_down["S"] = true
-        elseif key == app.Keycode.A then keys_down["A"] = true
-        elseif key == app.Keycode.D then keys_down["D"] = true
-        elseif key == app.Keycode.Q then keys_down["Q"] = true
-        elseif key == app.Keycode.E then keys_down["E"] = true
-        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = true
-        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = true
+            app.ShowMouse(true)
+            app.LockMouse(false)
+        elseif key == app.Keycode.W then
+            keys_down["W"] = true
+        elseif key == app.Keycode.S then
+            keys_down["S"] = true
+        elseif key == app.Keycode.A then
+            keys_down["A"] = true
+        elseif key == app.Keycode.D then
+            keys_down["D"] = true
+        elseif key == app.Keycode.Q then
+            keys_down["Q"] = true
+        elseif key == app.Keycode.E then
+            keys_down["E"] = true
+        elseif key == app.Keycode.SPACE then
+            keys_down["SPACE"] = true
+        elseif key == app.Keycode.LEFT_SHIFT then
+            keys_down["LEFT_SHIFT"] = true
         end
     elseif evtype == app.EventType.KEY_UP then
         local key = ev.key_code
-        if key == app.Keycode.W then keys_down["W"] = false
-        elseif key == app.Keycode.S then keys_down["S"] = false
-        elseif key == app.Keycode.A then keys_down["A"] = false
-        elseif key == app.Keycode.D then keys_down["D"] = false
-        elseif key == app.Keycode.Q then keys_down["Q"] = false
-        elseif key == app.Keycode.E then keys_down["E"] = false
-        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = false
-        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = false
+        if key == app.Keycode.W then
+            keys_down["W"] = false
+        elseif key == app.Keycode.S then
+            keys_down["S"] = false
+        elseif key == app.Keycode.A then
+            keys_down["A"] = false
+        elseif key == app.Keycode.D then
+            keys_down["D"] = false
+        elseif key == app.Keycode.Q then
+            keys_down["Q"] = false
+        elseif key == app.Keycode.E then
+            keys_down["E"] = false
+        elseif key == app.Keycode.SPACE then
+            keys_down["SPACE"] = false
+        elseif key == app.Keycode.LEFT_SHIFT then
+            keys_down["LEFT_SHIFT"] = false
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
-        app.show_mouse(false)
-        app.lock_mouse(true)
+        app.ShowMouse(false)
+        app.LockMouse(true)
     elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
             local dx = ev.mouse_dx
@@ -526,16 +542,16 @@ local function cleanup_game()
     textures_cache = {}
 
     log.info("Model cleanup")
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 1024,
     height = 768,
     window_title = "Mane3D - Model Loading",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

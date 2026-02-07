@@ -10,10 +10,15 @@ gen/
 assets/
 !examples/hakonotaiatari/assets/
 
+# .NET
+**/bin/
+**/obj/
+
 # Python
 __pycache__/
 
 # IDE
+.idea/
 .vs/
 .vscode/
 CMakeSettings.json
@@ -39,3 +44,4 @@ public/*.js
 # Generated documentation
 doc.json
 doc.md
+reference/

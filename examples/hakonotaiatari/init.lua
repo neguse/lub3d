@@ -36,12 +36,12 @@ local function init_game()
     log.info("hakonotaiatari starting...")
 
     -- Initialize sokol.gfx (required for Lua entry point)
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Initialize sokol.gl
-    gl.setup(gl.Desc({
+    gl.Setup(gl.Desc({
         max_vertices = 65536,
         max_commands = 16384,
     }))
@@ -73,7 +73,7 @@ end
 
 -- Frame update and render
 local function update_frame()
-    local frame_dt = app.frame_duration()
+    local frame_dt = app.FrameDuration()
     local fixed_dt = const.DELTA_T -- 1/60 sec
 
     -- Update input (every frame)
@@ -169,7 +169,7 @@ local function update_frame()
     end
 
     -- Setup orthographic projection for UI (includes loading wireframe pipeline)
-    -- Note: gl.draw() is called once at the end to render both 3D and UI
+    -- Note: gl.Draw() is called once at the end to render both 3D and UI
     renderer.setup_ui_projection()
 
     -- Render UI based on state
@@ -198,7 +198,7 @@ local function handle_event(ev)
     -- Handle global keys
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.Q then
-            app.quit()
+            app.Quit()
         elseif ev.key_code == app.Keycode.TAB then
             renderer.toggle_mode()
             log.info("Render mode: " .. (renderer.get_mode() == renderer.MODE_WIREFRAME and "WIREFRAME" or "SHADED"))
@@ -209,19 +209,19 @@ end
 -- Cleanup
 local function cleanup_game()
     audio.cleanup()
-    renderer.cleanup() -- gl.shutdown() is called inside
-    gfx.shutdown()
+    renderer.cleanup() -- gl.Shutdown() is called inside
+    gfx.Shutdown()
     log.info("hakonotaiatari cleanup complete")
 end
 
 -- Run the application (Lua entry point)
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 800,
     window_title = "hakonotaiatari",
     high_dpi = true,
-    init_cb = init_game,
-    frame_cb = update_frame,
-    event_cb = handle_event,
-    cleanup_cb = cleanup_game,
+    init = init_game,
+    frame = update_frame,
+    event = handle_event,
+    cleanup = cleanup_game,
 }))

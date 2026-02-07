@@ -17,7 +17,7 @@ local gc_supported = (function()
     _ = nil  ---@diagnostic disable-line: cast-local-type
     collectgarbage("collect")
     if not test_flag.called then
-        slog.func("lua", 2, 0, "[gpu] Table __gc not supported - GPU resources may leak if not explicitly destroyed", 0, "", nil)
+        slog.Func("lua", 2, 0, "[gpu] Table __gc not supported - GPU resources may leak if not explicitly destroyed", 0, "", nil)
     end
     return test_flag.called
 end)()
@@ -62,31 +62,31 @@ local function wrap(handle, destroy_fn)
 end
 
 ---Create an image resource
----@param desc gfx.ImageDesc
+---@param desc sokol.gfx.ImageDesc
 ---@return gpu.Image
 function M.image(desc)
-    return wrap(gfx.make_image(desc), gfx.destroy_image) --[[@as gpu.Image]]
+    return wrap(gfx.MakeImage(desc), gfx.DestroyImage) --[[@as gpu.Image]]
 end
 
 ---Create a view resource
----@param desc gfx.ViewDesc
+---@param desc sokol.gfx.ViewDesc
 ---@return gpu.View
 function M.view(desc)
-    return wrap(gfx.make_view(desc), gfx.destroy_view) --[[@as gpu.View]]
+    return wrap(gfx.MakeView(desc), gfx.DestroyView) --[[@as gpu.View]]
 end
 
 ---Create a buffer resource
----@param desc gfx.BufferDesc
+---@param desc sokol.gfx.BufferDesc
 ---@return gpu.Buffer
 function M.buffer(desc)
-    return wrap(gfx.make_buffer(desc), gfx.destroy_buffer) --[[@as gpu.Buffer]]
+    return wrap(gfx.MakeBuffer(desc), gfx.DestroyBuffer) --[[@as gpu.Buffer]]
 end
 
 ---Create a sampler resource
----@param desc gfx.SamplerDesc
+---@param desc sokol.gfx.SamplerDesc
 ---@return gpu.Sampler
 function M.sampler(desc)
-    return wrap(gfx.make_sampler(desc), gfx.destroy_sampler) --[[@as gpu.Sampler]]
+    return wrap(gfx.MakeSampler(desc), gfx.DestroySampler) --[[@as gpu.Sampler]]
 end
 
 ---Compile and create a shader resource
@@ -100,14 +100,14 @@ function M.shader(source, name, desc)
         log.error("Failed to compile shader: " .. name)
         return nil
     end
-    return wrap(handle, gfx.destroy_shader) --[[@as gpu.Shader]]
+    return wrap(handle, gfx.DestroyShader) --[[@as gpu.Shader]]
 end
 
 ---Create a pipeline resource
----@param desc gfx.PipelineDesc
+---@param desc sokol.gfx.PipelineDesc
 ---@return gpu.Pipeline
 function M.pipeline(desc)
-    return wrap(gfx.make_pipeline(desc), gfx.destroy_pipeline) --[[@as gpu.Pipeline]]
+    return wrap(gfx.MakePipeline(desc), gfx.DestroyPipeline) --[[@as gpu.Pipeline]]
 end
 
 return M

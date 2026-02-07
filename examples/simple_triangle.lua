@@ -15,7 +15,7 @@ local auto_rotate = true
 
 -- Graphics resources
 local shader = nil
----@type gfx.Pipeline
+---@type sokol.gfx.Pipeline
 local pipeline = nil
 local vbuf = nil
 
@@ -61,23 +61,23 @@ local function init_game()
     log.info("Simple triangle example init")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Setup ImGui
-    imgui.setup()
+    imgui.Setup()
 
     -- Create triangle vertex buffer
     -- Each vertex: pos (x, y), color (r, g, b)
     local vertices = {
         -- pos          -- color
-         0.0,  0.5,     1.0, 0.0, 0.0,  -- top (red)
-         0.5, -0.5,     0.0, 1.0, 0.0,  -- bottom right (green)
-        -0.5, -0.5,     0.0, 0.0, 1.0,  -- bottom left (blue)
+        0.0, 0.5, 1.0, 0.0, 0.0,       -- top (red)
+        0.5, -0.5, 0.0, 1.0, 0.0,      -- bottom right (green)
+        -0.5, -0.5, 0.0, 0.0, 1.0,     -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
-    vbuf = gfx.make_buffer(gfx.BufferDesc({
+    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         data = gfx.Range(data),
     }))
 
@@ -86,9 +86,9 @@ local function init_game()
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.VERTEX,
-                size = 32,  -- 1 vec4 (16) + 1 float padded to 16 = 32 bytes
+                size = 32, -- 1 vec4 (16) + 1 float padded to 16 = 32 bytes
                 glsl_uniforms = {
-                    { glsl_name = "tint", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "tint",     type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "rotation", type = gfx.UniformType.FLOAT },
                 },
             },
@@ -105,12 +105,12 @@ local function init_game()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT2 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- color
+                { format = gfx.VertexFormat.FLOAT2 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- color
             },
         },
     }))
@@ -119,7 +119,7 @@ local function init_game()
 end
 
 local function update_frame()
-    imgui.new_frame()
+    imgui.NewFrame()
 
     -- Update rotation
     if auto_rotate then
@@ -127,19 +127,19 @@ local function update_frame()
     end
 
     -- === RENDER PASS ===
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 },
-            }},
+            } },
         }),
-        swapchain = glue.swapchain(),
+        swapchain = glue.Swapchain(),
     }))
 
-    gfx.apply_pipeline(pipeline)
+    gfx.ApplyPipeline(pipeline)
 
-    gfx.apply_bindings(gfx.Bindings({
+    gfx.ApplyBindings(gfx.Bindings({
         vertex_buffers = { vbuf },
     }))
 
@@ -149,71 +149,71 @@ local function update_frame()
         triangle_color[1], triangle_color[2], triangle_color[3], 1.0,
         rotation, 0.0, 0.0, 0.0
     )
-    gfx.apply_uniforms(0, gfx.Range(uniform_data))
+    gfx.ApplyUniforms(0, gfx.Range(uniform_data))
 
-    gfx.draw(0, 3, 1)
+    gfx.Draw(0, 3, 1)
 
     -- ImGui UI
-    if imgui.begin("Triangle Controls") then
-        imgui.text_unformatted("Simple Triangle Example")
-        imgui.separator()
+    if imgui.Begin("Triangle Controls") then
+        imgui.TextUnformatted("Simple Triangle Example")
+        imgui.Separator()
 
-        local clicked, new_val = imgui.checkbox("Auto Rotate", auto_rotate)
+        local clicked, new_val = imgui.Checkbox("Auto Rotate", auto_rotate)
         if clicked then auto_rotate = new_val end
 
-        local changed, new_speed = imgui.slider_float("Rotation Speed", rotation_speed, 0.0, 5.0)
+        local changed, new_speed = imgui.SliderFloat("Rotation Speed", rotation_speed, 0.0, 5.0)
         if changed then rotation_speed = new_speed end
 
         if not auto_rotate then
-            local rot_changed, new_rot = imgui.slider_float("Rotation", rotation, 0.0, 6.28318)
+            local rot_changed, new_rot = imgui.SliderFloat("Rotation", rotation, 0.0, 6.28318)
             if rot_changed then rotation = new_rot end
         end
 
-        imgui.separator()
+        imgui.Separator()
 
-        local col_changed, new_col = imgui.color_edit3("Tint Color", triangle_color)
+        local col_changed, new_col = imgui.ColorEdit3("Tint Color", triangle_color)
         if col_changed then
             triangle_color = new_col
         end
 
-        imgui.separator()
-        imgui.text_unformatted(string.format("Rotation: %.2f rad", rotation))
+        imgui.Separator()
+        imgui.TextUnformatted(string.format("Rotation: %.2f rad", rotation))
     end
-    imgui.end_()
+    imgui.End()
 
-    imgui.render()
+    imgui.Render()
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    imgui.shutdown()
-    gfx.shutdown()
+    imgui.Shutdown()
+    gfx.Shutdown()
     log.info("cleanup")
 end
 
 local function handle_event(ev)
     -- Let ImGui handle events first
-    if imgui.handle_event(ev) then
+    if imgui.HandleEvent(ev) then
         return
     end
 
     -- ESC to quit
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE then
-            app.request_quit()
+            app.RequestQuit()
         end
     end
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Simple Triangle with ImGui",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

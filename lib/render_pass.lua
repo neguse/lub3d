@@ -11,7 +11,7 @@ local M = {}
 
 ---Setup common resource management on a pass module
 ---@param pass table The pass module table
----@param opts {shader_name: string, pipeline_desc: fun(shader_handle: any): gfx.PipelineDesc}
+---@param opts {shader_name: string, pipeline_desc: fun(shader_handle: any): sokol.gfx.PipelineDesc}
 function M.setup(pass, opts)
     -- Preserve across hotreload
     pass.resources = pass.resources

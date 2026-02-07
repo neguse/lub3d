@@ -157,7 +157,7 @@
         "MANE3D_BACKEND_DUMMY": "ON",
         "MANE3D_BUILD_TESTS": "ON",
         "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "OFF",
+        "MANE3D_BUILD_IMGUI": "ON",
         "MANE3D_BUILD_EXAMPLE": "OFF"
       }
     },
@@ -171,7 +171,7 @@
         "MANE3D_BACKEND_DUMMY": "ON",
         "MANE3D_BUILD_TESTS": "ON",
         "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "OFF",
+        "MANE3D_BUILD_IMGUI": "ON",
         "MANE3D_BUILD_EXAMPLE": "OFF"
       }
     },
@@ -185,7 +185,7 @@
         "MANE3D_BACKEND_DUMMY": "ON",
         "MANE3D_BUILD_TESTS": "ON",
         "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "OFF",
+        "MANE3D_BUILD_IMGUI": "ON",
         "MANE3D_BUILD_EXAMPLE": "OFF"
       }
     },
@@ -199,7 +199,7 @@
         "MANE3D_BACKEND_DUMMY": "ON",
         "MANE3D_BUILD_TESTS": "ON",
         "MANE3D_BUILD_SHDC": "ON",
-        "MANE3D_BUILD_IMGUI": "OFF",
+        "MANE3D_BUILD_IMGUI": "ON",
         "MANE3D_BUILD_EXAMPLE": "OFF"
       }
     }

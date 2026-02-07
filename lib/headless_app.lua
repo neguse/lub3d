@@ -21,36 +21,40 @@ function M.Desc(desc)
     return desc
 end
 
--- app.run() compatible function
-function M.run(desc)
+-- app.Run() compatible function
+function M.Run(desc)
     local stm = require("sokol.time")
-    stm.setup()
+    stm.Setup()
 
-    -- init_cb
-    if callbacks.init_cb then callbacks.init_cb() end
+    local init_fn = callbacks.init_cb or callbacks.init
+    local frame_fn = callbacks.frame_cb or callbacks.frame
+    local cleanup_fn = callbacks.cleanup_cb or callbacks.cleanup
+
+    -- init
+    if init_fn then init_fn() end
 
     -- frame loop
     for i = 1, M._frames do
         M._frame_count = i
-        if callbacks.frame_cb then callbacks.frame_cb() end
+        if frame_fn then frame_fn() end
     end
 
-    -- cleanup_cb
-    if callbacks.cleanup_cb then callbacks.cleanup_cb() end
+    -- cleanup
+    if cleanup_fn then cleanup_fn() end
 end
 
--- app.width() / app.height() compatible functions
-function M.width() return M._width end
-function M.height() return M._height end
-function M.widthf() return M._width end
-function M.heightf() return M._height end
-function M.sample_count() return M._sample_count end
-function M.frame_duration() return 1/60 end
-function M.frame_count() return M._frame_count end
-function M.dpi_scale() return 1.0 end
-function M.high_dpi() return false end
-function M.isvalid() return true end
-function M.is_fullscreen() return false end
+-- app.Width() / app.Height() compatible functions
+function M.Width() return M._width end
+function M.Height() return M._height end
+function M.Widthf() return M._width end
+function M.Heightf() return M._height end
+function M.SampleCount() return M._sample_count end
+function M.FrameDuration() return 1/60 end
+function M.FrameCount() return M._frame_count end
+function M.DpiScale() return 1.0 end
+function M.HighDpi() return false end
+function M.Isvalid() return true end
+function M.IsFullscreen() return false end
 
 -- PixelFormat enum (same values as sokol.gfx)
 M.PixelFormat = {
@@ -64,8 +68,8 @@ M.PixelFormat = {
     DEPTH_STENCIL = 7,
 }
 
-function M.color_format() return M.PixelFormat.RGBA8 end
-function M.depth_format() return M.PixelFormat.DEPTH_STENCIL end
+function M.ColorFormat() return M.PixelFormat.RGBA8 end
+function M.DepthFormat() return M.PixelFormat.DEPTH_STENCIL end
 
 -- EventType enum
 M.EventType = {
@@ -223,32 +227,32 @@ function M.Html5FetchResponse(t) return t or {} end
 function M.Html5FetchRequest(t) return t or {} end
 
 -- Stub functions (no-op in headless mode)
-function M.quit() end
-function M.request_quit() end
-function M.cancel_quit() end
-function M.consume_event() end
-function M.show_mouse(show) end
-function M.lock_mouse(lock) end
-function M.mouse_shown() return true end
-function M.mouse_locked() return false end
-function M.set_mouse_cursor(cursor) end
-function M.get_mouse_cursor() return M.MouseCursor.DEFAULT end
-function M.bind_mouse_cursor_image(cursor, desc) return cursor end
-function M.unbind_mouse_cursor_image(cursor) end
-function M.show_keyboard(show) end
-function M.keyboard_shown() return false end
-function M.toggle_fullscreen() end
-function M.userdata() return nil end
-function M.query_desc() return callbacks end
-function M.set_clipboard_string(str) end
-function M.get_clipboard_string() return "" end
-function M.set_window_title(str) end
-function M.set_icon(icon_desc) end
-function M.get_num_dropped_files() return 0 end
-function M.get_dropped_file_path(index) return "" end
+function M.Quit() end
+function M.RequestQuit() end
+function M.CancelQuit() end
+function M.ConsumeEvent() end
+function M.ShowMouse(show) end
+function M.LockMouse(lock) end
+function M.MouseShown() return true end
+function M.MouseLocked() return false end
+function M.SetMouseCursor(cursor) end
+function M.GetMouseCursor() return M.MouseCursor.DEFAULT end
+function M.BindMouseCursorImage(cursor, desc) return cursor end
+function M.UnbindMouseCursorImage(cursor) end
+function M.ShowKeyboard(show) end
+function M.KeyboardShown() return false end
+function M.ToggleFullscreen() end
+function M.Userdata() return nil end
+function M.QueryDesc() return callbacks end
+function M.SetClipboardString(str) end
+function M.GetClipboardString() return "" end
+function M.SetWindowTitle(str) end
+function M.SetIcon(icon_desc) end
+function M.GetNumDroppedFiles() return 0 end
+function M.GetDroppedFilePath(index) return "" end
 
 -- Environment/Swapchain functions (return dummy values)
-function M.get_environment()
+function M.GetEnvironment()
     return {
         defaults = {
             color_format = M.PixelFormat.RGBA8,
@@ -258,7 +262,7 @@ function M.get_environment()
     }
 end
 
-function M.get_swapchain()
+function M.GetSwapchain()
     return {
         width = M._width,
         height = M._height,
@@ -269,20 +273,20 @@ function M.get_swapchain()
 end
 
 -- Platform-specific stubs (return nil)
-function M.egl_get_display() return nil end
-function M.egl_get_context() return nil end
-function M.html5_ask_leave_site(ask) end
-function M.html5_get_dropped_file_size(index) return 0 end
-function M.html5_fetch_dropped_file(request) end
-function M.macos_get_window() return nil end
-function M.ios_get_window() return nil end
-function M.d3d11_get_swap_chain() return nil end
-function M.win32_get_hwnd() return nil end
-function M.gl_get_major_version() return 0 end
-function M.gl_get_minor_version() return 0 end
-function M.gl_is_gles() return false end
-function M.x11_get_window() return nil end
-function M.x11_get_display() return nil end
-function M.android_get_native_activity() return nil end
+function M.EglGetDisplay() return nil end
+function M.EglGetContext() return nil end
+function M.Html5AskLeaveSite(ask) end
+function M.Html5GetDroppedFileSize(index) return 0 end
+function M.Html5FetchDroppedFile(request) end
+function M.MacosGetWindow() return nil end
+function M.IosGetWindow() return nil end
+function M.D3d11GetSwapChain() return nil end
+function M.Win32GetHwnd() return nil end
+function M.GlGetMajorVersion() return 0 end
+function M.GlGetMinorVersion() return 0 end
+function M.GlIsGles() return false end
+function M.X11GetWindow() return nil end
+function M.X11GetDisplay() return nil end
+function M.AndroidGetNativeActivity() return nil end
 
 return M

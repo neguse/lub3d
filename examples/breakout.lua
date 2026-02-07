@@ -31,13 +31,13 @@ local t = 0
 local keys_down = {}
 
 -- Graphics resources
----@type gfx.Shader?
+---@type sokol.gfx.Shader?
 local shader = nil
----@type gfx.Pipeline?
+---@type sokol.gfx.Pipeline?
 local pipeline = nil
----@type gfx.Buffer?
+---@type sokol.gfx.Buffer?
 local vbuf = nil
----@type gfx.Buffer?
+---@type sokol.gfx.Buffer?
 local ibuf = nil
 
 -- Shader with MVP matrix and color uniform
@@ -102,17 +102,17 @@ local function make_cube_vertices()
     local v = {}
     local faces = {
         -- front (z+)
-        {{ -0.5, -0.5,  0.5}, { 0.5, -0.5,  0.5}, { 0.5,  0.5,  0.5}, {-0.5,  0.5,  0.5}, {0, 0, 1}},
+        { { -0.5, -0.5, 0.5 }, { 0.5, -0.5, 0.5 }, { 0.5, 0.5, 0.5 },  { -0.5, 0.5, 0.5 }, { 0, 0, 1 } },
         -- back (z-)
-        {{ 0.5, -0.5, -0.5}, {-0.5, -0.5, -0.5}, {-0.5,  0.5, -0.5}, { 0.5,  0.5, -0.5}, {0, 0, -1}},
+        { { 0.5, -0.5, -0.5 }, { -0.5, -0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0, 0, -1 } },
         -- top (y+)
-        {{-0.5,  0.5,  0.5}, { 0.5,  0.5,  0.5}, { 0.5,  0.5, -0.5}, {-0.5,  0.5, -0.5}, {0, 1, 0}},
+        { { -0.5, 0.5, 0.5 },  { 0.5, 0.5, 0.5 },  { 0.5, 0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0, 1, 0 } },
         -- bottom (y-)
-        {{-0.5, -0.5, -0.5}, { 0.5, -0.5, -0.5}, { 0.5, -0.5,  0.5}, {-0.5, -0.5,  0.5}, {0, -1, 0}},
+        { { -0.5, -0.5, -0.5 }, { 0.5, -0.5, -0.5 }, { 0.5, -0.5, 0.5 }, { -0.5, -0.5, 0.5 }, { 0, -1, 0 } },
         -- right (x+)
-        {{ 0.5, -0.5,  0.5}, { 0.5, -0.5, -0.5}, { 0.5,  0.5, -0.5}, { 0.5,  0.5,  0.5}, {1, 0, 0}},
+        { { 0.5, -0.5, 0.5 },  { 0.5, -0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0.5, 0.5, 0.5 }, { 1, 0, 0 } },
         -- left (x-)
-        {{-0.5, -0.5, -0.5}, {-0.5, -0.5,  0.5}, {-0.5,  0.5,  0.5}, {-0.5,  0.5, -0.5}, {-1, 0, 0}},
+        { { -0.5, -0.5, -0.5 }, { -0.5, -0.5, 0.5 }, { -0.5, 0.5, 0.5 }, { -0.5, 0.5, -0.5 }, { -1, 0, 0 } },
     }
 
     for _, face in ipairs(faces) do
@@ -153,11 +153,11 @@ end
 local function init_blocks()
     blocks = {}
     local colors = {
-        glm.vec3(1.0, 0.3, 0.3),  -- red
-        glm.vec3(1.0, 0.6, 0.2),  -- orange
-        glm.vec3(1.0, 1.0, 0.3),  -- yellow
-        glm.vec3(0.3, 1.0, 0.3),  -- green
-        glm.vec3(0.3, 0.6, 1.0),  -- blue
+        glm.vec3(1.0, 0.3, 0.3), -- red
+        glm.vec3(1.0, 0.6, 0.2), -- orange
+        glm.vec3(1.0, 1.0, 0.3), -- yellow
+        glm.vec3(0.3, 1.0, 0.3), -- green
+        glm.vec3(0.3, 0.6, 1.0), -- blue
     }
     for row = 1, BLOCK_ROWS do
         for col = 1, BLOCK_COLS do
@@ -177,8 +177,8 @@ local function init_game()
     log.info("3D Block Breaker starting...")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
@@ -187,8 +187,8 @@ local function init_game()
             stage = gfx.ShaderStage.VERTEX,
             size = 144,
             glsl_uniforms = {
-                { type = gfx.UniformType.MAT4, glsl_name = "mvp" },
-                { type = gfx.UniformType.MAT4, glsl_name = "model" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "model" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "color" },
             }
         }
@@ -202,12 +202,12 @@ local function init_game()
         return
     end
 
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT3 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- normal
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
             }
         },
         index_type = gfx.IndexType.UINT16,
@@ -219,19 +219,19 @@ local function init_game()
         primitive_type = gfx.PrimitiveType.TRIANGLES,
     }))
 
-    if gfx.query_pipeline_state(pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
         log.error("Pipeline creation failed!")
         return
     end
 
     -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
     local vertices = make_cube_vertices()
-    vbuf = gfx.make_buffer(gfx.BufferDesc({
+    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
         data = gfx.Range(util.pack_floats(vertices))
     }))
 
     local indices = make_cube_indices()
-    ibuf = gfx.make_buffer(gfx.BufferDesc({
+    ibuf = gfx.MakeBuffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(pack_indices(indices))
     }))
@@ -248,39 +248,39 @@ local function update_game_logic(dt)
     ball_y = ball_y + ball_vy * dt
 
     -- Wall collision (left/right)
-    if ball_x < -FIELD_WIDTH/2 + BALL_SIZE/2 then
-        ball_x = -FIELD_WIDTH/2 + BALL_SIZE/2
+    if ball_x < -FIELD_WIDTH / 2 + BALL_SIZE / 2 then
+        ball_x = -FIELD_WIDTH / 2 + BALL_SIZE / 2
         ball_vx = -ball_vx
-    elseif ball_x > FIELD_WIDTH/2 - BALL_SIZE/2 then
-        ball_x = FIELD_WIDTH/2 - BALL_SIZE/2
+    elseif ball_x > FIELD_WIDTH / 2 - BALL_SIZE / 2 then
+        ball_x = FIELD_WIDTH / 2 - BALL_SIZE / 2
         ball_vx = -ball_vx
     end
 
     -- Wall collision (top)
-    if ball_y > FIELD_HEIGHT/2 - BALL_SIZE/2 then
-        ball_y = FIELD_HEIGHT/2 - BALL_SIZE/2
+    if ball_y > FIELD_HEIGHT / 2 - BALL_SIZE / 2 then
+        ball_y = FIELD_HEIGHT / 2 - BALL_SIZE / 2
         ball_vy = -ball_vy
     end
 
     -- Ball out of bounds (bottom)
-    if ball_y < -FIELD_HEIGHT/2 then
+    if ball_y < -FIELD_HEIGHT / 2 then
         game_over = true
         log.info("Game Over! Score: " .. score)
         return
     end
 
     -- Paddle collision
-    local paddle_top = -FIELD_HEIGHT/2 + 1 + PADDLE_HEIGHT/2
-    local paddle_bottom = -FIELD_HEIGHT/2 + 1 - PADDLE_HEIGHT/2
+    local paddle_top = -FIELD_HEIGHT / 2 + 1 + PADDLE_HEIGHT / 2
+    local paddle_bottom = -FIELD_HEIGHT / 2 + 1 - PADDLE_HEIGHT / 2
     if ball_vy < 0 and
-       ball_y - BALL_SIZE/2 < paddle_top and
-       ball_y + BALL_SIZE/2 > paddle_bottom and
-       ball_x > paddle_x - PADDLE_WIDTH/2 and
-       ball_x < paddle_x + PADDLE_WIDTH/2 then
-        ball_y = paddle_top + BALL_SIZE/2
+        ball_y - BALL_SIZE / 2 < paddle_top and
+        ball_y + BALL_SIZE / 2 > paddle_bottom and
+        ball_x > paddle_x - PADDLE_WIDTH / 2 and
+        ball_x < paddle_x + PADDLE_WIDTH / 2 then
+        ball_y = paddle_top + BALL_SIZE / 2
         ball_vy = -ball_vy
         -- Add angle based on where ball hit paddle
-        local hit_pos = (ball_x - paddle_x) / (PADDLE_WIDTH/2)
+        local hit_pos = (ball_x - paddle_x) / (PADDLE_WIDTH / 2)
         ball_vx = ball_vx + hit_pos * 2
         -- Clamp velocity
         ball_vx = glm.clamp(ball_vx, -6, 6)
@@ -290,11 +290,11 @@ local function update_game_logic(dt)
     for _, block in ipairs(blocks) do
         if block.alive then
             local bx, by = block.x, block.y
-            local hw, hh = BLOCK_WIDTH/2, BLOCK_HEIGHT/2
-            if ball_x + BALL_SIZE/2 > bx - hw and
-               ball_x - BALL_SIZE/2 < bx + hw and
-               ball_y + BALL_SIZE/2 > by - hh and
-               ball_y - BALL_SIZE/2 < by + hh then
+            local hw, hh = BLOCK_WIDTH / 2, BLOCK_HEIGHT / 2
+            if ball_x + BALL_SIZE / 2 > bx - hw and
+                ball_x - BALL_SIZE / 2 < bx + hw and
+                ball_y + BALL_SIZE / 2 > by - hh and
+                ball_y - BALL_SIZE / 2 < by + hh then
                 block.alive = false
                 score = score + 10
 
@@ -314,7 +314,10 @@ local function update_game_logic(dt)
     -- Check win condition
     local all_dead = true
     for _, block in ipairs(blocks) do
-        if block.alive then all_dead = false break end
+        if block.alive then
+            all_dead = false
+            break
+        end
     end
     if all_dead then
         log.info("You Win! Score: " .. score)
@@ -340,8 +343,8 @@ local function draw_cube(proj, view, pos, scale, color)
     local model = glm.translate(pos) * glm.scale(scale)
     local mvp = proj * view * model
 
-    gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
-    gfx.draw(0, 36, 1)
+    gfx.ApplyUniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
+    gfx.Draw(0, 36, 1)
 end
 
 local function update_frame()
@@ -359,13 +362,13 @@ local function update_frame()
         paddle_x = paddle_x + paddle_speed
     end
     -- Clamp paddle
-    local max_x = FIELD_WIDTH/2 - PADDLE_WIDTH/2
+    local max_x = FIELD_WIDTH / 2 - PADDLE_WIDTH / 2
     paddle_x = glm.clamp(paddle_x, -max_x, max_x)
 
     update_game_logic(dt)
 
     -- Camera setup
-    local aspect = app.widthf() / app.heightf()
+    local aspect = app.Widthf() / app.Heightf()
     local proj = glm.perspective(glm.radians(45), aspect, 0.1, 100.0)
     local view = glm.lookat(
         glm.vec3(0, -5, 18),
@@ -374,7 +377,7 @@ local function update_frame()
     )
 
     -- Begin render pass
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
@@ -385,49 +388,52 @@ local function update_frame()
                 clear_value = 1.0
             }
         }),
-        swapchain = glue.swapchain()
+        swapchain = glue.Swapchain()
     }))
 
-    gfx.apply_pipeline(pipeline)
-    gfx.apply_bindings(gfx.Bindings({
+    gfx.ApplyPipeline(pipeline)
+    gfx.ApplyBindings(gfx.Bindings({
         vertex_buffers = { vbuf },
         index_buffer = ibuf
     }))
 
     -- Draw walls (faint)
     local wall_color = glm.vec3(0.2, 0.2, 0.3)
-    draw_cube(proj, view, glm.vec3(-FIELD_WIDTH/2 - 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
-    draw_cube(proj, view, glm.vec3(FIELD_WIDTH/2 + 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
-    draw_cube(proj, view, glm.vec3(0, FIELD_HEIGHT/2 + 0.25, 0), glm.vec3(FIELD_WIDTH + 1, 0.5, 1), wall_color)
+    draw_cube(proj, view, glm.vec3(-FIELD_WIDTH / 2 - 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
+    draw_cube(proj, view, glm.vec3(FIELD_WIDTH / 2 + 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
+    draw_cube(proj, view, glm.vec3(0, FIELD_HEIGHT / 2 + 0.25, 0), glm.vec3(FIELD_WIDTH + 1, 0.5, 1), wall_color)
 
     -- Draw paddle
-    local paddle_y = -FIELD_HEIGHT/2 + 1
-    draw_cube(proj, view, glm.vec3(paddle_x, paddle_y, 0), glm.vec3(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_DEPTH), glm.vec3(0.8, 0.8, 0.9))
+    local paddle_y = -FIELD_HEIGHT / 2 + 1
+    draw_cube(proj, view, glm.vec3(paddle_x, paddle_y, 0), glm.vec3(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_DEPTH),
+        glm.vec3(0.8, 0.8, 0.9))
 
     -- Draw ball
     local pulse = math.sin(t * 10) * 0.1 + 0.9
-    draw_cube(proj, view, glm.vec3(ball_x, ball_y, 0), glm.vec3(BALL_SIZE, BALL_SIZE, BALL_SIZE), glm.vec3(pulse, pulse, 1.0))
+    draw_cube(proj, view, glm.vec3(ball_x, ball_y, 0), glm.vec3(BALL_SIZE, BALL_SIZE, BALL_SIZE),
+        glm.vec3(pulse, pulse, 1.0))
 
     -- Draw blocks
     for _, block in ipairs(blocks) do
         if block.alive then
-            draw_cube(proj, view, glm.vec3(block.x, block.y, 0), glm.vec3(BLOCK_WIDTH, BLOCK_HEIGHT, BLOCK_DEPTH), block.color)
+            draw_cube(proj, view, glm.vec3(block.x, block.y, 0), glm.vec3(BLOCK_WIDTH, BLOCK_HEIGHT, BLOCK_DEPTH),
+                block.color)
         end
     end
 
-    gfx.end_pass()
-    gfx.commit()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 local function handle_event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         keys_down[ev.key_code] = true
         if ev.key_code == app.Keycode.Q then
-            app.quit()
+            app.Quit()
         end
         if ev.key_code == app.Keycode.R then
             -- Reset game
@@ -445,12 +451,12 @@ local function handle_event(ev)
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - 3D Breakout",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

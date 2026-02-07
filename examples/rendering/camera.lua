@@ -98,8 +98,8 @@ function M.handle_event(ev)
         elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = true
         elseif key == app.Keycode.ESCAPE then
             if M.mouse_captured then
-                app.show_mouse(true)
-                app.lock_mouse(false)
+                app.ShowMouse(true)
+                app.LockMouse(false)
                 M.mouse_captured = false
                 return true  -- handled
             end
@@ -116,8 +116,8 @@ function M.handle_event(ev)
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         if ev.mouse_button == app.Mousebutton.RIGHT then
-            app.show_mouse(false)
-            app.lock_mouse(true)
+            app.ShowMouse(false)
+            app.LockMouse(true)
             M.mouse_captured = true
         end
     elseif evtype == app.EventType.MOUSE_MOVE then

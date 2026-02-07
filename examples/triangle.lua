@@ -44,15 +44,15 @@ void main() {
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
     -- Compile shader using lib.shader (auto-detects backend language)
     shd = shader.compile(shader_source, "triangle", {
         {
             stage = gfx.ShaderStage.VERTEX,
-            size = 16,  -- rotation (float) padded to 16 bytes
+            size = 16, -- rotation (float) padded to 16 bytes
         }
     })
     if not shd then
@@ -60,70 +60,70 @@ local function init_game()
         return
     end
 
-    pip = gfx.make_pipeline(gfx.PipelineDesc({
+    pip = gfx.MakePipeline(gfx.PipelineDesc({
         shader = shd,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT2 },  -- position
-                { format = gfx.VertexFormat.FLOAT3 },  -- color
+                { format = gfx.VertexFormat.FLOAT2 }, -- position
+                { format = gfx.VertexFormat.FLOAT3 }, -- color
             }
         }
     }))
 
     -- Triangle vertices: position (x, y) + color (r, g, b)
     local vertices = {
-         0.0,  0.5,   1.0, 0.0, 0.0,  -- top (red)
-         0.5, -0.5,   0.0, 1.0, 0.0,  -- bottom right (green)
-        -0.5, -0.5,   0.0, 0.0, 1.0,  -- bottom left (blue)
+        0.0, 0.5, 1.0, 0.0, 0.0,   -- top (red)
+        0.5, -0.5, 0.0, 1.0, 0.0,  -- bottom right (green)
+        -0.5, -0.5, 0.0, 0.0, 1.0, -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
     bind = {
-        vertex_buffers = { gfx.make_buffer(gfx.BufferDesc({ data = gfx.Range(data) })) }
+        vertex_buffers = { gfx.MakeBuffer(gfx.BufferDesc({ data = gfx.Range(data) })) }
     }
 end
 
 local function update_frame()
-    time = time + 1/60
+    time = time + 1 / 60
 
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
-            }}
+            } }
         }),
-        swapchain = glue.swapchain()
+        swapchain = glue.Swapchain()
     }))
 
-    gfx.apply_pipeline(pip)
-    gfx.apply_bindings(gfx.Bindings(bind))
+    gfx.ApplyPipeline(pip)
+    gfx.ApplyBindings(gfx.Bindings(bind))
 
     -- Pack uniform: rotation (float) padded to 16 bytes
     local uniform_data = string.pack("ffff", time, 0, 0, 0)
-    gfx.apply_uniforms(0, gfx.Range(uniform_data))
+    gfx.ApplyUniforms(0, gfx.Range(uniform_data))
 
-    gfx.draw(0, 3, 1)
-    gfx.end_pass()
-    gfx.commit()
+    gfx.Draw(0, 3, 1)
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function cleanup_game()
-    gfx.shutdown()
+    gfx.Shutdown()
 end
 
 local function handle_event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
-        app.quit()
+        app.Quit()
     end
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Simple Triangle",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

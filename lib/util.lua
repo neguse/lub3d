@@ -4,7 +4,7 @@ local log = require("lib.log")
 
 -- Initialize sokol_time (once)
 if not _G._stm_initialized then
-    stm.setup()
+    stm.Setup()
     _G._stm_initialized = true
 end
 
@@ -23,7 +23,7 @@ M.profile = {
 function M.profile_begin(category, name)
     if not M.profile.enabled then return end
     local key = category .. ":" .. name
-    M.profile.pending[key] = stm.now()
+    M.profile.pending[key] = stm.Now()
 end
 
 --- End a profiling measurement, log if slow
@@ -35,7 +35,7 @@ function M.profile_end(category, name)
     local start = M.profile.pending[key]
     if not start then return end
 
-    local elapsed_ms = stm.ms(stm.since(start))
+    local elapsed_ms = stm.Ms(stm.Since(start))
     M.profile.pending[key] = nil
 
     if elapsed_ms >= M.profile.threshold_ms then

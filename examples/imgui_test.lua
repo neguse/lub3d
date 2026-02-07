@@ -12,73 +12,73 @@ local color = { 0.4, 0.7, 1.0 }
 
 local function init_game()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.Desc({
-        environment = glue.environment(),
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
     }))
 
-    imgui.setup()
+    imgui.Setup()
 end
 
 local function update_frame()
-    imgui.new_frame()
+    imgui.NewFrame()
 
     -- Main debug window
-    if imgui.begin("Debug Menu") then
-        imgui.text_unformatted("Mane3D ImGui Test")
-        imgui.separator()
+    if imgui.Begin("Debug Menu") then
+        imgui.TextUnformatted("Mane3D ImGui Test")
+        imgui.Separator()
 
-        local clicked, new_val = imgui.checkbox("Enable Feature", checkbox_val)
+        local clicked, new_val = imgui.Checkbox("Enable Feature", checkbox_val)
         if clicked then checkbox_val = new_val end
 
-        local changed, new_slider = imgui.slider_float("Value", slider_val, 0.0, 1.0)
+        local changed, new_slider = imgui.SliderFloat("Value", slider_val, 0.0, 1.0)
         if changed then slider_val = new_slider end
 
-        local col_changed, new_col = imgui.color_edit3("Color", color)
+        local col_changed, new_col = imgui.ColorEdit3("Color", color)
         if col_changed then color = new_col end
 
-        imgui.separator()
-        if imgui.button("Show Demo Window") then
+        imgui.Separator()
+        if imgui.Button("Show Demo Window") then
             show_demo = not show_demo
         end
     end
-    imgui.end_()
+    imgui.End()
 
     if show_demo then
-        local open = imgui.show_demo_window(show_demo)
+        local open = imgui.ShowDemoWindow(show_demo)
         show_demo = open
     end
 
     -- Render
-    gfx.begin_pass(gfx.Pass({
+    gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
             colors = {{
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = color[1], g = color[2], b = color[3], a = 1.0 }
             }}
         }),
-        swapchain = glue.swapchain()
+        swapchain = glue.Swapchain()
     }))
-    imgui.render()
-    gfx.end_pass()
-    gfx.commit()
+    imgui.Render()
+    gfx.EndPass()
+    gfx.Commit()
 end
 
 local function handle_event(ev)
-    imgui.handle_event(ev)
+    imgui.HandleEvent(ev)
 end
 
 local function cleanup_game()
-    imgui.shutdown()
-    gfx.shutdown()
+    imgui.Shutdown()
+    gfx.Shutdown()
 end
 
 -- Run the application
-app.run(app.Desc({
+app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - ImGui Test",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))
