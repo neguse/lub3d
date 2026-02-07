@@ -426,6 +426,11 @@ if(MANE3D_BUILD_IMGUI)
         endif()
     endif()
 
+    # Stub sokol_app functions for dummy backend (sokol_app.h has no dummy support)
+    if(MANE3D_BACKEND_DUMMY)
+        target_sources(imgui_lib PRIVATE src/sapp_stub.c)
+    endif()
+
     # Link ImGui to mane3d
     target_sources(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_imgui.c)
     target_link_libraries(mane3d PUBLIC imgui_lib)
