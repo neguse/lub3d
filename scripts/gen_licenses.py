@@ -334,7 +334,9 @@ def generate_notices(licenses, output_path):
         lines.append(lib["text"])
         lines.append("")
 
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    dirn = os.path.dirname(output_path)
+    if dirn:
+        os.makedirs(dirn, exist_ok=True)
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write('\n'.join(lines))
         f.write('\n')
