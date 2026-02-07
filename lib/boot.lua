@@ -14,8 +14,11 @@ local app = require("sokol.app")
 
 -- Set up hotreload BEFORE requiring the entry script,
 -- so the require hook watches all dependencies automatically.
+-- Skip in playground mode (_lub3d_module): no filesystem to watch.
 local hotreload
-pcall(function() hotreload = require("lib.hotreload") end)
+if _lub3d_script then
+    pcall(function() hotreload = require("lib.hotreload") end)
+end
 
 -- Load the module
 local M
