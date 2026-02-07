@@ -311,16 +311,46 @@ def generate_c_source(licenses, output_path):
         f.write('\n'.join(lines))
         f.write('\n')
 
+def generate_notices(licenses, output_path):
+    """Generate THIRD-PARTY-NOTICES text file."""
+    sep = "=" * 78
+
+    lines = [
+        "THIRD-PARTY SOFTWARE NOTICES",
+        "",
+        "This software includes the following third-party components.",
+        "Each component is listed with its license type and full license text.",
+        "",
+    ]
+
+    for lib in licenses:
+        lines.append(sep)
+        lines.append(f"Component: {lib['name']}")
+        lines.append(f"License: {lib['type']}")
+        if lib["url"]:
+            lines.append(f"Origin: {lib['url']}")
+        lines.append(sep)
+        lines.append("")
+        lines.append(lib["text"])
+        lines.append("")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, 'w', encoding='utf-8') as f:
+        f.write('\n'.join(lines))
+        f.write('\n')
+
 def main():
     import argparse
     parser = argparse.ArgumentParser(description='Generate license data')
     script_dir = os.path.dirname(__file__)
     parser.add_argument('--root', default=os.path.abspath(os.path.join(script_dir, '..')), help='Root directory')
     parser.add_argument('--output', default=None, help='Output C file')
+    parser.add_argument('--notices', default=None, help='Output THIRD-PARTY-NOTICES text file')
     args = parser.parse_args()
 
     root = os.path.abspath(args.root)
     output = args.output or os.path.join(root, 'gen', 'licenses.c')
+    notices = args.notices or os.path.join(root, 'THIRD-PARTY-NOTICES')
 
     print(f"Scanning {root}/deps for licenses...")
     licenses = find_licenses(root)
@@ -331,6 +361,10 @@ def main():
 
     print(f"Generating {output}...")
     generate_c_source(licenses, output)
+
+    print(f"Generating {notices}...")
+    generate_notices(licenses, notices)
+
     print("Done.")
 
 if __name__ == '__main__':
