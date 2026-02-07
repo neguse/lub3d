@@ -189,12 +189,18 @@ if(Python3_FOUND)
     )
 endif()
 
+# LuaFileSystem
+add_library(lfs STATIC deps/luafilesystem/src/lfs.c)
+target_include_directories(lfs PRIVATE ${LUA_INCLUDE})
+target_link_libraries(lfs PRIVATE ${LUA_TARGET})
+
 # lub3d sources
 set(LUB3D_SOURCES
     src/sokol_impl.c
     src/miniaudio_impl.c
     src/stb_image_lua.c
     src/lub3d_lua.c
+    src/encoding_lua.c
     ${LUB3D_GENERATED}
 )
 
@@ -217,8 +223,8 @@ target_include_directories(lub3d
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio
 )
 
-# Link Lua
-target_link_libraries(lub3d PUBLIC ${LUA_TARGET})
+# Link Lua and LFS
+target_link_libraries(lub3d PUBLIC ${LUA_TARGET} lfs)
 
 # Backend selection for sokol_impl.c
 if(LUB3D_BACKEND_DUMMY)

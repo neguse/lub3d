@@ -1,0 +1,22 @@
+*---------------------- HEADER FIELD
+#PLAYER 1
+#GENRE Test
+#TITLE Simple Test
+#ARTIST mane3d
+#BPM 120
+#PLAYLEVEL 1
+#RANK 3
+#TOTAL 100
+
+#WAV01 test_kick.wav
+#WAV02 test_snare.wav
+
+*---------------------- MAIN DATA FIELD
+
+*-- measure 001 (beat 4-8): 1拍おきにノート
+#00111:01000100
+#00113:00010001
+
+*-- measure 002 (beat 8-12): 1拍おきにノート
+#00211:01000100
+#00213:00010001

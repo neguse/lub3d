@@ -45,3 +45,6 @@ public/*.js
 doc.json
 doc.md
 reference/
+
+# Runtime cache
+bms_cache.lua
