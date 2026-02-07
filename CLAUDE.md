@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Måne3D is a lightweight game framework for Lua 5.5 built on Sokol. Auto-generated C/C++ bindings expose Sokol, Dear ImGui, and Miniaudio to Lua with LuaCATS type annotations.
+Lübertà3d is a lightweight game framework for Lua 5.5 built on Sokol. Auto-generated C/C++ bindings expose Sokol, Dear ImGui, and Miniaudio to Lua with LuaCATS type annotations.
 
 ## Build
 
@@ -21,15 +21,15 @@ Presets: `win-d3d11-{debug,release}`, `win-gl-debug`, `win-dummy-{debug,release}
 
 | Option | Default | Description |
 |---|---|---|
-| `MANE3D_BUILD_EXAMPLE` | ON | Example executable |
-| `MANE3D_BUILD_SHDC` | ON | sokol-shdc runtime shader compiler |
-| `MANE3D_BUILD_IMGUI` | ON | Dear ImGui integration |
-| `MANE3D_BUILD_BC7ENC` | ON | BC7 texture encoder |
-| `MANE3D_BUILD_TESTS` | OFF | Headless test runner |
-| `MANE3D_BUILD_SHARED` | OFF | Shared library (.dll/.so) |
-| `MANE3D_BUILD_INTERPRETER` | OFF | Standalone Lua interpreter |
-| `MANE3D_USE_SYSTEM_LUA` | OFF | System Lua instead of bundled |
-| `MANE3D_BACKEND_*` | auto | `D3D11` / `GL` / `GLES3` / `METAL` / `WGPU` / `DUMMY` |
+| `LUB3D_BUILD_EXAMPLE` | ON | Example executable |
+| `LUB3D_BUILD_SHDC` | ON | sokol-shdc runtime shader compiler |
+| `LUB3D_BUILD_IMGUI` | ON | Dear ImGui integration |
+| `LUB3D_BUILD_BC7ENC` | ON | BC7 texture encoder |
+| `LUB3D_BUILD_TESTS` | OFF | Headless test runner |
+| `LUB3D_BUILD_SHARED` | OFF | Shared library (.dll/.so) |
+| `LUB3D_BUILD_INTERPRETER` | OFF | Standalone Lua interpreter |
+| `LUB3D_USE_SYSTEM_LUA` | OFF | System Lua instead of bundled |
+| `LUB3D_BACKEND_*` | auto | `D3D11` / `GL` / `GLES3` / `METAL` / `WGPU` / `DUMMY` |
 
 Backend auto-detection: Windows → D3D11, macOS → Metal, Linux → OpenGL, Emscripten → WGPU.
 
@@ -57,7 +57,7 @@ gen/                    Generated files (gitignored, output of C# Generator)
 src/                    Manual C/C++ source
   sokol_impl.c          Sokol implementation defines
   miniaudio_impl.c      Miniaudio implementation
-  mane3d_lua.c          Module registration entry point
+  lub3d_lua.c          Module registration entry point
   stb_image_lua.c       stb_image Lua bindings
   imgui_impl.cpp        Dear ImGui core implementation
   imgui_sokol.cpp       ImGui-Sokol integration
@@ -108,16 +108,16 @@ Always available:
 | `sokol.shape` | `sshape_` | Shape generation |
 | `miniaudio` | — | Audio engine |
 | `stb.image` | — | Image loading |
-| `mane3d.licenses` | — | Third-party license info |
+| `lub3d.licenses` | — | Third-party license info |
 
 Conditional:
 
 | Module | Flag | Description |
 |---|---|---|
-| `sokol.imgui` | `MANE3D_BUILD_IMGUI` | ImGui-Sokol integration |
-| `imgui` | `MANE3D_BUILD_IMGUI` | Dear ImGui API |
-| `shdc` | `MANE3D_BUILD_SHDC` | Runtime shader compiler |
-| `bc7enc` | `MANE3D_BUILD_BC7ENC` | BC7 texture encoder |
+| `sokol.imgui` | `LUB3D_BUILD_IMGUI` | ImGui-Sokol integration |
+| `imgui` | `LUB3D_BUILD_IMGUI` | Dear ImGui API |
+| `shdc` | `LUB3D_BUILD_SHDC` | Runtime shader compiler |
+| `bc7enc` | `LUB3D_BUILD_BC7ENC` | BC7 texture encoder |
 
 ## Code Generation
 
@@ -134,7 +134,7 @@ Pipeline: Clang AST → TypeRegistry → ModuleSpec → C/C++ bindings + LuaCATS
 
 - **Require paths**: root-relative (`require("lib.util")`, `require("examples.deferred.camera")`). Do NOT manipulate `package.path`.
 - **Event loop**: Lua scripts implement `init()`, `frame()`, `event(ev)`, `cleanup()` callbacks.
-- **Shader compilation**: `util.compile_shader()` with auto backend detection (D3D11→hlsl5, Metal→metal_macos, WGPU→wgsl, GL→glsl430/glsl300es). Requires `MANE3D_BUILD_SHDC=ON`.
+- **Shader compilation**: `util.compile_shader()` with auto backend detection (D3D11→hlsl5, Metal→metal_macos, WGPU→wgsl, GL→glsl430/glsl300es). Requires `LUB3D_BUILD_SHDC=ON`.
 
 ## Asset Pipeline
 

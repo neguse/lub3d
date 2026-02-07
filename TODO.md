@@ -34,7 +34,7 @@
 
 ## 3D Game Shaders Tutorial (lettier/3d-game-shaders-for-beginners)
 
-Step-by-step port to mane3d.
+Step-by-step port to lub3d.
 
 ### Setup
 

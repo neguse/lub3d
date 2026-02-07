@@ -62,11 +62,11 @@ def find_licenses(root_dir):
     """Find all LICENSE files and extract info."""
     licenses = []
 
-    # Mane3D itself
+    # Lub3d itself
     licenses.append({
-        "name": "Mane3D",
+        "name": "Lub3d",
         "type": "MIT",
-        "url": "https://github.com/neguse/mane3d",
+        "url": "https://github.com/neguse/lub3d",
         "text": """MIT License
 
 Copyright (c) 2026 neguse
@@ -237,9 +237,9 @@ def generate_c_source(licenses, output_path):
         "    const char* type;",
         "    const char* url;",
         "    const char* text;",
-        "} mane3d_license_t;",
+        "} lub3d_license_t;",
         "",
-        "static const mane3d_license_t mane3d_licenses[] = {",
+        "static const lub3d_license_t lub3d_licenses[] = {",
     ]
 
     for lib in licenses:
@@ -258,22 +258,22 @@ def generate_c_source(licenses, output_path):
 
     lines.append("};")
     lines.append("")
-    lines.append(f"static const int mane3d_licenses_count = {len(licenses)};")
+    lines.append(f"static const int lub3d_licenses_count = {len(licenses)};")
     lines.append("")
 
     # Lua binding
     lines.extend([
         "static int l_licenses_get(lua_State* L) {",
         "    lua_newtable(L);",
-        "    for (int i = 0; i < mane3d_licenses_count; i++) {",
+        "    for (int i = 0; i < lub3d_licenses_count; i++) {",
         "        lua_newtable(L);",
-        "        lua_pushstring(L, mane3d_licenses[i].name);",
+        "        lua_pushstring(L, lub3d_licenses[i].name);",
         "        lua_setfield(L, -2, \"name\");",
-        "        lua_pushstring(L, mane3d_licenses[i].type);",
+        "        lua_pushstring(L, lub3d_licenses[i].type);",
         "        lua_setfield(L, -2, \"type\");",
-        "        lua_pushstring(L, mane3d_licenses[i].url);",
+        "        lua_pushstring(L, lub3d_licenses[i].url);",
         "        lua_setfield(L, -2, \"url\");",
-        "        lua_pushstring(L, mane3d_licenses[i].text);",
+        "        lua_pushstring(L, lub3d_licenses[i].text);",
         "        lua_setfield(L, -2, \"text\");",
         "        lua_rawseti(L, -2, i + 1);",
         "    }",
@@ -284,10 +284,10 @@ def generate_c_source(licenses, output_path):
         "    luaL_Buffer b;",
         "    luaL_buffinit(L, &b);",
         "    luaL_addstring(&b, \"This software uses the following libraries:\\n\\n\");",
-        "    for (int i = 0; i < mane3d_licenses_count; i++) {",
-        "        luaL_addstring(&b, mane3d_licenses[i].name);",
+        "    for (int i = 0; i < lub3d_licenses_count; i++) {",
+        "        luaL_addstring(&b, lub3d_licenses[i].name);",
         "        luaL_addstring(&b, \" (\");",
-        "        luaL_addstring(&b, mane3d_licenses[i].type);",
+        "        luaL_addstring(&b, lub3d_licenses[i].type);",
         "        luaL_addstring(&b, \")\\n\");",
         "    }",
         "    luaL_pushresult(&b);",
@@ -300,7 +300,7 @@ def generate_c_source(licenses, output_path):
         "    {NULL, NULL}",
         "};",
         "",
-        "int luaopen_mane3d_licenses(lua_State* L) {",
+        "int luaopen_lub3d_licenses(lua_State* L) {",
         "    luaL_newlib(L, licenses_funcs);",
         "    return 1;",
         "}",

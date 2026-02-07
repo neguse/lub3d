@@ -10,14 +10,14 @@
 void slog_func(const char* tag, unsigned int log_level, unsigned int log_item,
                const char* message, unsigned int line_nr,
                const char* filename, void* user_data);
-static void _mane3d_assert_fail(const char* expr, const char* file, int line) {
+static void _lub3d_assert_fail(const char* expr, const char* file, int line) {
     char msg[512];
     snprintf(msg, sizeof(msg), "SOKOL_ASSERT(%s) failed", expr);
     slog_func("assert", 0 /*panic*/, 0, msg, (unsigned int)line, file, 0);
     _exit(42);
 }
-#define SOKOL_ASSERT(c) do { if (!(c)) _mane3d_assert_fail(#c, __FILE__, __LINE__); } while(0)
-#define SOKOL_ABORT() do { _mane3d_assert_fail("ABORT", __FILE__, __LINE__); } while(0)
+#define SOKOL_ASSERT(c) do { if (!(c)) _lub3d_assert_fail(#c, __FILE__, __LINE__); } while(0)
+#define SOKOL_ABORT() do { _lub3d_assert_fail("ABORT", __FILE__, __LINE__); } while(0)
 #endif
 #define SOKOL_IMPL
 #include "sokol_log.h"

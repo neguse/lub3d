@@ -1,7 +1,7 @@
 /*
- * mane3d_lua.c - Shared Lua module registration
+ * lub3d_lua.c - Shared Lua module registration
  */
-#include "mane3d_lua.h"
+#include "lub3d_lua.h"
 #include <lauxlib.h>
 #include <stdio.h>
 #include <sys/stat.h>
@@ -17,15 +17,15 @@ extern int luaopen_sokol_gl(lua_State *L);
 extern int luaopen_sokol_debugtext(lua_State *L);
 extern int luaopen_sokol_audio(lua_State *L);
 extern int luaopen_sokol_shape(lua_State *L);
-extern int luaopen_mane3d_licenses(lua_State *L);
+extern int luaopen_lub3d_licenses(lua_State *L);
 extern int luaopen_stb_image(lua_State *L);
 extern int luaopen_miniaudio(lua_State *L);
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
 extern int luaopen_shdc(lua_State *L);
 #endif
 
-#ifdef MANE3D_HAS_IMGUI
+#ifdef LUB3D_HAS_IMGUI
 extern int luaopen_sokol_imgui(lua_State *L);
 extern int luaopen_imgui(lua_State *L);
 #else
@@ -48,7 +48,7 @@ static int luaopen_imgui_dummy(lua_State *L)
 }
 #endif
 
-#ifdef MANE3D_HAS_BC7ENC
+#ifdef LUB3D_HAS_BC7ENC
 extern int luaopen_bc7enc(lua_State *L);
 #endif
 
@@ -89,7 +89,7 @@ static int l_write_floats(lua_State *L)
     return 0;
 }
 
-void mane3d_lua_register_all(lua_State *L)
+void lub3d_lua_register_all(lua_State *L)
 {
     luaL_requiref(L, "sokol.gfx", luaopen_sokol_gfx, 0);
     lua_pop(L, 1);
@@ -114,7 +114,7 @@ void mane3d_lua_register_all(lua_State *L)
     lua_pop(L, 1);
     luaL_requiref(L, "sokol.shape", luaopen_sokol_shape, 0);
     lua_pop(L, 1);
-    luaL_requiref(L, "mane3d.licenses", luaopen_mane3d_licenses, 0);
+    luaL_requiref(L, "lub3d.licenses", luaopen_lub3d_licenses, 0);
     lua_pop(L, 1);
     luaL_requiref(L, "stb.image", luaopen_stb_image, 0);
     lua_pop(L, 1);
@@ -129,12 +129,12 @@ void mane3d_lua_register_all(lua_State *L)
     lua_pushcfunction(L, l_write_floats);
     lua_setglobal(L, "write_floats");
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
     luaL_requiref(L, "shdc", luaopen_shdc, 0);
     lua_pop(L, 1);
 #endif
 
-#ifdef MANE3D_HAS_IMGUI
+#ifdef LUB3D_HAS_IMGUI
     luaL_requiref(L, "sokol.imgui", luaopen_sokol_imgui, 0);
     lua_pop(L, 1);
     luaL_requiref(L, "imgui", luaopen_imgui, 0);
@@ -144,13 +144,13 @@ void mane3d_lua_register_all(lua_State *L)
     lua_pop(L, 1);
 #endif
 
-#ifdef MANE3D_HAS_BC7ENC
+#ifdef LUB3D_HAS_BC7ENC
     luaL_requiref(L, "bc7enc", luaopen_bc7enc, 0);
     lua_pop(L, 1);
 #endif
 }
 
-void mane3d_lua_setup_path(lua_State *L, const char *script_dir)
+void lub3d_lua_setup_path(lua_State *L, const char *script_dir)
 {
     lua_getglobal(L, "package");
     lua_getfield(L, -1, "path");

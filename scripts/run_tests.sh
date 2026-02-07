@@ -8,12 +8,12 @@ BUILD_DIR="${1:-build/dummy-release}"
 NUM_FRAMES="${2:-10}"
 
 # Find test runner
-if [ -f "$BUILD_DIR/mane3d-test.exe" ]; then
-    TEST_RUNNER="$BUILD_DIR/mane3d-test.exe"
-elif [ -f "$BUILD_DIR/mane3d-test" ]; then
-    TEST_RUNNER="$BUILD_DIR/mane3d-test"
+if [ -f "$BUILD_DIR/lub3d-test.exe" ]; then
+    TEST_RUNNER="$BUILD_DIR/lub3d-test.exe"
+elif [ -f "$BUILD_DIR/lub3d-test" ]; then
+    TEST_RUNNER="$BUILD_DIR/lub3d-test"
 else
-    echo "Error: mane3d-test not found in $BUILD_DIR"
+    echo "Error: lub3d-test not found in $BUILD_DIR"
     exit 1
 fi
 

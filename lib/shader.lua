@@ -1,8 +1,8 @@
--- Shader compilation utilities for mane3d
+-- Shader compilation utilities for lub3d
 local gfx = require("sokol.gfx")
 local log = require("lib.log")
 
--- Optional shdc module (requires MANE3D_BUILD_SHDC=ON)
+-- Optional shdc module (requires LUB3D_BUILD_SHDC=ON)
 ---@type shdc?
 local shdc
 local shdc_ok, shdc_mod = pcall(require, "shdc")
@@ -180,7 +180,7 @@ end
 ---@return sokol.gfx.Shader? shader shader handle or nil on failure
 function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
     if not shdc then
-        log.error("shdc module not available (requires MANE3D_BUILD_SHDC=ON)")
+        log.error("shdc module not available (requires LUB3D_BUILD_SHDC=ON)")
         return nil
     end
     local lang = M.get_lang()
@@ -274,7 +274,7 @@ end
 ---@return sokol.gfx.Shader? shader shader handle or nil on failure
 function M.compile_full(source, program_name, shader_desc)
     if not shdc then
-        log.error("shdc module not available (requires MANE3D_BUILD_SHDC=ON)")
+        log.error("shdc module not available (requires LUB3D_BUILD_SHDC=ON)")
         return nil
     end
     local lang = M.get_lang()

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build mane3d for WebAssembly with WebGPU
+# Build lub3d for WebAssembly with WebGPU
 # Usage: ./scripts/build-wasm.sh [Release|Debug]
 
 set -e
@@ -29,8 +29,8 @@ echo "Using Emscripten: $(emcc --version | head -1)"
 echo "Configuring ($BUILD_TYPE)..."
 emcmake cmake -B "$BUILD_DIR" -S . \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-    -DMANE3D_BUILD_EXAMPLE=ON \
-    -DMANE3D_BUILD_SHDC=ON
+    -DLUB3D_BUILD_EXAMPLE=ON \
+    -DLUB3D_BUILD_SHDC=ON
 
 # Build
 echo "Building..."
@@ -38,8 +38,8 @@ cmake --build "$BUILD_DIR" --parallel
 
 echo ""
 echo "Build complete!"
-echo "Output: $BUILD_DIR/mane3d-example.html"
+echo "Output: $BUILD_DIR/lub3d-example.html"
 echo ""
 echo "To test locally:"
 echo "  cd $BUILD_DIR && python3 -m http.server 8080"
-echo "  Open: http://localhost:8080/mane3d-example.html"
+echo "  Open: http://localhost:8080/lub3d-example.html"

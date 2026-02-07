@@ -1,4 +1,4 @@
--- mane3d example: Section 8 - Lighting
+-- lub3d example: Section 8 - Lighting
 -- Based on lettier/3d-game-shaders-for-beginners
 local gfx = require("sokol.gfx")
 local app = require("sokol.app")
@@ -516,7 +516,7 @@ end
 app.Run(app.Desc({
     width = 1280,
     height = 720,
-    window_title = "Mane3D - Lighting",
+    window_title = "Lub3d - Lighting",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

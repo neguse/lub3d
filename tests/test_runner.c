@@ -1,7 +1,7 @@
 /*
- * mane3d headless test runner
+ * lub3d headless test runner
  *
- * Usage: mane3d-test <script.lua> [num_frames]
+ * Usage: lub3d-test <script.lua> [num_frames]
  *
  * Runs a Lua script for the specified number of frames (default: 10)
  * without creating a window or using real graphics APIs.
@@ -14,7 +14,7 @@
  *   3 - Usage error
  *   4 - Native crash (access violation, etc.)
  */
-#include "mane3d_lua.h"
+#include "lub3d_lua.h"
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -50,7 +50,7 @@ static void test_log(unsigned int level, const char* fmt, ...)
     slog_func("test", level, 0, buf, 0, NULL, NULL);
 }
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
 extern void shdc_init(void);
 extern void shdc_shutdown(void);
 #endif
@@ -142,21 +142,21 @@ static int run_test(int argc, char *argv[])
 
     char script_dir[512];
     extract_dir(script, script_dir, sizeof(script_dir));
-    mane3d_lua_setup_path(L, script_dir);
-    mane3d_lua_register_all(L);
+    lub3d_lua_setup_path(L, script_dir);
+    lub3d_lua_register_all(L);
 
     /* Set _headless_frames global before running script */
     lua_pushinteger(L, num_frames);
     lua_setglobal(L, "_headless_frames");
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
     shdc_init();
 #endif
 
     /* Run script with traceback handler */
     int result = run_script(L, script);
 
-#ifdef MANE3D_HAS_SHDC
+#ifdef LUB3D_HAS_SHDC
     shdc_shutdown();
 #endif
     lua_close(L);

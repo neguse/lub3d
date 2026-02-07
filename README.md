@@ -1,6 +1,6 @@
-# Måne3D
+# Lübertà3d / lub3d
 
-![Måne3D](public/mane3d.png)
+![Lübertà3d](public/lub3d.png)
 
 A lightweight game framework for Lua 5.5 built on the Sokol ecosystem.
 

@@ -1,6 +1,6 @@
 # Dependencies
 
-Third-party libraries used by Mane3D.
+Third-party libraries used by Lub3d.
 
 ## License Summary
 
@@ -25,4 +25,4 @@ Shader techniques referenced from:
 python3 scripts/gen_licenses.py
 ```
 
-This generates `gen/licenses.c` which is compiled into the binary and accessible via `require("mane3d.licenses")`.
+This generates `gen/licenses.c` which is compiled into the binary and accessible via `require("lub3d.licenses")`.

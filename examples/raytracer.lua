@@ -356,7 +356,7 @@ end
 app.Run(app.Desc({
     width = 800,
     height = 600,
-    window_title = "Mane3D - Raytracer",
+    window_title = "Lub3d - Raytracer",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,

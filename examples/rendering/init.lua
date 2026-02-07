@@ -513,7 +513,7 @@ end
 app.Run(app.Desc({
     width = 1280,
     height = 720,
-    window_title = "Mane3D - Rendering Pipeline",
+    window_title = "Lub3d - Rendering Pipeline",
     init = init_game,
     frame = update_frame,
     cleanup = cleanup_game,
