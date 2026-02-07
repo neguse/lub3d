@@ -673,9 +673,9 @@ public static partial class CTypeParser
         return typeStr switch
         {
             "void" => new Types.Void(),
-            "int" or "int32_t" => new Types.Int(),
+            "int" or "int8_t" or "int16_t" or "int32_t" => new Types.Int(),
             "int64_t" => new Types.Int64(),
-            "uint32_t" => new Types.UInt32(),
+            "uint8_t" or "uint16_t" or "uint32_t" => new Types.UInt32(),
             "uint64_t" => new Types.UInt64(),
             "size_t" => new Types.Size(),
             "uintptr_t" => new Types.UIntPtr(),
