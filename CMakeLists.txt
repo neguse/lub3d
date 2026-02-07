@@ -108,6 +108,7 @@ set(MANE3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_gl.c
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_debugtext.c
     ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_shape.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/newgen/miniaudio.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
@@ -130,6 +131,7 @@ add_custom_command(
            ${NEWGEN_DIR}/sokol_debugtext.c ${NEWGEN_DIR}/sokol_debugtext.lua
            ${NEWGEN_DIR}/sokol_shape.c ${NEWGEN_DIR}/sokol_shape.lua
            ${NEWGEN_DIR}/sokol_imgui.c ${NEWGEN_DIR}/sokol_imgui.lua
+           ${NEWGEN_DIR}/miniaudio.c ${NEWGEN_DIR}/miniaudio.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${NEWGEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
@@ -145,6 +147,7 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_shape.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_glue.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_imgui.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio/miniaudio.h
         ${GENERATOR_DIR}/Program.cs
         ${GENERATOR_DIR}/IModule.cs
         ${GENERATOR_DIR}/ModuleSpec.cs
@@ -167,6 +170,7 @@ add_custom_command(
         ${GENERATOR_DIR}/Modules/Sokol/Shape.cs
         ${GENERATOR_DIR}/Modules/Sokol/Time.cs
         ${GENERATOR_DIR}/Modules/Sokol/Imgui.cs
+        ${GENERATOR_DIR}/Modules/Miniaudio/MiniaudioModule.cs
     COMMENT "Running Generator (header -> bindings)"
 )
 
@@ -185,6 +189,7 @@ endif()
 # mane3d sources
 set(MANE3D_SOURCES
     src/sokol_impl.c
+    src/miniaudio_impl.c
     src/stb_image_lua.c
     src/mane3d_lua.c
     ${MANE3D_GENERATED}
@@ -206,6 +211,7 @@ target_include_directories(mane3d
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio
 )
 
 # Link Lua

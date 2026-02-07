@@ -143,6 +143,19 @@ public static class ClangRunner
     }
 
     /// <summary>
+    /// clang を実行して raw AST JSON を取得し、parse 結果の Module と一緒に返す
+    /// </summary>
+    public static (string RawJson, Module Parsed) ParseHeadersWithRawJson(
+        string clangPath,
+        List<string> headerPaths,
+        List<string> allPrefixes,
+        List<string> includePaths)
+    {
+        var json = RunClang(clangPath, headerPaths, includePaths);
+        return (json, ParseUnifiedAstJson(json, allPrefixes));
+    }
+
+    /// <summary>
     /// unified Module から特定 prefix の view を生成（IsDep 再計算）
     /// </summary>
     public static Module CreateView(Module unified, string ownPrefix, string moduleName)
@@ -252,6 +265,21 @@ public static class ClangRunner
         var root = doc.RootElement;
         var decls = new List<Decl>();
 
+        // 1パス目: 匿名 EnumDecl を ID でマップ (typedef enum { } name; パターン用)
+        var anonEnums = new Dictionary<string, JsonElement>();
+        foreach (var node in root.GetProperty("inner").EnumerateArray())
+        {
+            var kind = node.GetProperty("kind").GetString() ?? "";
+            if (kind != "EnumDecl") continue;
+            var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+            if (string.IsNullOrEmpty(name))
+            {
+                var id = node.GetProperty("id").GetString() ?? "";
+                if (id != "") anonEnums[id] = node.Clone();
+            }
+        }
+
+        // 2パス目: 通常パース + TypedefDecl → 匿名 enum 解決
         foreach (var node in root.GetProperty("inner").EnumerateArray())
         {
             var kind = node.GetProperty("kind").GetString() ?? "";
@@ -261,12 +289,28 @@ public static class ClangRunner
                 .OrderByDescending(p => p.Length)
                 .FirstOrDefault(p => name.StartsWith(p));
             if (matchedPrefix == null) continue;
-            if (kind == "TypedefDecl") continue;
 
             var line = GetLine(node);
 
             switch (kind)
             {
+                case "TypedefDecl":
+                    // typedef enum { ... } name; パターン: ownedTagDecl で匿名 enum を解決
+                    if (node.TryGetProperty("inner", out var tdInner))
+                    {
+                        foreach (var child in tdInner.EnumerateArray())
+                        {
+                            if (child.TryGetProperty("ownedTagDecl", out var owned)
+                                && owned.TryGetProperty("kind", out var owKind)
+                                && owKind.GetString() == "EnumDecl"
+                                && owned.TryGetProperty("id", out var owId)
+                                && anonEnums.TryGetValue(owId.GetString() ?? "", out var enumNode))
+                            {
+                                decls.Add(ParseEnumWithName(enumNode, name, false, null, line));
+                            }
+                        }
+                    }
+                    break;
                 case "FunctionDecl":
                     decls.Add(ParseFunc(node, false, null, line));
                     break;
@@ -275,7 +319,8 @@ public static class ClangRunner
                         decls.Add(ParseStruct(node, false, null, line));
                     break;
                 case "EnumDecl":
-                    decls.Add(ParseEnum(node, false, null, line));
+                    if (!string.IsNullOrEmpty(name))
+                        decls.Add(ParseEnum(node, false, null, line));
                     break;
             }
         }
@@ -312,7 +357,7 @@ public static class ClangRunner
 
     private static Structs ParseStruct(JsonElement node, bool isDep, string? depPrefix, int? line)
     {
-        var name = node.GetProperty("name").GetString()!;
+        var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
         var fields = new List<Field>();
 
         if (node.TryGetProperty("inner", out var inner))
@@ -320,7 +365,9 @@ public static class ClangRunner
             foreach (var child in inner.EnumerateArray())
             {
                 if (child.GetProperty("kind").GetString() != "FieldDecl") continue;
-                var fName = child.GetProperty("name").GetString()!;
+                if (!child.TryGetProperty("name", out var fn)) continue;
+                var fName = fn.GetString() ?? "";
+                if (fName == "") continue;
                 var fType = child.GetProperty("type").GetProperty("qualType").GetString()!;
                 fields.Add(new Field(fName, fType));
             }
@@ -332,6 +379,11 @@ public static class ClangRunner
     private static Enums ParseEnum(JsonElement node, bool isDep, string? depPrefix, int? line)
     {
         var name = node.GetProperty("name").GetString()!;
+        return ParseEnumWithName(node, name, isDep, depPrefix, line);
+    }
+
+    private static Enums ParseEnumWithName(JsonElement node, string name, bool isDep, string? depPrefix, int? line)
+    {
         var items = new List<EnumItem>();
 
         if (node.TryGetProperty("inner", out var inner))

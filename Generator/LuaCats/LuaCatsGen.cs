@@ -104,10 +104,27 @@ public static class LuaCatsGen
                 s.SourceLink);
         }
 
-        // Module class with struct ctors + funcs
+        // Opaque type classes
+        foreach (var ot in spec.OpaqueTypes)
+        {
+            var methodFields = ot.Methods.Select(m =>
+            {
+                var selfParam = new List<(string name, Type type)> { ("self", new Type.Class(ot.LuaClassName)) };
+                var otherParams = m.Params.Select(p => (p.Name, ToLuaCatsType(p.Type)));
+                var allParams = selfParam.Concat(otherParams);
+                var ret = m.ReturnType is BindingType.Void ? null : ToLuaCatsType(m.ReturnType);
+                return FuncField(m.LuaName, allParams, ret, m.SourceLink);
+            });
+            sb += SourceComment(ot.SourceLink) + $"---@class {ot.LuaClassName}\n";
+            sb += string.Join("\n", methodFields) + "\n\n";
+        }
+
+        // Module class with struct ctors + funcs + opaque ctors
         var moduleFields = new List<string>();
         foreach (var s in spec.Structs)
             moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName));
+        foreach (var ot in spec.OpaqueTypes)
+            moduleFields.Add($"---@field {ot.PascalName}Init fun(): {ot.LuaClassName}");
         foreach (var f in spec.Funcs)
         {
             var parms = f.Params.Select(p => (p.Name, ToLuaCatsType(p.Type)));

@@ -17,6 +17,9 @@ public static class CBindingGen
             #include <lauxlib.h>
             #include <lualib.h>
             #include <string.h>
+            #include <stdbool.h>
+            #include <stdint.h>
+            #include <stdlib.h>
 
             {{userIncludes}}
 
@@ -253,7 +256,9 @@ public static class CBindingGen
     {
         var sb = Header(spec.CIncludes);
 
-        if (spec.ExtraCCode != null)
+        // ExtraCCode は Struct/Opaque 型生成の後に出力 (依存関係のため)
+        // ただし opaque 型がない場合は先に出力
+        if (spec.ExtraCCode != null && spec.OpaqueTypes.Count == 0)
             sb += spec.ExtraCCode;
 
         // Struct new / metamethods
@@ -325,6 +330,22 @@ public static class CBindingGen
             }
         }
 
+        // Opaque types
+        foreach (var ot in spec.OpaqueTypes)
+        {
+            sb += OpaqueCheckHelper(ot);
+            if (ot.InitFunc != null)
+                sb += OpaqueConstructor(ot);
+            sb += OpaqueDestructor(ot);
+            foreach (var m in ot.Methods)
+                sb += OpaqueMethod(ot, m);
+            sb += OpaqueMethodTable(ot);
+        }
+
+        // ExtraCCode (opaque 型の check ヘルパーに依存する場合があるため、opaque 型の後に出力)
+        if (spec.ExtraCCode != null && spec.OpaqueTypes.Count > 0)
+            sb += spec.ExtraCCode;
+
         // Enums
         foreach (var e in spec.Enums)
         {
@@ -332,11 +353,13 @@ public static class CBindingGen
             sb += Enum(e.CName, e.FieldName, items);
         }
 
-        // Metatables
+        // Metatables (structs + opaque types)
         var metatables = spec.Structs.Select(s => s.HasMetamethods
             ? (s.Metatable, (string?)$"l_{s.CName}__index", (string?)$"l_{s.CName}__newindex", (string?)$"l_{s.CName}__pairs")
             : (s.Metatable, null, null, null)).ToList();
-        sb += RegisterMetatables(metatables);
+        foreach (var ot in spec.OpaqueTypes)
+            metatables.Add((ot.Metatable, null, null, null));
+        sb += RegisterOpaqueMetatables(spec.OpaqueTypes, metatables);
 
         // LuaReg
         var funcArrayName = $"{spec.ModuleName.Replace('.', '_')}_funcs";
@@ -346,6 +369,13 @@ public static class CBindingGen
         // Struct constructors
         foreach (var s in spec.Structs)
             regEntries.Add((s.PascalName, $"l_{s.CName}_new"));
+
+        // Opaque type constructors (only for types with InitFunc)
+        foreach (var ot in spec.OpaqueTypes)
+        {
+            if (ot.InitFunc != null)
+                regEntries.Add(($"{ot.PascalName}Init", $"l_{ot.CName}_new"));
+        }
 
         // Extra lua regs (before functions for consistent ordering)
         regEntries.AddRange(spec.ExtraLuaRegs);
@@ -358,7 +388,7 @@ public static class CBindingGen
 
         // Enum registrations in luaopen
         var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
-        if (enumRegs.Count > 0)
+        if (enumRegs.Count > 0 || spec.OpaqueTypes.Count > 0)
         {
             sb += $$"""
                 MANE3D_API int luaopen_{{luaOpenName}}(lua_State *L) {
@@ -405,6 +435,171 @@ public static class CBindingGen
 
             """;
     }
+
+    // ===== Opaque 型生成 =====
+
+    public static string OpaqueCheckHelper(OpaqueTypeBinding ot) => $$"""
+        static {{ot.CName}}* check_{{ot.CName}}(lua_State *L, int idx) {
+            {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, idx, "{{ot.Metatable}}");
+            if (*pp == NULL) luaL_error(L, "{{ot.CName}} already freed");
+            return *pp;
+        }
+
+        """;
+
+    public static string OpaqueConstructor(OpaqueTypeBinding ot)
+    {
+        var configInit = ot.ConfigInitFunc != null && ot.ConfigType != null
+            ? $"    {ot.ConfigType} config = {ot.ConfigInitFunc}();\n"
+            : "";
+        var initArg = ot.ConfigType != null ? "&config" : "NULL";
+        var initCall = ot.InitFunc != null
+            ? $$"""
+                    ma_result result = {{ot.InitFunc}}({{initArg}}, p);
+                    if (result != MA_SUCCESS) {
+                        free(p);
+                        return luaL_error(L, "{{ot.InitFunc}} failed: %d", result);
+                    }
+                """
+            : "";
+        return $$"""
+            static int l_{{ot.CName}}_new(lua_State *L) {
+                {{ot.CName}}* p = ({{ot.CName}}*)malloc(sizeof({{ot.CName}}));
+                memset(p, 0, sizeof({{ot.CName}}));
+            {{configInit}}{{initCall}}
+                {{ot.CName}}** pp = ({{ot.CName}}**)lua_newuserdatauv(L, sizeof({{ot.CName}}*), 0);
+                *pp = p;
+                luaL_setmetatable(L, "{{ot.Metatable}}");
+                return 1;
+            }
+
+            """;
+    }
+
+    public static string OpaqueDestructor(OpaqueTypeBinding ot)
+    {
+        var uninitCall = ot.UninitFunc != null
+            ? $"        {ot.UninitFunc}(*pp);\n"
+            : "";
+        return $$"""
+            static int l_{{ot.CName}}_gc(lua_State *L) {
+                {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
+                if (*pp != NULL) {
+            {{uninitCall}}        free(*pp);
+                    *pp = NULL;
+                }
+                return 0;
+            }
+
+            """;
+    }
+
+    public static string OpaqueMethod(OpaqueTypeBinding ot, MethodBinding m)
+    {
+        var paramDecls = new List<string>
+        {
+            $"    {ot.CName}* self = check_{ot.CName}(L, 1);"
+        };
+        foreach (var (p, i) in m.Params.Select((p, i) => (p, i)))
+        {
+            var idx = i + 2; // self is 1
+            paramDecls.Add(GenOpaqueParamDecl(p, idx));
+        }
+        var argNames = new List<string> { "self" };
+        argNames.AddRange(m.Params.Select(p => p.Name));
+        var args = string.Join(", ", argNames);
+
+        var call = m.ReturnType switch
+        {
+            BindingType.Void => $"    {m.CName}({args});\n    return 0;",
+            BindingType.Int => $"    lua_pushinteger(L, {m.CName}({args}));\n    return 1;",
+            BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64 or BindingType.Size
+                => $"    lua_pushinteger(L, (lua_Integer){m.CName}({args}));\n    return 1;",
+            BindingType.Bool => $"    lua_pushboolean(L, {m.CName}({args}));\n    return 1;",
+            BindingType.Float => $"    lua_pushnumber(L, {m.CName}({args}));\n    return 1;",
+            BindingType.Double => $"    lua_pushnumber(L, (lua_Number){m.CName}({args}));\n    return 1;",
+            BindingType.Str => $"    lua_pushstring(L, {m.CName}({args}));\n    return 1;",
+            BindingType.Enum(var eName, _) => $"    lua_pushinteger(L, (lua_Integer){m.CName}({args}));\n    return 1;",
+            _ => $"    {m.CName}({args});\n    return 0;"
+        };
+
+        return $$"""
+            static int l_{{m.CName}}(lua_State *L) {
+            {{string.Join("\n", paramDecls)}}
+            {{call}}
+            }
+
+            """;
+    }
+
+    public static string OpaqueMethodTable(OpaqueTypeBinding ot)
+    {
+        var entries = ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},");
+        return $$"""
+            static const luaL_Reg {{ot.CName}}_methods[] = {
+            {{string.Join("\n", entries)}}
+                {NULL, NULL}
+            };
+
+            """;
+    }
+
+    public static string RegisterOpaqueMetatables(
+        List<OpaqueTypeBinding> opaqueTypes,
+        List<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc)> metatables)
+    {
+        var opaqueSet = opaqueTypes.ToDictionary(ot => ot.Metatable);
+        var lines = metatables.Select(m =>
+        {
+            var sb = $"    luaL_newmetatable(L, \"{m.metatable}\");";
+            if (opaqueSet.TryGetValue(m.metatable, out var ot))
+            {
+                // opaque type: __gc + __index = method table
+                sb += $"\n    lua_pushcfunction(L, l_{ot.CName}_gc); lua_setfield(L, -2, \"__gc\");";
+                sb += $"\n    luaL_newlib(L, {ot.CName}_methods); lua_setfield(L, -2, \"__index\");";
+            }
+            else
+            {
+                if (m.indexFunc != null)
+                    sb += $"\n    lua_pushcfunction(L, {m.indexFunc}); lua_setfield(L, -2, \"__index\");";
+                if (m.newindexFunc != null)
+                    sb += $"\n    lua_pushcfunction(L, {m.newindexFunc}); lua_setfield(L, -2, \"__newindex\");";
+                if (m.pairsFunc != null)
+                    sb += $"\n    lua_pushcfunction(L, {m.pairsFunc}); lua_setfield(L, -2, \"__pairs\");";
+            }
+            sb += "\n    lua_pop(L, 1);";
+            return sb;
+        });
+        return $$"""
+            static void register_metatables(lua_State *L) {
+            {{string.Join("\n", lines)}}
+            }
+
+            """;
+    }
+
+    private static string GenOpaqueParamDecl(ParamBinding p, int idx) => p.Type switch
+    {
+        BindingType.Int => $"    int {p.Name} = (int)luaL_checkinteger(L, {idx});",
+        BindingType.Int64 => $"    int64_t {p.Name} = (int64_t)luaL_checkinteger(L, {idx});",
+        BindingType.UInt32 => $"    uint32_t {p.Name} = (uint32_t)luaL_checkinteger(L, {idx});",
+        BindingType.UInt64 => $"    uint64_t {p.Name} = (uint64_t)luaL_checkinteger(L, {idx});",
+        BindingType.Size => $"    size_t {p.Name} = (size_t)luaL_checkinteger(L, {idx});",
+        BindingType.Float => $"    float {p.Name} = (float)luaL_checknumber(L, {idx});",
+        BindingType.Double => $"    double {p.Name} = (double)luaL_checknumber(L, {idx});",
+        BindingType.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});",
+        BindingType.Str => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
+        BindingType.ConstPtr(BindingType.Str) => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
+        BindingType.Enum(var eName, _) => $"    {eName} {p.Name} = ({eName})luaL_checkinteger(L, {idx});",
+        BindingType.VoidPtr => $"    void* {p.Name} = lua_touserdata(L, {idx});",
+        BindingType.Ptr(BindingType.Struct(var cName, var mt, _)) =>
+            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
+            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        BindingType.Struct(var cName, var mt, _) =>
+            $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        _ => $"    /* unsupported param type for {p.Name} */"
+    };
 
     // ===== BindingType → 旧 CBinding.Type 変換 (内部用) =====
 

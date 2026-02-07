@@ -4,6 +4,7 @@ using System.Text.Json.Serialization;
 using Generator;
 using Generator.ClangAst;
 using Generator.Modules.Sokol;
+using Generator.Modules.Miniaudio;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -69,10 +70,15 @@ rootCommand.SetAction(parseResult =>
     var headerPaths = sokolHeaders.Select(h => FindHeader(h, sokolIncludePaths)).ToList();
     Console.WriteLine($"Parsing {headerPaths.Count} headers with clang ...");
 
-    var unified = ClangRunner.ParseHeaders(
+    var (sokolRawJson, unified) = ClangRunner.ParseHeadersWithRawJson(
         clangPath, headerPaths,
         prefixToModule.Keys.ToList(),
         sokolIncludePaths);
+
+    // clang 生 AST JSON を保存
+    var sokolAstPath = Path.Combine(outputDir, "sokol_clang_ast.json");
+    File.WriteAllText(sokolAstPath, sokolRawJson);
+    Console.WriteLine($"Generated: {sokolAstPath} (raw clang AST)");
 
     Console.WriteLine($"  Found {unified.Decls.Count} declarations total");
 
@@ -116,6 +122,47 @@ rootCommand.SetAction(parseResult =>
         var luaPath = Path.Combine(outputDir, $"{moduleId}.lua");
         File.WriteAllText(luaPath, mod.GenerateLua(reg, prefixToModule, sourceLink));
         Console.WriteLine($"Generated: {luaPath}");
+    }
+
+    // --- ヘッダグループ (Miniaudio) ---
+    var miniaudioModule = new MiniaudioModule();
+    var miniaudioHeader = Path.Combine(depsDir, "miniaudio", "miniaudio.h");
+    var miniaudioIncludePaths = new List<string>
+    {
+        Path.Combine(depsDir, "miniaudio")
+    };
+
+    Console.WriteLine("Parsing miniaudio header with clang ...");
+    var (maRawJson, maUnified) = ClangRunner.ParseHeadersWithRawJson(
+        clangPath, [miniaudioHeader], [miniaudioModule.Prefix],
+        miniaudioIncludePaths);
+
+    // clang 生 AST JSON を保存
+    var maAstPath = Path.Combine(outputDir, "miniaudio_clang_ast.json");
+    File.WriteAllText(maAstPath, maRawJson);
+    Console.WriteLine($"Generated: {maAstPath} (raw clang AST)");
+
+    Console.WriteLine($"  Found {maUnified.Decls.Count} declarations total");
+
+    {
+        var maView = ClangRunner.CreateView(maUnified, miniaudioModule.Prefix, miniaudioModule.ModuleName);
+        var maReg = TypeRegistry.FromModule(maView);
+        var maPrefixToModule = new Dictionary<string, string> { [miniaudioModule.Prefix] = miniaudioModule.ModuleName };
+        var maSourceLink = SourceLink.FromHeader(depsDir, "miniaudio/miniaudio.h");
+
+        var maModuleId = miniaudioModule.ModuleName.Replace('.', '_');
+
+        var maJsonPath = Path.Combine(outputDir, $"{maModuleId}.json");
+        File.WriteAllText(maJsonPath, JsonSerializer.Serialize(maView, jsonOptions));
+        Console.WriteLine($"Generated: {maJsonPath}");
+
+        var maCPath = Path.Combine(outputDir, $"{maModuleId}.c");
+        File.WriteAllText(maCPath, miniaudioModule.GenerateC(maReg, maPrefixToModule));
+        Console.WriteLine($"Generated: {maCPath}");
+
+        var maLuaPath = Path.Combine(outputDir, $"{maModuleId}.lua");
+        File.WriteAllText(maLuaPath, miniaudioModule.GenerateLua(maReg, maPrefixToModule, maSourceLink));
+        Console.WriteLine($"Generated: {maLuaPath}");
     }
 
     return 0;

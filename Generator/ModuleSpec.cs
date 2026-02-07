@@ -11,8 +11,12 @@ public record ModuleSpec(
     List<StructBinding> Structs,
     List<FuncBinding> Funcs,
     List<EnumBinding> Enums,
-    List<(string LuaName, string CFunc)> ExtraLuaRegs
-);
+    List<(string LuaName, string CFunc)> ExtraLuaRegs,
+    List<OpaqueTypeBinding> OpaqueTypes = default!
+)
+{
+    public List<OpaqueTypeBinding> OpaqueTypes { get; init; } = OpaqueTypes ?? [];
+}
 
 public record StructBinding(
     string CName,
@@ -54,4 +58,25 @@ public record EnumItemBinding(
     string LuaName,
     string CConstName,
     int? Value
+);
+
+public record OpaqueTypeBinding(
+    string CName,
+    string PascalName,
+    string Metatable,
+    string LuaClassName,
+    string? InitFunc,
+    string? UninitFunc,
+    string? ConfigType,
+    string? ConfigInitFunc,
+    List<MethodBinding> Methods,
+    string? SourceLink
+);
+
+public record MethodBinding(
+    string CName,
+    string LuaName,
+    List<ParamBinding> Params,
+    BindingType ReturnType,
+    string? SourceLink
 );
