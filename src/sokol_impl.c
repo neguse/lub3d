@@ -3,6 +3,9 @@
 /* Override SOKOL_ASSERT to log via sokol logger and exit cleanly (no dialog) */
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef __unix__
+#include <unistd.h>
+#endif
 /* Forward-declare slog_func (defined in sokol_log.h implementation) */
 void slog_func(const char* tag, unsigned int log_level, unsigned int log_item,
                const char* message, unsigned int line_nr,

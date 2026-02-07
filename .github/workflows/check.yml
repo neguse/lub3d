@@ -21,7 +21,7 @@ jobs:
         run: sudo apt-get install -y clang
 
       - name: Generate bindings (C# Generator)
-        run: dotnet run --project Generator -- gen --deps deps --clang clang
+        run: dotnet run --project Generator -- gen --deps deps --clang $(which clang)
 
       - name: Setup Lua Language Server
         run: |
