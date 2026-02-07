@@ -253,7 +253,7 @@ M.width = 1280
 M.height = 720
 M.window_title = "Lub3d - Lighting"
 
-function M.init()
+function M:init()
     log.info("Lighting example init")
 
     -- Initialize sokol.gfx
@@ -344,7 +344,7 @@ function M.init()
     log.info("Init complete")
 end
 
-function M.frame()
+function M:frame()
     t = t + 1 / 60
 
     -- Update camera based on input
@@ -461,7 +461,7 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.event(ev)
+function M:event(ev)
     local evtype = ev.type
     if evtype == app.EventType.KEY_DOWN then
         local key = ev.key_code
@@ -512,7 +512,7 @@ function M.event(ev)
     end
 end
 
-function M.cleanup()
+function M:cleanup()
     gfx.Shutdown()
     log.info("Lighting cleanup")
 end

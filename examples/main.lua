@@ -45,7 +45,7 @@ M.width = 800
 M.height = 600
 M.window_title = "Lub3d - Triangle"
 
-function M.init()
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -86,7 +86,7 @@ function M.init()
     }))
 end
 
-function M.frame()
+function M:frame()
     t = t + 1.0 / 60.0
     if not pipeline or not vbuf then return end
 
@@ -125,11 +125,11 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.cleanup()
+function M:cleanup()
     gfx.Shutdown()
 end
 
-function M.event(ev)
+function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
         app.Quit()
     end

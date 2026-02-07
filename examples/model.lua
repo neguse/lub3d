@@ -246,7 +246,7 @@ end
 local default_diffuse_view, default_diffuse_smp
 local default_normal_view, default_normal_smp
 
-function M.init()
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -393,7 +393,7 @@ function M.init()
 end
 
 local frame_count = 0
-function M.frame()
+function M:frame()
     frame_count = frame_count + 1
     if frame_count == 1 then
         log.info("First frame!")
@@ -473,7 +473,7 @@ function M.frame()
 end
 
 local event_logged = false
-function M.event(ev)
+function M:event(ev)
     if not event_logged then
         log.info("Lua event() called!")
         event_logged = true
@@ -537,7 +537,7 @@ function M.event(ev)
     end
 end
 
-function M.cleanup()
+function M:cleanup()
     -- Destroy cached textures
     for _, tex in pairs(textures_cache) do
         tex.smp:destroy()

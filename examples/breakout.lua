@@ -285,7 +285,7 @@ M.width = 800
 M.height = 600
 M.window_title = "Lub3d - 3D Breakout"
 
-function M.init()
+function M:init()
     log.info("3D Block Breaker starting...")
 
     -- Initialize sokol.gfx
@@ -352,7 +352,7 @@ function M.init()
     log.info(string.format("Game initialized with %d blocks", #blocks))
 end
 
-function M.frame()
+function M:frame()
     t = t + 1.0 / 60.0
     local dt = 1.0 / 60.0
 
@@ -430,11 +430,11 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.cleanup()
+function M:cleanup()
     gfx.Shutdown()
 end
 
-function M.event(ev)
+function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         keys_down[ev.key_code] = true
         if ev.key_code == app.Keycode.Q then

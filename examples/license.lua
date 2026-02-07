@@ -12,7 +12,7 @@ M.width = 1024
 M.height = 768
 M.window_title = "Lub3d - Licenses"
 
-function M.init()
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -38,7 +38,7 @@ function M.init()
     license_text = table.concat(parts)
 end
 
-function M.frame()
+function M:frame()
     local w = app.Width()
     local h = app.Height()
 
@@ -67,12 +67,12 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.cleanup()
+function M:cleanup()
     imgui.Shutdown()
     gfx.Shutdown()
 end
 
-function M.event(ev)
+function M:event(ev)
     imgui.HandleEvent(ev)
 end
 

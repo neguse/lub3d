@@ -15,7 +15,7 @@ M.width = 800
 M.height = 600
 M.window_title = "Lub3d - ImGui Test"
 
-function M.init()
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -24,7 +24,7 @@ function M.init()
     imgui.Setup()
 end
 
-function M.frame()
+function M:frame()
     imgui.NewFrame()
 
     -- Main debug window
@@ -68,11 +68,11 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.event(ev)
+function M:event(ev)
     imgui.HandleEvent(ev)
 end
 
-function M.cleanup()
+function M:cleanup()
     imgui.Shutdown()
     gfx.Shutdown()
 end

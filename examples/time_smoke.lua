@@ -63,11 +63,11 @@ M.width = 400
 M.height = 300
 M.window_title = "sokol.time smoke test"
 
-function M.init()
+function M:init()
     info("init")
 end
 
-function M.frame()
+function M:frame()
     if not tested then
         tested = true
         smoke_test()
@@ -75,7 +75,7 @@ function M.frame()
     end
 end
 
-function M.cleanup()
+function M:cleanup()
     info("cleanup")
 end
 

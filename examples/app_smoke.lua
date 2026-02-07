@@ -80,11 +80,11 @@ M.height = 600
 M.window_title = "sokol.app smoke test"
 M.enable_clipboard = true
 
-function M.init()
+function M:init()
     info("init")
 end
 
-function M.frame()
+function M:frame()
     if not tested then
         tested = true
         smoke_test()
@@ -92,11 +92,11 @@ function M.frame()
     end
 end
 
-function M.cleanup()
+function M:cleanup()
     info("cleanup")
 end
 
-function M.event(ev)
+function M:event(ev)
     -- Exercise event struct metamethods
     if ev then
         local _ = ev.type
