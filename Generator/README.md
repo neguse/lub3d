@@ -1,94 +1,124 @@
 # Generator 設計
 
-C/C++ ライブラリから Lua バインディング（C/C++）と型定義（LuaCATS）を生成するツール。
+C/C++ ヘッダから Lua バインディング（C/C++）と型定義（LuaCATS）を自動生成する。
 
 ## アーキテクチャ
 
-Clang JSON を入力として、LuaCATS 型定義と C バインディングを出力する。
-入力(ClangAst)と出力(LuaCats/CBinding)それぞれにモデルを持ち、Pipeline がデフォルト変換を提供する。
-Modules で変換をカスタマイズし、モジュール固有のコード生成を行う。
-
 ```mermaid
 flowchart TD
-    JSON[/Clang JSON/] --> TypeRegistry
-    TypeRegistry --> ClangAst[/ClangAst.*/]
-    ClangAst --> Modules
-    Modules --> LuaCats[/LuaCats.*/]
-    Modules --> CBinding[/CBinding.*/]
-    LuaCats --> LuaCatsGen
-    CBinding --> CBindingGen
-    LuaCatsGen --> LuaCatsOutput[/LuaCATS/]
-    CBindingGen --> COutput[/C・C++/]
-    Pipeline -.-> Modules
+    Headers[/C/C++ Headers/] --> ClangRunner
+    ClangRunner --> TypeRegistry
+    TypeRegistry --> IModule
+    IModule --> ModuleSpec
+    ModuleSpec --> CBindingGen --> COutput[/C・C++/]
+    ModuleSpec --> LuaCatsGen --> LuaOutput[/LuaCATS/]
+    Pipeline -.->|default transform| IModule
+    BindingType -.->|unified types| ModuleSpec
 ```
 
-| 層 | 入力 | 出力 |
-|----|------|------|
-| ClangAst.TypeRegistry | Clang JSON | ClangAst.* |
-| Modules/* | ClangAst.* | LuaCats.* / CBinding.* |
-| LuaCats.Gen | LuaCats.* | 文字列 |
-| CBinding.Gen | CBinding.* | 文字列 |
-| Pipeline | ClangAst.* | LuaCats.* / CBinding.*（デフォルト変換） |
+| 層 | 責務 |
+|----|------|
+| `ClangAst/ClangAst.cs` | Clang JSON → `Types`, `Structs`, `Funcs`, `Enums` レコード |
+| `ClangAst/TypeRegistry.cs` | `Module` → struct/func/enum 辞書。`CTypeParser` で C 型文字列をパース |
+| `ClangAst/SourceLink.cs` | GitHub ソースリンク URL 生成 |
+| `BindingType.cs` | 統一型システム（`Int`, `Str`, `Struct`, `Callback`, `Vec2`, `Custom`, ...） |
+| `ModuleSpec.cs` | 中間データモデル（`StructBinding`, `FuncBinding`, `EnumBinding`, `OpaqueTypeBinding`） |
+| `Pipeline.cs` | ClangAst → `ModuleSpec` デフォルト変換 + 文字列ヘルパ（`ToPascalCase`, `StripPrefix`, ...） |
+| `IModule.cs` | `GenerateC(reg, prefixToModule)` / `GenerateLua(reg, prefixToModule, sourceLink?)` |
+| `CBinding/CBindingGen.cs` | `ModuleSpec` → C/C++ 文字列生成。`IsCpp` で C++ モード分岐 |
+| `LuaCats/LuaCatsGen.cs` | `ModuleSpec` → LuaCATS 文字列生成 |
 
-## 型定義
+## モジュール
 
-### ClangAst（入力）
+### Sokol (10 modules) — `Modules/Sokol/`
 
-```csharp
-namespace Generator.ClangAst;
+`SokolModule` 基底クラスが `TypeRegistry` → `ModuleSpec` 変換を自動化。サブクラスはフックのみオーバーライド。
 
-public abstract record Types { ... }  // Int, Float, Ptr, FuncPtr, StructRef, ...
-public record Structs(...);
-public record Funcs(...);
-public record Enums(...);
-```
+| Class | Prefix | Lua module |
+|---|---|---|
+| `App` | `sapp_` | `sokol.app` |
+| `Audio` | `saudio_` | `sokol.audio` |
+| `DebugText` | `sdtx_` | `sokol.debugtext` |
+| `Gfx` | `sg_` | `sokol.gfx` |
+| `Gl` | `sgl_` | `sokol.gl` |
+| `Glue` | `sglue_` | `sokol.glue` |
+| `Imgui` | `simgui_` | `sokol.imgui` |
+| `Log` | `slog_` | `sokol.log` |
+| `Shape` | `sshape_` | `sokol.shape` |
+| `Time` | `stm_` | `sokol.time` |
 
-### LuaCats（出力モデル）
+### Dear ImGui — `Modules/Imgui/ImguiModule.cs`
 
-```csharp
-namespace Generator.LuaCats;
+`IModule` 直接実装。clang++ (`-std=c++17`) で `ImGui::` 名前空間をパース。
 
-public abstract record Type
-{
-    public record Primitive(string Name) : Type;  // integer, number, boolean, string, ...
-    public record Fun(List<(string Name, Type Type)> Args, Type? Ret) : Type;
-    public record Class(string FullName) : Type;  // app.Desc
-}
-```
+- `ImVec2`/`ImVec4` → `BindingType.Vec2`/`Vec4`（Lua テーブル）
+- オーバーロード → 型サフィックス（`_Str`, `_Int`, `_Float`, ...）
+- `CppFuncName` で `ImGui::Func` ディスパッチ
+- 出力: `imgui_gen.cpp` + `imgui.lua`
 
-### CBinding（出力モデル）
+### Miniaudio — `Modules/Miniaudio/MiniaudioModule.cs`
 
-```csharp
-namespace Generator.CBinding;
-
-public abstract record Type { ... }  // Int, Float, Pointer, FuncPtr, Struct, ...
-public record FieldInit(string FieldName, string LuaFieldName, Type Type, string? InitCode);
-public record Param(string Name, Type Type, string? CheckCode);
-```
+`IModule` 直接実装。`OpaqueTypeBinding` でポインタ型を管理。
 
 ## ファイル構成
 
 ```
 Generator/
-├── ClangAst.cs        # Clang 入力（Types, Structs, Funcs, Enums, TypeRegistry, CTypeParser）
-├── LuaCats.cs         # LuaCATS 出力モデル
-├── LuaCatsGen.cs      # LuaCATS 文字列生成
-├── CBinding.cs        # C バインディング出力モデル
-├── CBindingGen.cs     # C バインディング文字列生成
-├── Pipeline.cs        # ClangAst → LuaCats/CBinding 変換
-├── Program.cs         # CLI
-└── Modules/
-    └── App.cs         # sokol_app 固有ロジック
+  Program.cs              CLI (System.CommandLine)
+  IModule.cs              モジュールインターフェース
+  ModuleSpec.cs           中間データモデル
+  BindingType.cs          統一型システム
+  Pipeline.cs             デフォルト変換 + 文字列ヘルパ
+  ClangAst/
+    ClangAst.cs           Clang JSON パーサ + ClangRunner
+    TypeRegistry.cs       型レジストリ
+    SourceLink.cs         GitHub リンク生成
+  CBinding/
+    CBinding.cs           C 出力モデル (Type, FieldInit, Param)
+    CBindingGen.cs        C/C++ コード生成
+  LuaCats/
+    LuaCats.cs            LuaCATS 出力モデル (Type.Primitive, Type.Fun, Type.Class)
+    LuaCatsGen.cs         LuaCATS コード生成
+  Modules/
+    Sokol/
+      SokolModule.cs      Sokol 基底クラス
+      App.cs ... Time.cs  各モジュール (10)
+    Imgui/
+      ImguiModule.cs      Dear ImGui (C++)
+    Miniaudio/
+      MiniaudioModule.cs  Miniaudio
 ```
 
 ## 使用方法
 
 ```bash
-dotnet run --project Generator -- <input.json> <output-dir>
+# CMake 経由（通常はこちら）
+scripts\build.bat
+
+# 直接実行
+dotnet run --project Generator -- <output-dir> --deps <deps-dir> --clang <clang-path>
 ```
 
 ## テスト
 
 ```bash
-dotnet test
+dotnet test Generator.Tests   # 338 tests
 ```
+
+テストは JSON フィクスチャベース。clang 不要。`Assert.Contains` で出力順序に依存しない。
+
+## 新モジュール追加
+
+### Sokol モジュール
+
+1. `Modules/Sokol/` に新クラス作成、`SokolModule` 継承
+2. `ModuleName` と `Prefix` をオーバーライド
+3. 必要に応じてフック（`CustomizeType`, `ExtraRegs` 等）をオーバーライド
+4. `Program.cs` の `modules` 配列に追加、`sokolHeaders` にヘッダ追加
+
+### C++ モジュール
+
+1. `IModule` を直接実装
+2. `ClangRunner.ParseCppHeadersWithRawJson()` で C++ AST パース
+3. `ModuleSpec` を手動構築、`IsCpp = true`
+4. `Program.cs` に独立セクション追加
