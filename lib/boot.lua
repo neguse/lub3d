@@ -5,6 +5,11 @@
 --   _lub3d_script  (string)  → require the module by name (hotreload works)
 --   _lub3d_module  (table)   → use directly (playground, no hotreload)
 
+---@type string?
+local _lub3d_script = _lub3d_script ---@diagnostic disable-line: undefined-global
+---@type table?
+local _lub3d_module = _lub3d_module ---@diagnostic disable-line: undefined-global
+
 local app = require("sokol.app")
 
 -- Set up hotreload BEFORE requiring the entry script,
