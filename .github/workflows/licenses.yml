@@ -1,0 +1,41 @@
+name: Update licenses
+
+on:
+  pull_request:
+    paths:
+      - "deps/**"
+      - "scripts/gen_licenses.py"
+
+permissions:
+  contents: write
+
+jobs:
+  update-notices:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          ref: ${{ github.head_ref }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate THIRD-PARTY-NOTICES
+        run: python scripts/gen_licenses.py --notices THIRD-PARTY-NOTICES
+
+      - name: Check for changes
+        id: diff
+        run: |
+          git diff --exit-code THIRD-PARTY-NOTICES || echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit and push
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add THIRD-PARTY-NOTICES
+          git commit -m "Update THIRD-PARTY-NOTICES"
+          git push
