@@ -223,4 +223,72 @@ public class LuaCatsGenSpecTests
         Assert.Contains("---@class sokol.empty", code);
         Assert.Contains("return M", code);
     }
+
+    // ===== Output params + multi-return =====
+
+    [Fact]
+    public void Generate_OutputParam_IncludedAsOptionalInput()
+    {
+        var spec = new ModuleSpec(
+            "imgui", "ImGui_", ["imgui.h"], null,
+            [],
+            [new FuncBinding("ImGui_Checkbox", "Checkbox",
+                [new ParamBinding("label", new BindingType.Str()),
+                 new ParamBinding("v", new BindingType.Bool(), IsOutput: true)],
+                new BindingType.Bool(), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("fun(label: string, v?: boolean): boolean, boolean", code);
+    }
+
+    [Fact]
+    public void Generate_MultiReturn_AllTypesListed()
+    {
+        var spec = new ModuleSpec(
+            "imgui", "ImGui_", ["imgui.h"], null,
+            [],
+            [new FuncBinding("ImGui_SliderFloat", "SliderFloat",
+                [new ParamBinding("label", new BindingType.Str()),
+                 new ParamBinding("v", new BindingType.Float(), IsOutput: true),
+                 new ParamBinding("v_min", new BindingType.Float()),
+                 new ParamBinding("v_max", new BindingType.Float())],
+                new BindingType.Bool(), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("fun(label: string, v?: number, v_min: number, v_max: number): boolean, number", code);
+    }
+
+    [Fact]
+    public void Generate_NoOutputParam_SingleReturn()
+    {
+        var spec = new ModuleSpec(
+            "imgui", "ImGui_", ["imgui.h"], null,
+            [],
+            [new FuncBinding("ImGui_Begin", "Begin",
+                [new ParamBinding("name", new BindingType.Str())],
+                new BindingType.Bool(), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("fun(name: string): boolean", code);
+    }
+
+    // ===== ExtraLuaFuncs =====
+
+    [Fact]
+    public void Generate_ExtraLuaFuncs_IncludedInModule()
+    {
+        var spec = new ModuleSpec(
+            "miniaudio", "ma_", ["miniaudio.h"], null,
+            [], [], [], [],
+            ExtraLuaFuncs:
+            [
+                new FuncBinding("l_ma_sound_new", "SoundInitFromFile",
+                    [new ParamBinding("engine", new BindingType.Struct("ma_engine", "miniaudio.Engine", "miniaudio.Engine")),
+                     new ParamBinding("filePath", new BindingType.Str()),
+                     new ParamBinding("flags", new BindingType.Int(), IsOptional: true)],
+                    new BindingType.Struct("ma_sound", "miniaudio.Sound", "miniaudio.Sound"), null),
+            ]);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("SoundInitFromFile fun(engine: miniaudio.Engine, filePath: string, flags?: integer): miniaudio.Sound", code);
+    }
 }

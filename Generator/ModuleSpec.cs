@@ -14,10 +14,12 @@ public record ModuleSpec(
     List<(string LuaName, string CFunc)> ExtraLuaRegs,
     List<OpaqueTypeBinding> OpaqueTypes = default!,
     bool IsCpp = false,
-    string? EntryPoint = null
+    string? EntryPoint = null,
+    List<FuncBinding>? ExtraLuaFuncs = null
 )
 {
     public List<OpaqueTypeBinding> OpaqueTypes { get; init; } = OpaqueTypes ?? [];
+    public List<FuncBinding> ExtraLuaFuncs { get; init; } = ExtraLuaFuncs ?? [];
 }
 
 public record StructBinding(

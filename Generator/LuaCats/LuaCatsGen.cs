@@ -58,15 +58,24 @@ public static class LuaCatsGen
         """;
 
     /// <summary>
-    /// 関数の LuaCATS フィールド定義
+    /// 関数の LuaCATS フィールド定義 (複数戻り値対応)
+    /// </summary>
+    public static string FuncField(string name, IEnumerable<(string name, Type type)> parameters, IEnumerable<Type> retTypes, string? sourceLink = null)
+    {
+        var args = string.Join(", ", parameters.Select(p => $"{p.name}: {TypeToString(p.type)}"));
+        var retList = retTypes.ToList();
+        var retStr = retList.Count > 0 ? ": " + string.Join(", ", retList.Select(TypeToString)) : "";
+        var suffix = sourceLink != null ? $" [source]({sourceLink})" : "";
+        return $"---@field {name} fun({args}){retStr}{suffix}";
+    }
+
+    /// <summary>
+    /// 関数の LuaCATS フィールド定義 (単一戻り値 — 後方互換)
     /// </summary>
     public static string FuncField(string name, IEnumerable<(string name, Type type)> parameters, Type? ret, string? sourceLink = null)
     {
-        var args = string.Join(", ", parameters.Select(p => $"{p.name}: {TypeToString(p.type)}"));
-        var suffix = sourceLink != null ? $" [source]({sourceLink})" : "";
-        return ret == null
-            ? $"---@field {name} fun({args}){suffix}"
-            : $"---@field {name} fun({args}): {TypeToString(ret)}{suffix}";
+        var retTypes = ret != null ? [ret] : Array.Empty<Type>();
+        return FuncField(name, parameters, retTypes, sourceLink);
     }
 
     /// <summary>
@@ -128,15 +137,24 @@ public static class LuaCatsGen
         foreach (var f in spec.Funcs)
         {
             var parms = f.Params
-                .Where(p => !p.IsOutput)
-                .Select(p => (p.IsOptional ? p.Name + "?" : p.Name, ToLuaCatsType(p.Type)));
+                .Select(p => (p.IsOptional || p.IsOutput ? p.Name + "?" : p.Name, ToLuaCatsType(p.Type)));
             var retTypes = new List<Type>();
             if (f.ReturnType is not BindingType.Void)
                 retTypes.Add(ToLuaCatsType(f.ReturnType));
             foreach (var op in f.Params.Where(p => p.IsOutput))
                 retTypes.Add(ToLuaCatsType(op.Type));
-            var ret = retTypes.Count > 0 ? retTypes[0] : null;
-            moduleFields.Add(FuncField(f.LuaName, parms, ret, f.SourceLink));
+            moduleFields.Add(FuncField(f.LuaName, parms, retTypes, f.SourceLink));
+        }
+        foreach (var f in spec.ExtraLuaFuncs)
+        {
+            var parms = f.Params
+                .Select(p => (p.IsOptional || p.IsOutput ? p.Name + "?" : p.Name, ToLuaCatsType(p.Type)));
+            var retTypes = new List<Type>();
+            if (f.ReturnType is not BindingType.Void)
+                retTypes.Add(ToLuaCatsType(f.ReturnType));
+            foreach (var op in f.Params.Where(p => p.IsOutput))
+                retTypes.Add(ToLuaCatsType(op.Type));
+            moduleFields.Add(FuncField(f.LuaName, parms, retTypes, f.SourceLink));
         }
         sb += ModuleClass(spec.ModuleName, moduleFields);
 

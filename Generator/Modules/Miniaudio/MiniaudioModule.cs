@@ -255,7 +255,17 @@ public class MiniaudioModule : IModule
             ExtraCCode(),
             [], [], enums,
             [("SoundInitFromFile", "l_ma_sound_new")],
-            opaqueTypes);
+            opaqueTypes,
+            ExtraLuaFuncs:
+            [
+                new FuncBinding("l_ma_sound_new", "SoundInitFromFile",
+                    [
+                        new ParamBinding("engine", new BindingType.Struct("ma_engine", "miniaudio.Engine", "miniaudio.Engine")),
+                        new ParamBinding("filePath", new BindingType.Str()),
+                        new ParamBinding("flags", new BindingType.Int(), IsOptional: true),
+                    ],
+                    new BindingType.Struct("ma_sound", "miniaudio.Sound", "miniaudio.Sound"), null),
+            ]);
     }
 
     // ===== IModule 実装 =====
