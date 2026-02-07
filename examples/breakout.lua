@@ -102,17 +102,17 @@ local function make_cube_vertices()
     local v = {}
     local faces = {
         -- front (z+)
-        {{ -0.5, -0.5,  0.5}, { 0.5, -0.5,  0.5}, { 0.5,  0.5,  0.5}, {-0.5,  0.5,  0.5}, {0, 0, 1}},
+        { { -0.5, -0.5, 0.5 }, { 0.5, -0.5, 0.5 }, { 0.5, 0.5, 0.5 },  { -0.5, 0.5, 0.5 }, { 0, 0, 1 } },
         -- back (z-)
-        {{ 0.5, -0.5, -0.5}, {-0.5, -0.5, -0.5}, {-0.5,  0.5, -0.5}, { 0.5,  0.5, -0.5}, {0, 0, -1}},
+        { { 0.5, -0.5, -0.5 }, { -0.5, -0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0, 0, -1 } },
         -- top (y+)
-        {{-0.5,  0.5,  0.5}, { 0.5,  0.5,  0.5}, { 0.5,  0.5, -0.5}, {-0.5,  0.5, -0.5}, {0, 1, 0}},
+        { { -0.5, 0.5, 0.5 },  { 0.5, 0.5, 0.5 },  { 0.5, 0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0, 1, 0 } },
         -- bottom (y-)
-        {{-0.5, -0.5, -0.5}, { 0.5, -0.5, -0.5}, { 0.5, -0.5,  0.5}, {-0.5, -0.5,  0.5}, {0, -1, 0}},
+        { { -0.5, -0.5, -0.5 }, { 0.5, -0.5, -0.5 }, { 0.5, -0.5, 0.5 }, { -0.5, -0.5, 0.5 }, { 0, -1, 0 } },
         -- right (x+)
-        {{ 0.5, -0.5,  0.5}, { 0.5, -0.5, -0.5}, { 0.5,  0.5, -0.5}, { 0.5,  0.5,  0.5}, {1, 0, 0}},
+        { { 0.5, -0.5, 0.5 },  { 0.5, -0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0.5, 0.5, 0.5 }, { 1, 0, 0 } },
         -- left (x-)
-        {{-0.5, -0.5, -0.5}, {-0.5, -0.5,  0.5}, {-0.5,  0.5,  0.5}, {-0.5,  0.5, -0.5}, {-1, 0, 0}},
+        { { -0.5, -0.5, -0.5 }, { -0.5, -0.5, 0.5 }, { -0.5, 0.5, 0.5 }, { -0.5, 0.5, -0.5 }, { -1, 0, 0 } },
     }
 
     for _, face in ipairs(faces) do
@@ -153,11 +153,11 @@ end
 local function init_blocks()
     blocks = {}
     local colors = {
-        glm.vec3(1.0, 0.3, 0.3),  -- red
-        glm.vec3(1.0, 0.6, 0.2),  -- orange
-        glm.vec3(1.0, 1.0, 0.3),  -- yellow
-        glm.vec3(0.3, 1.0, 0.3),  -- green
-        glm.vec3(0.3, 0.6, 1.0),  -- blue
+        glm.vec3(1.0, 0.3, 0.3), -- red
+        glm.vec3(1.0, 0.6, 0.2), -- orange
+        glm.vec3(1.0, 1.0, 0.3), -- yellow
+        glm.vec3(0.3, 1.0, 0.3), -- green
+        glm.vec3(0.3, 0.6, 1.0), -- blue
     }
     for row = 1, BLOCK_ROWS do
         for col = 1, BLOCK_COLS do
@@ -187,8 +187,8 @@ local function init_game()
             stage = gfx.ShaderStage.VERTEX,
             size = 144,
             glsl_uniforms = {
-                { type = gfx.UniformType.MAT4, glsl_name = "mvp" },
-                { type = gfx.UniformType.MAT4, glsl_name = "model" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "model" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "color" },
             }
         }
@@ -206,8 +206,8 @@ local function init_game()
         shader = shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT3 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- normal
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
             }
         },
         index_type = gfx.IndexType.UINT16,
@@ -248,39 +248,39 @@ local function update_game_logic(dt)
     ball_y = ball_y + ball_vy * dt
 
     -- Wall collision (left/right)
-    if ball_x < -FIELD_WIDTH/2 + BALL_SIZE/2 then
-        ball_x = -FIELD_WIDTH/2 + BALL_SIZE/2
+    if ball_x < -FIELD_WIDTH / 2 + BALL_SIZE / 2 then
+        ball_x = -FIELD_WIDTH / 2 + BALL_SIZE / 2
         ball_vx = -ball_vx
-    elseif ball_x > FIELD_WIDTH/2 - BALL_SIZE/2 then
-        ball_x = FIELD_WIDTH/2 - BALL_SIZE/2
+    elseif ball_x > FIELD_WIDTH / 2 - BALL_SIZE / 2 then
+        ball_x = FIELD_WIDTH / 2 - BALL_SIZE / 2
         ball_vx = -ball_vx
     end
 
     -- Wall collision (top)
-    if ball_y > FIELD_HEIGHT/2 - BALL_SIZE/2 then
-        ball_y = FIELD_HEIGHT/2 - BALL_SIZE/2
+    if ball_y > FIELD_HEIGHT / 2 - BALL_SIZE / 2 then
+        ball_y = FIELD_HEIGHT / 2 - BALL_SIZE / 2
         ball_vy = -ball_vy
     end
 
     -- Ball out of bounds (bottom)
-    if ball_y < -FIELD_HEIGHT/2 then
+    if ball_y < -FIELD_HEIGHT / 2 then
         game_over = true
         log.info("Game Over! Score: " .. score)
         return
     end
 
     -- Paddle collision
-    local paddle_top = -FIELD_HEIGHT/2 + 1 + PADDLE_HEIGHT/2
-    local paddle_bottom = -FIELD_HEIGHT/2 + 1 - PADDLE_HEIGHT/2
+    local paddle_top = -FIELD_HEIGHT / 2 + 1 + PADDLE_HEIGHT / 2
+    local paddle_bottom = -FIELD_HEIGHT / 2 + 1 - PADDLE_HEIGHT / 2
     if ball_vy < 0 and
-       ball_y - BALL_SIZE/2 < paddle_top and
-       ball_y + BALL_SIZE/2 > paddle_bottom and
-       ball_x > paddle_x - PADDLE_WIDTH/2 and
-       ball_x < paddle_x + PADDLE_WIDTH/2 then
-        ball_y = paddle_top + BALL_SIZE/2
+        ball_y - BALL_SIZE / 2 < paddle_top and
+        ball_y + BALL_SIZE / 2 > paddle_bottom and
+        ball_x > paddle_x - PADDLE_WIDTH / 2 and
+        ball_x < paddle_x + PADDLE_WIDTH / 2 then
+        ball_y = paddle_top + BALL_SIZE / 2
         ball_vy = -ball_vy
         -- Add angle based on where ball hit paddle
-        local hit_pos = (ball_x - paddle_x) / (PADDLE_WIDTH/2)
+        local hit_pos = (ball_x - paddle_x) / (PADDLE_WIDTH / 2)
         ball_vx = ball_vx + hit_pos * 2
         -- Clamp velocity
         ball_vx = glm.clamp(ball_vx, -6, 6)
@@ -290,11 +290,11 @@ local function update_game_logic(dt)
     for _, block in ipairs(blocks) do
         if block.alive then
             local bx, by = block.x, block.y
-            local hw, hh = BLOCK_WIDTH/2, BLOCK_HEIGHT/2
-            if ball_x + BALL_SIZE/2 > bx - hw and
-               ball_x - BALL_SIZE/2 < bx + hw and
-               ball_y + BALL_SIZE/2 > by - hh and
-               ball_y - BALL_SIZE/2 < by + hh then
+            local hw, hh = BLOCK_WIDTH / 2, BLOCK_HEIGHT / 2
+            if ball_x + BALL_SIZE / 2 > bx - hw and
+                ball_x - BALL_SIZE / 2 < bx + hw and
+                ball_y + BALL_SIZE / 2 > by - hh and
+                ball_y - BALL_SIZE / 2 < by + hh then
                 block.alive = false
                 score = score + 10
 
@@ -314,7 +314,10 @@ local function update_game_logic(dt)
     -- Check win condition
     local all_dead = true
     for _, block in ipairs(blocks) do
-        if block.alive then all_dead = false break end
+        if block.alive then
+            all_dead = false
+            break
+        end
     end
     if all_dead then
         log.info("You Win! Score: " .. score)
@@ -359,7 +362,7 @@ local function update_frame()
         paddle_x = paddle_x + paddle_speed
     end
     -- Clamp paddle
-    local max_x = FIELD_WIDTH/2 - PADDLE_WIDTH/2
+    local max_x = FIELD_WIDTH / 2 - PADDLE_WIDTH / 2
     paddle_x = glm.clamp(paddle_x, -max_x, max_x)
 
     update_game_logic(dt)
@@ -396,22 +399,25 @@ local function update_frame()
 
     -- Draw walls (faint)
     local wall_color = glm.vec3(0.2, 0.2, 0.3)
-    draw_cube(proj, view, glm.vec3(-FIELD_WIDTH/2 - 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
-    draw_cube(proj, view, glm.vec3(FIELD_WIDTH/2 + 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
-    draw_cube(proj, view, glm.vec3(0, FIELD_HEIGHT/2 + 0.25, 0), glm.vec3(FIELD_WIDTH + 1, 0.5, 1), wall_color)
+    draw_cube(proj, view, glm.vec3(-FIELD_WIDTH / 2 - 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
+    draw_cube(proj, view, glm.vec3(FIELD_WIDTH / 2 + 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
+    draw_cube(proj, view, glm.vec3(0, FIELD_HEIGHT / 2 + 0.25, 0), glm.vec3(FIELD_WIDTH + 1, 0.5, 1), wall_color)
 
     -- Draw paddle
-    local paddle_y = -FIELD_HEIGHT/2 + 1
-    draw_cube(proj, view, glm.vec3(paddle_x, paddle_y, 0), glm.vec3(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_DEPTH), glm.vec3(0.8, 0.8, 0.9))
+    local paddle_y = -FIELD_HEIGHT / 2 + 1
+    draw_cube(proj, view, glm.vec3(paddle_x, paddle_y, 0), glm.vec3(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_DEPTH),
+        glm.vec3(0.8, 0.8, 0.9))
 
     -- Draw ball
     local pulse = math.sin(t * 10) * 0.1 + 0.9
-    draw_cube(proj, view, glm.vec3(ball_x, ball_y, 0), glm.vec3(BALL_SIZE, BALL_SIZE, BALL_SIZE), glm.vec3(pulse, pulse, 1.0))
+    draw_cube(proj, view, glm.vec3(ball_x, ball_y, 0), glm.vec3(BALL_SIZE, BALL_SIZE, BALL_SIZE),
+        glm.vec3(pulse, pulse, 1.0))
 
     -- Draw blocks
     for _, block in ipairs(blocks) do
         if block.alive then
-            draw_cube(proj, view, glm.vec3(block.x, block.y, 0), glm.vec3(BLOCK_WIDTH, BLOCK_HEIGHT, BLOCK_DEPTH), block.color)
+            draw_cube(proj, view, glm.vec3(block.x, block.y, 0), glm.vec3(BLOCK_WIDTH, BLOCK_HEIGHT, BLOCK_DEPTH),
+                block.color)
         end
     end
 
@@ -449,8 +455,8 @@ app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - 3D Breakout",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

@@ -72,9 +72,9 @@ local function init_game()
     -- Each vertex: pos (x, y), color (r, g, b)
     local vertices = {
         -- pos          -- color
-         0.0,  0.5,     1.0, 0.0, 0.0,  -- top (red)
-         0.5, -0.5,     0.0, 1.0, 0.0,  -- bottom right (green)
-        -0.5, -0.5,     0.0, 0.0, 1.0,  -- bottom left (blue)
+        0.0, 0.5, 1.0, 0.0, 0.0,       -- top (red)
+        0.5, -0.5, 0.0, 1.0, 0.0,      -- bottom right (green)
+        -0.5, -0.5, 0.0, 0.0, 1.0,     -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
     vbuf = gfx.MakeBuffer(gfx.BufferDesc({
@@ -86,9 +86,9 @@ local function init_game()
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.VERTEX,
-                size = 32,  -- 1 vec4 (16) + 1 float padded to 16 = 32 bytes
+                size = 32, -- 1 vec4 (16) + 1 float padded to 16 = 32 bytes
                 glsl_uniforms = {
-                    { glsl_name = "tint", type = gfx.UniformType.FLOAT4 },
+                    { glsl_name = "tint",     type = gfx.UniformType.FLOAT4 },
                     { glsl_name = "rotation", type = gfx.UniformType.FLOAT },
                 },
             },
@@ -109,8 +109,8 @@ local function init_game()
         shader = shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT2 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- color
+                { format = gfx.VertexFormat.FLOAT2 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- color
             },
         },
     }))
@@ -129,10 +129,10 @@ local function update_frame()
     -- === RENDER PASS ===
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 },
-            }},
+            } },
         }),
         swapchain = glue.Swapchain(),
     }))
@@ -212,8 +212,8 @@ app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Simple Triangle with ImGui",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

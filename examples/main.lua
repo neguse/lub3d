@@ -135,8 +135,8 @@ app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Triangle",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

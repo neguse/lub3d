@@ -11,14 +11,14 @@ local glm = require("lib.glm")
 -- Camera
 local camera_pos = glm.vec3(0, -15, 8)
 local camera_target = glm.vec3(0, 0, 3)
-local camera_up = glm.vec3(0, 0, 1)  -- Z-up coordinate system
+local camera_up = glm.vec3(0, 0, 1) -- Z-up coordinate system
 local camera_yaw = 0
 local camera_pitch = 0.3
 
 -- Light
 local light_pos = glm.vec3(5, -5, 10)
-local light_color = glm.vec3(2, 1.9, 1.8)  -- brighter
-local ambient_color = glm.vec3(0.5, 0.5, 0.5)  -- brighter
+local light_color = glm.vec3(2, 1.9, 1.8)     -- brighter
+local ambient_color = glm.vec3(0.5, 0.5, 0.5) -- brighter
 
 -- Graphics resources
 local shader = nil
@@ -139,17 +139,17 @@ local function make_cube_vertices()
     local v = {}
     local faces = {
         -- front (z+)
-        {{ -0.5, -0.5,  0.5}, { 0.5, -0.5,  0.5}, { 0.5,  0.5,  0.5}, {-0.5,  0.5,  0.5}, {0, 0, 1}, {{0,0},{1,0},{1,1},{0,1}}},
+        { { -0.5, -0.5, 0.5 }, { 0.5, -0.5, 0.5 }, { 0.5, 0.5, 0.5 },  { -0.5, 0.5, 0.5 }, { 0, 0, 1 }, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } } },
         -- back (z-)
-        {{ 0.5, -0.5, -0.5}, {-0.5, -0.5, -0.5}, {-0.5,  0.5, -0.5}, { 0.5,  0.5, -0.5}, {0, 0, -1}, {{0,0},{1,0},{1,1},{0,1}}},
+        { { 0.5, -0.5, -0.5 }, { -0.5, -0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0, 0, -1 }, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } } },
         -- top (y+)
-        {{-0.5,  0.5,  0.5}, { 0.5,  0.5,  0.5}, { 0.5,  0.5, -0.5}, {-0.5,  0.5, -0.5}, {0, 1, 0}, {{0,0},{1,0},{1,1},{0,1}}},
+        { { -0.5, 0.5, 0.5 },  { 0.5, 0.5, 0.5 },  { 0.5, 0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0, 1, 0 }, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } } },
         -- bottom (y-)
-        {{-0.5, -0.5, -0.5}, { 0.5, -0.5, -0.5}, { 0.5, -0.5,  0.5}, {-0.5, -0.5,  0.5}, {0, -1, 0}, {{0,0},{1,0},{1,1},{0,1}}},
+        { { -0.5, -0.5, -0.5 }, { 0.5, -0.5, -0.5 }, { 0.5, -0.5, 0.5 }, { -0.5, -0.5, 0.5 }, { 0, -1, 0 }, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } } },
         -- right (x+)
-        {{ 0.5, -0.5,  0.5}, { 0.5, -0.5, -0.5}, { 0.5,  0.5, -0.5}, { 0.5,  0.5,  0.5}, {1, 0, 0}, {{0,0},{1,0},{1,1},{0,1}}},
+        { { 0.5, -0.5, 0.5 },  { 0.5, -0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0.5, 0.5, 0.5 }, { 1, 0, 0 }, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } } },
         -- left (x-)
-        {{-0.5, -0.5, -0.5}, {-0.5, -0.5,  0.5}, {-0.5,  0.5,  0.5}, {-0.5,  0.5, -0.5}, {-1, 0, 0}, {{0,0},{1,0},{1,1},{0,1}}},
+        { { -0.5, -0.5, -0.5 }, { -0.5, -0.5, 0.5 }, { -0.5, 0.5, 0.5 }, { -0.5, 0.5, -0.5 }, { -1, 0, 0 }, { { 0, 0 }, { 1, 0 }, { 1, 1 }, { 0, 1 } } },
     }
 
     for _, face in ipairs(faces) do
@@ -219,7 +219,7 @@ local function make_sphere_vertices(segments, rings)
             table.insert(v, x)
             table.insert(v, y)
             table.insert(v, z)
-            table.insert(v, x)  -- normal = pos
+            table.insert(v, x) -- normal = pos
             table.insert(v, y)
             table.insert(v, z)
             table.insert(v, u)
@@ -263,8 +263,8 @@ local function init_game()
             stage = gfx.ShaderStage.VERTEX,
             size = 224,
             glsl_uniforms = {
-                { type = gfx.UniformType.MAT4, glsl_name = "mvp" },
-                { type = gfx.UniformType.MAT4, glsl_name = "model" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "model" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "light_pos" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "light_color" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "ambient_color" },
@@ -289,9 +289,9 @@ local function init_game()
         shader = shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT3 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- normal
-                { format = gfx.VertexFormat.FLOAT2 },  -- uv
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
+                { format = gfx.VertexFormat.FLOAT2 }, -- uv
             },
         },
         index_type = gfx.IndexType.UINT16,
@@ -340,7 +340,7 @@ local function init_game()
 end
 
 local function update_frame()
-    t = t + 1/60
+    t = t + 1 / 60
 
     -- Update camera based on input
     local move_speed = 0.2
@@ -376,15 +376,15 @@ local function update_frame()
     local center = glm.vec3(0, 0, 0)
     local up = glm.vec3(0, 0, 1)
     local view = glm.lookat(eye, center, up)
-    camera_pos = eye  -- for lighting calculation
+    camera_pos = eye -- for lighting calculation
 
     -- Begin pass
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 }
-            }},
+            } },
             depth = {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = 1.0
@@ -402,19 +402,19 @@ local function update_frame()
     }))
 
     local sphere_positions = {
-        {0, 0, 0},
-        {4, 0, 0},
-        {-4, 0, 0},
-        {0, 4, 0},
-        {0, -4, 0},
+        { 0,  0,  0 },
+        { 4,  0,  0 },
+        { -4, 0,  0 },
+        { 0,  4,  0 },
+        { 0,  -4, 0 },
     }
 
     local sphere_colors = {
-        {1, 0.3, 0.3},
-        {0.3, 1, 0.3},
-        {0.3, 0.3, 1},
-        {1, 1, 0.3},
-        {0.3, 1, 1},
+        { 1,   0.3, 0.3 },
+        { 0.3, 1,   0.3 },
+        { 0.3, 0.3, 1 },
+        { 1,   1,   0.3 },
+        { 0.3, 1,   1 },
     }
 
     for i, pos in ipairs(sphere_positions) do
@@ -428,8 +428,8 @@ local function update_frame()
             light_color.x, light_color.y, light_color.z, 1,
             ambient_color.x, ambient_color.y, ambient_color.z, 1,
             camera_pos.x, camera_pos.y, camera_pos.z, 1,
-            color[1], color[2], color[3], 1,  -- diffuse
-            0.3, 0.3, 0.3, 64,  -- specular + shininess
+            color[1], color[2], color[3], 1, -- diffuse
+            0.3, 0.3, 0.3, 64,               -- specular + shininess
         })
 
         gfx.ApplyUniforms(0, gfx.Range(uniforms))
@@ -443,7 +443,7 @@ local function update_frame()
     local uniforms = light_mvp:pack() .. light_model:pack() .. util.pack_floats({
         light_pos.x, light_pos.y, light_pos.z, 1,
         1, 1, 1, 1,
-        5, 5, 5, 1,  -- high ambient = emissive
+        5, 5, 5, 1, -- high ambient = emissive
         camera_pos.x, camera_pos.y, camera_pos.z, 1,
         1, 0.9, 0.7, 1,
         0, 0, 0, 1,
@@ -464,21 +464,33 @@ local function handle_event(ev)
             mouse_captured = false
             app.ShowMouse(true)
             app.LockMouse(false)
-        elseif key == app.Keycode.W then keys_down["W"] = true
-        elseif key == app.Keycode.S then keys_down["S"] = true
-        elseif key == app.Keycode.A then keys_down["A"] = true
-        elseif key == app.Keycode.D then keys_down["D"] = true
-        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = true
-        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = true
+        elseif key == app.Keycode.W then
+            keys_down["W"] = true
+        elseif key == app.Keycode.S then
+            keys_down["S"] = true
+        elseif key == app.Keycode.A then
+            keys_down["A"] = true
+        elseif key == app.Keycode.D then
+            keys_down["D"] = true
+        elseif key == app.Keycode.SPACE then
+            keys_down["SPACE"] = true
+        elseif key == app.Keycode.LEFT_SHIFT then
+            keys_down["LEFT_SHIFT"] = true
         end
     elseif evtype == app.EventType.KEY_UP then
         local key = ev.key_code
-        if key == app.Keycode.W then keys_down["W"] = false
-        elseif key == app.Keycode.S then keys_down["S"] = false
-        elseif key == app.Keycode.A then keys_down["A"] = false
-        elseif key == app.Keycode.D then keys_down["D"] = false
-        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = false
-        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = false
+        if key == app.Keycode.W then
+            keys_down["W"] = false
+        elseif key == app.Keycode.S then
+            keys_down["S"] = false
+        elseif key == app.Keycode.A then
+            keys_down["A"] = false
+        elseif key == app.Keycode.D then
+            keys_down["D"] = false
+        elseif key == app.Keycode.SPACE then
+            keys_down["SPACE"] = false
+        elseif key == app.Keycode.LEFT_SHIFT then
+            keys_down["LEFT_SHIFT"] = false
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
@@ -505,8 +517,8 @@ app.Run(app.Desc({
     width = 1280,
     height = 720,
     window_title = "Mane3D - Lighting",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

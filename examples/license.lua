@@ -39,18 +39,18 @@ local function update_frame()
 
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
-            }}
+            } }
         }),
         swapchain = glue.Swapchain()
     }))
 
     imgui.NewFrame()
 
-    imgui.SetNextWindowPos({w * 0.1, h * 0.05})
-    imgui.SetNextWindowSize({w * 0.8, h * 0.9})
+    imgui.SetNextWindowPos({ w * 0.1, h * 0.05 })
+    imgui.SetNextWindowSize({ w * 0.8, h * 0.9 })
     -- flags: NoResize(2) + NoMove(4) + NoCollapse(32) = 38
     if imgui.Begin("Mane3D Licenses", nil, 38) then
         imgui.TextUnformatted(license_text)
@@ -76,8 +76,8 @@ app.Run(app.Desc({
     width = 1024,
     height = 768,
     window_title = "Mane3D - Licenses",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))

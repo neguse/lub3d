@@ -52,7 +52,7 @@ local function init_game()
     shd = shader.compile(shader_source, "triangle", {
         {
             stage = gfx.ShaderStage.VERTEX,
-            size = 16,  -- rotation (float) padded to 16 bytes
+            size = 16, -- rotation (float) padded to 16 bytes
         }
     })
     if not shd then
@@ -64,17 +64,17 @@ local function init_game()
         shader = shd,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT2 },  -- position
-                { format = gfx.VertexFormat.FLOAT3 },  -- color
+                { format = gfx.VertexFormat.FLOAT2 }, -- position
+                { format = gfx.VertexFormat.FLOAT3 }, -- color
             }
         }
     }))
 
     -- Triangle vertices: position (x, y) + color (r, g, b)
     local vertices = {
-         0.0,  0.5,   1.0, 0.0, 0.0,  -- top (red)
-         0.5, -0.5,   0.0, 1.0, 0.0,  -- bottom right (green)
-        -0.5, -0.5,   0.0, 0.0, 1.0,  -- bottom left (blue)
+        0.0, 0.5, 1.0, 0.0, 0.0,   -- top (red)
+        0.5, -0.5, 0.0, 1.0, 0.0,  -- bottom right (green)
+        -0.5, -0.5, 0.0, 0.0, 1.0, -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
     bind = {
@@ -83,14 +83,14 @@ local function init_game()
 end
 
 local function update_frame()
-    time = time + 1/60
+    time = time + 1 / 60
 
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
-            }}
+            } }
         }),
         swapchain = glue.Swapchain()
     }))
@@ -122,8 +122,8 @@ app.Run(app.Desc({
     width = 800,
     height = 600,
     window_title = "Mane3D - Simple Triangle",
-    init_cb = init_game,
-    frame_cb = update_frame,
-    cleanup_cb = cleanup_game,
-    event_cb = handle_event,
+    init = init_game,
+    frame = update_frame,
+    cleanup = cleanup_game,
+    event = handle_event,
 }))
