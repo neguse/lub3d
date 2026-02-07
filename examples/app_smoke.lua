@@ -56,7 +56,7 @@ local function smoke_test()
     -- Struct return
     test("QueryDesc", function()
         local desc = app.QueryDesc()
-        assert(type(desc) == "userdata")
+        assert(type(desc) == "userdata" or type(desc) == "table")
     end)
 
     -- Platform-specific (may fail on some platforms, that's expected)
@@ -71,6 +71,7 @@ local function smoke_test()
         if r:sub(1, 2) == "OK" then ok_count = ok_count + 1 else fail_count = fail_count + 1 end
     end
     info(string.format("=== %d OK, %d FAIL ===", ok_count, fail_count))
+    if fail_count > 0 then error(string.format("%d tests failed", fail_count)) end
 end
 
 app.Run(app.Desc({

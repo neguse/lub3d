@@ -26,17 +26,21 @@ function M.Run(desc)
     local stm = require("sokol.time")
     stm.Setup()
 
-    -- init_cb
-    if callbacks.init_cb then callbacks.init_cb() end
+    local init_fn = callbacks.init_cb or callbacks.init
+    local frame_fn = callbacks.frame_cb or callbacks.frame
+    local cleanup_fn = callbacks.cleanup_cb or callbacks.cleanup
+
+    -- init
+    if init_fn then init_fn() end
 
     -- frame loop
     for i = 1, M._frames do
         M._frame_count = i
-        if callbacks.frame_cb then callbacks.frame_cb() end
+        if frame_fn then frame_fn() end
     end
 
-    -- cleanup_cb
-    if callbacks.cleanup_cb then callbacks.cleanup_cb() end
+    -- cleanup
+    if cleanup_fn then cleanup_fn() end
 end
 
 -- app.Width() / app.Height() compatible functions

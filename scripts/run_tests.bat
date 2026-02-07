@@ -23,16 +23,13 @@ echo.
 set PASSED=0
 set FAILED=0
 
-REM Note: rendering\init.lua excluded - requires assets\mill-scene which is gitignored
-for %%s in (
-    examples\main.lua
-    examples\breakout.lua
-    examples\raytracer.lua
-    examples\lighting.lua
-    examples\triangle.lua
-    examples\hakonotaiatari\init.lua
-) do (
-    if exist "%%s" (
+REM Run all top-level examples
+for %%s in (examples\*.lua) do (
+    set BASENAME=%%~ns
+    REM Skip model (crashes in dummy backend with shdc, needs investigation)
+    if /i "!BASENAME!"=="model" (
+        echo Skipped: %%s [dummy-backend issue]
+    ) else (
         echo ----------------------------------------
         echo Testing: %%s
         "%TEST_RUNNER%" "%%s" %NUM_FRAMES%
@@ -43,8 +40,28 @@ for %%s in (
             echo FAILED with exit code: !EC!
             set /a FAILED+=1
         )
-    ) else (
-        echo Skipped: %%s
+    )
+)
+
+REM Run subdirectory examples (init.lua)
+for /d %%d in (examples\*) do (
+    if exist "%%d\init.lua" (
+        set DIRNAME=%%~nxd
+        REM Skip rendering (asset-dependent, crashes without model files)
+        if /i "!DIRNAME!"=="rendering" (
+            echo Skipped: %%d\init.lua [asset-dependent]
+        ) else (
+            echo ----------------------------------------
+            echo Testing: %%d\init.lua
+            "%TEST_RUNNER%" "%%d\init.lua" %NUM_FRAMES%
+            set EC=!errorlevel!
+            if !EC! equ 0 (
+                set /a PASSED+=1
+            ) else (
+                echo FAILED with exit code: !EC!
+                set /a FAILED+=1
+            )
+        )
     )
 )
 
