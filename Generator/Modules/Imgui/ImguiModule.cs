@@ -222,8 +222,8 @@ public class ImguiModule
             if (t.Contains("(*)")) return true;
             // Void pointers (callback userdata)
             if (t is "void *" or "const void *") return true;
-            // va_list
-            if (t == "va_list") return true;
+            // va_list (Linux clang expands to __va_list_tag[1] etc.)
+            if (t.Contains("va_list") || t.Contains("__va_list")) return true;
             // References to non-ImVec/non-basic types
             if (t.Contains('&') && !t.Contains("ImVec") && !IsBasicRef(t)) return true;
             return false;
