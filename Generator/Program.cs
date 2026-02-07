@@ -5,6 +5,7 @@ using Generator;
 using Generator.ClangAst;
 using Generator.Modules.Sokol;
 using Generator.Modules.Miniaudio;
+using Generator.Modules.Imgui;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -163,6 +164,44 @@ rootCommand.SetAction(parseResult =>
         var maLuaPath = Path.Combine(outputDir, $"{maModuleId}.lua");
         File.WriteAllText(maLuaPath, miniaudioModule.GenerateLua(maReg, maPrefixToModule, maSourceLink));
         Console.WriteLine($"Generated: {maLuaPath}");
+    }
+
+    // --- ヘッダグループ (Dear ImGui) ---
+    var imguiHeaderPath = Path.Combine(depsDir, "imgui", "imgui.h");
+    if (File.Exists(imguiHeaderPath))
+    {
+        var imguiModule = new ImguiModule();
+        var imguiIncludePaths = new List<string>
+        {
+            Path.Combine(depsDir, "imgui")
+        };
+
+        Console.WriteLine("Parsing imgui header with clang++ ...");
+        var (imguiRawJson, imguiParsed) = ClangRunner.ParseCppHeadersWithRawJson(
+            clangPath, [imguiHeaderPath], ["ImGui"],
+            imguiIncludePaths,
+            ["IMGUI_DISABLE_OBSOLETE_FUNCTIONS"]);
+
+        var imguiAstPath = Path.Combine(outputDir, "imgui_clang_ast.json");
+        File.WriteAllText(imguiAstPath, imguiRawJson);
+        Console.WriteLine($"Generated: {imguiAstPath} (raw clang++ AST)");
+
+        var imguiFuncCount = imguiParsed.Decls.OfType<Funcs>().Count();
+        var imguiEnumCount = imguiParsed.Decls.OfType<Enums>().Count();
+        Console.WriteLine($"  Found {imguiFuncCount} functions, {imguiEnumCount} enums");
+
+        var imguiCppPath = Path.Combine(outputDir, "imgui_gen.cpp");
+        File.WriteAllText(imguiCppPath, imguiModule.GenerateC(imguiParsed));
+        Console.WriteLine($"Generated: {imguiCppPath}");
+
+        var imguiSourceLink = SourceLink.FromHeader(depsDir, "imgui/imgui.h");
+        var imguiLuaPath = Path.Combine(outputDir, "imgui.lua");
+        File.WriteAllText(imguiLuaPath, imguiModule.GenerateLua(imguiParsed, imguiSourceLink));
+        Console.WriteLine($"Generated: {imguiLuaPath}");
+    }
+    else
+    {
+        Console.WriteLine("Skipping Dear ImGui (deps/imgui/imgui.h not found)");
     }
 
     return 0;

@@ -12,7 +12,9 @@ public record ModuleSpec(
     List<FuncBinding> Funcs,
     List<EnumBinding> Enums,
     List<(string LuaName, string CFunc)> ExtraLuaRegs,
-    List<OpaqueTypeBinding> OpaqueTypes = default!
+    List<OpaqueTypeBinding> OpaqueTypes = default!,
+    bool IsCpp = false,
+    string? EntryPoint = null
 )
 {
     public List<OpaqueTypeBinding> OpaqueTypes { get; init; } = OpaqueTypes ?? [];
@@ -38,12 +40,16 @@ public record FuncBinding(
     string LuaName,
     List<ParamBinding> Params,
     BindingType ReturnType,
-    string? SourceLink
+    string? SourceLink,
+    string? CppNamespace = null,
+    string? CppFuncName = null
 );
 
 public record ParamBinding(
     string Name,
-    BindingType Type
+    BindingType Type,
+    bool IsOptional = false,
+    bool IsOutput = false
 );
 
 public record EnumBinding(

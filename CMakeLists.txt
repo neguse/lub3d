@@ -132,6 +132,7 @@ add_custom_command(
            ${NEWGEN_DIR}/sokol_shape.c ${NEWGEN_DIR}/sokol_shape.lua
            ${NEWGEN_DIR}/sokol_imgui.c ${NEWGEN_DIR}/sokol_imgui.lua
            ${NEWGEN_DIR}/miniaudio.c ${NEWGEN_DIR}/miniaudio.lua
+           ${NEWGEN_DIR}/imgui_gen.cpp ${NEWGEN_DIR}/imgui.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${NEWGEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
@@ -148,6 +149,7 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_glue.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_imgui.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio/miniaudio.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
         ${GENERATOR_DIR}/Program.cs
         ${GENERATOR_DIR}/IModule.cs
         ${GENERATOR_DIR}/ModuleSpec.cs
@@ -171,6 +173,7 @@ add_custom_command(
         ${GENERATOR_DIR}/Modules/Sokol/Time.cs
         ${GENERATOR_DIR}/Modules/Sokol/Imgui.cs
         ${GENERATOR_DIR}/Modules/Miniaudio/MiniaudioModule.cs
+        ${GENERATOR_DIR}/Modules/Imgui/ImguiModule.cs
     COMMENT "Running Generator (header -> bindings)"
 )
 
@@ -381,28 +384,8 @@ install(DIRECTORY deps/lua/ DESTINATION include/lua FILES_MATCHING PATTERN "*.h"
 
 # Dear ImGui integration (optional)
 if(MANE3D_BUILD_IMGUI)
-    # ImGui auto-generated bindings (requires clang++)
-    option(MANE3D_GEN_IMGUI "Generate ImGui bindings (requires clang++)" ON)
-    if(MANE3D_GEN_IMGUI AND Python3_FOUND AND CLANGPP_EXECUTABLE)
-        add_custom_command(
-            OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp
-            COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1 CLANGPP=${CLANGPP_EXECUTABLE}
-                ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
-                --sokol ${SOKOL_DIR}
-                --bindgen ${BINDGEN_DIR}
-                --imgui ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_lua.py
-                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/bindings/imgui.py
-                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/__init__.py
-                    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/binding_gen/ir.py
-                    ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
-            COMMENT "Generating ImGui Lua bindings..."
-        )
-        set(IMGUI_GEN_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/gen/bindings/imgui_gen.cpp)
-    elseif(MANE3D_GEN_IMGUI)
-        message(WARNING "clang++ not found, skipping ImGui binding generation")
-    endif()
+    # ImGui auto-generated bindings (C# Generator output)
+    set(IMGUI_GEN_SOURCE ${NEWGEN_DIR}/imgui_gen.cpp)
 
     # ImGui library (C++)
     add_library(imgui_lib STATIC

@@ -39,6 +39,41 @@ public static class CBindingGen
     }
 
     /// <summary>
+    /// C++ モード用ヘッダ — imgui.h は extern "C" の外、Lua ヘッダは中
+    /// </summary>
+    public static string CppHeader(IEnumerable<string> includes)
+    {
+        var userIncludes = string.Join("\n", includes.Select(h => $"#include \"{h}\""));
+        return $$"""
+            /* machine generated, do not edit */
+            {{userIncludes}}
+
+            extern "C" {
+            #include <lua.h>
+            #include <lauxlib.h>
+            #include <lualib.h>
+            }  /* extern "C" */
+
+            #include <string.h>
+            #include <stdint.h>
+            #include <stdlib.h>
+
+            #ifndef MANE3D_API
+              #ifdef _WIN32
+                #ifdef MANE3D_EXPORTS
+                  #define MANE3D_API __declspec(dllexport)
+                #else
+                  #define MANE3D_API __declspec(dllimport)
+                #endif
+              #else
+                #define MANE3D_API
+              #endif
+            #endif
+
+            """;
+    }
+
+    /// <summary>
     /// 構造体の new 関数
     /// </summary>
     public static string StructNew(string structName, string metatable, IEnumerable<FieldInit> fields)
@@ -254,6 +289,9 @@ public static class CBindingGen
     /// </summary>
     public static string Generate(ModuleSpec spec)
     {
+        if (spec.IsCpp)
+            return GenerateCpp(spec);
+
         var sb = Header(spec.CIncludes);
 
         // ExtraCCode は Struct/Opaque 型生成の後に出力 (依存関係のため)
@@ -406,6 +444,294 @@ public static class CBindingGen
 
         return sb;
     }
+
+    // ===== C++ モード生成 =====
+
+    private static string GenerateCpp(ModuleSpec spec)
+    {
+        var sb = CppHeader(spec.CIncludes);
+
+        // Functions
+        foreach (var f in spec.Funcs)
+            sb += CppFunc(f);
+
+        // Enums
+        foreach (var e in spec.Enums)
+        {
+            var items = e.Items.Select(i => (i.LuaName, i.CConstName));
+            sb += Enum(e.CName, e.FieldName, items);
+        }
+
+        // LuaReg
+        var funcArrayName = spec.EntryPoint != null
+            ? $"{spec.EntryPoint.Replace("luaopen_", "")}_funcs"
+            : $"{spec.ModuleName.Replace('.', '_')}_funcs";
+        var regEntries = spec.Funcs.Select(f => (f.LuaName, $"l_{f.CName}")).ToList();
+        regEntries.AddRange(spec.ExtraLuaRegs);
+        sb += LuaReg(funcArrayName, regEntries);
+
+        // luaopen — extern "C" void luaopen_X(L, int table_idx)
+        var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
+        var entryPoint = spec.EntryPoint ?? $"luaopen_{spec.ModuleName.Replace('.', '_')}";
+        sb += $$"""
+            extern "C" void {{entryPoint}}(lua_State *L, int table_idx) {
+                int abs_idx = lua_absindex(L, table_idx);
+                lua_pushvalue(L, abs_idx);
+                luaL_setfuncs(L, {{funcArrayName}}, 0);
+            {{string.Join("\n", enumRegs)}}
+                lua_pop(L, 1);
+            }
+            """;
+
+        return sb;
+    }
+
+    /// <summary>
+    /// C++ モード関数バインディング
+    /// </summary>
+    private static string CppFunc(FuncBinding f)
+    {
+        var sb = $"static int l_{f.CName}(lua_State *L) {{\n";
+        var argNames = new List<string>();
+        var outputParams = new List<(string name, BindingType type, int idx)>();
+        var idx = 1;
+
+        foreach (var p in f.Params)
+        {
+            if (p.IsOutput)
+            {
+                sb += GenCppOutputParamDecl(p, idx, out var argExpr);
+                argNames.Add(argExpr);
+                outputParams.Add((p.Name, p.Type, idx));
+                idx++;
+            }
+            else if (p.IsOptional)
+            {
+                sb += GenCppOptionalParamDecl(p, idx);
+                argNames.Add(p.Name);
+                idx++;
+            }
+            else
+            {
+                sb += GenCppParamDecl(p, idx);
+                argNames.Add(p.Name);
+                idx++;
+            }
+        }
+
+        var callName = f.CppFuncName ?? f.CName;
+        var callExpr = f.CppNamespace != null
+            ? $"{f.CppNamespace}::{callName}({string.Join(", ", argNames)})"
+            : $"{callName}({string.Join(", ", argNames)})";
+
+        var retCount = 0;
+
+        // Return value handling
+        if (f.ReturnType is not BindingType.Void)
+        {
+            sb += GenCppReturnCapture(f.ReturnType, callExpr);
+            retCount++;
+        }
+        else
+        {
+            sb += $"    {callExpr};\n";
+        }
+
+        // Output params push
+        foreach (var (name, type, tableIdx) in outputParams)
+        {
+            sb += GenCppOutputPush(name, type, tableIdx);
+            retCount++;
+        }
+
+        sb += $"    return {retCount};\n}}\n\n";
+        return sb;
+    }
+
+    private static string GenCppParamDecl(ParamBinding p, int idx) => p.Type switch
+    {
+        BindingType.Int => $"    int {p.Name} = (int)luaL_checkinteger(L, {idx});\n",
+        BindingType.Int64 => $"    int64_t {p.Name} = (int64_t)luaL_checkinteger(L, {idx});\n",
+        BindingType.UInt32 => $"    uint32_t {p.Name} = (uint32_t)luaL_checkinteger(L, {idx});\n",
+        BindingType.UInt64 => $"    uint64_t {p.Name} = (uint64_t)luaL_checkinteger(L, {idx});\n",
+        BindingType.Size => $"    size_t {p.Name} = (size_t)luaL_checkinteger(L, {idx});\n",
+        BindingType.Float => $"    float {p.Name} = (float)luaL_checknumber(L, {idx});\n",
+        BindingType.Double => $"    double {p.Name} = (double)luaL_checknumber(L, {idx});\n",
+        BindingType.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});\n",
+        BindingType.Str => $"    const char* {p.Name} = luaL_checkstring(L, {idx});\n",
+        BindingType.Enum(var cName, _) => $"    {cName} {p.Name} = ({cName})luaL_checkinteger(L, {idx});\n",
+        BindingType.VoidPtr => $"    void* {p.Name} = lua_touserdata(L, {idx});\n",
+        BindingType.Vec2 => $$"""
+                luaL_checktype(L, {{idx}}, LUA_TTABLE);
+                ImVec2 {{p.Name}};
+                lua_rawgeti(L, {{idx}}, 1); {{p.Name}}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                lua_rawgeti(L, {{idx}}, 2); {{p.Name}}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+
+            """,
+        BindingType.Vec4 => $$"""
+                luaL_checktype(L, {{idx}}, LUA_TTABLE);
+                ImVec4 {{p.Name}};
+                lua_rawgeti(L, {{idx}}, 1); {{p.Name}}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                lua_rawgeti(L, {{idx}}, 2); {{p.Name}}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                lua_rawgeti(L, {{idx}}, 3); {{p.Name}}.z = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                lua_rawgeti(L, {{idx}}, 4); {{p.Name}}.w = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+
+            """,
+        BindingType.FloatArray(var len) => GenCppFloatArrayInput(p.Name, idx, len, required: true),
+        _ => $"    /* unsupported param type for {p.Name} */\n"
+    };
+
+    private static string GenCppOptionalParamDecl(ParamBinding p, int idx) => p.Type switch
+    {
+        BindingType.Int => $"    int {p.Name} = (int)luaL_optinteger(L, {idx}, 0);\n",
+        BindingType.Float => $"    float {p.Name} = (float)luaL_optnumber(L, {idx}, 0.0);\n",
+        BindingType.Double => $"    double {p.Name} = (double)luaL_optnumber(L, {idx}, 0.0);\n",
+        BindingType.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});\n",
+        BindingType.Str => $"    const char* {p.Name} = luaL_optstring(L, {idx}, NULL);\n",
+        BindingType.Enum(var cName, _) => $"    {cName} {p.Name} = ({cName})luaL_optinteger(L, {idx}, 0);\n",
+        BindingType.Vec2 => $$"""
+                ImVec2 {{p.Name}} = ImVec2(0, 0);
+                if (lua_istable(L, {{idx}})) {
+                    lua_rawgeti(L, {{idx}}, 1); {{p.Name}}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                    lua_rawgeti(L, {{idx}}, 2); {{p.Name}}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                }
+
+            """,
+        BindingType.Vec4 => $$"""
+                ImVec4 {{p.Name}} = ImVec4(0, 0, 0, 0);
+                if (lua_istable(L, {{idx}})) {
+                    lua_rawgeti(L, {{idx}}, 1); {{p.Name}}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                    lua_rawgeti(L, {{idx}}, 2); {{p.Name}}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                    lua_rawgeti(L, {{idx}}, 3); {{p.Name}}.z = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                    lua_rawgeti(L, {{idx}}, 4); {{p.Name}}.w = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                }
+
+            """,
+        BindingType.FloatArray(var len) => GenCppFloatArrayInput(p.Name, idx, len, required: false),
+        _ => $"    /* unsupported optional param type for {p.Name} */\n"
+    };
+
+    private static string GenCppOutputParamDecl(ParamBinding p, int idx, out string argExpr)
+    {
+        // Output params: declare local, pass pointer
+        switch (p.Type)
+        {
+            case BindingType.Bool:
+                // Optional bool* (e.g. p_open) → pass pointer (can be NULL)
+                // Required bool* (e.g. Checkbox v) → pass &val (always valid)
+                argExpr = p.IsOptional ? p.Name : $"&{p.Name}_val";
+                return $$"""
+                        bool {{p.Name}}_val = true;
+                        bool* {{p.Name}} = NULL;
+                        if (lua_isboolean(L, {{idx}})) {
+                            {{p.Name}}_val = lua_toboolean(L, {{idx}});
+                            {{p.Name}} = &{{p.Name}}_val;
+                        }
+
+                    """;
+            case BindingType.Int:
+                argExpr = $"&{p.Name}_val";
+                return $$"""
+                        int {{p.Name}}_val = 0;
+                        if (lua_isinteger(L, {{idx}})) {{p.Name}}_val = (int)lua_tointeger(L, {{idx}});
+
+                    """;
+            case BindingType.Float:
+                argExpr = $"&{p.Name}_val";
+                return $$"""
+                        float {{p.Name}}_val = 0.0f;
+                        if (lua_isnumber(L, {{idx}})) {{p.Name}}_val = (float)lua_tonumber(L, {{idx}});
+
+                    """;
+            case BindingType.UInt32:
+                argExpr = $"&{p.Name}_val";
+                return $$"""
+                        unsigned int {{p.Name}}_val = 0;
+                        if (lua_isinteger(L, {{idx}})) {{p.Name}}_val = (unsigned int)lua_tointeger(L, {{idx}});
+
+                    """;
+            case BindingType.Double:
+                argExpr = $"&{p.Name}_val";
+                return $$"""
+                        double {{p.Name}}_val = 0.0;
+                        if (lua_isnumber(L, {{idx}})) {{p.Name}}_val = (double)lua_tonumber(L, {{idx}});
+
+                    """;
+            case BindingType.FloatArray(var len):
+                argExpr = p.Name;
+                return GenCppFloatArrayInput(p.Name, idx, len, required: true);
+            default:
+                argExpr = p.Name;
+                return $"    /* unsupported output param type for {p.Name} */\n";
+        }
+    }
+
+    private static string GenCppOutputPush(string name, BindingType type, int tableIdx) => type switch
+    {
+        BindingType.Bool => $"    lua_pushboolean(L, {name}_val);\n",
+        BindingType.Int => $"    lua_pushinteger(L, {name}_val);\n",
+        BindingType.UInt32 => $"    lua_pushinteger(L, {name}_val);\n",
+        BindingType.Float => $"    lua_pushnumber(L, {name}_val);\n",
+        BindingType.Double => $"    lua_pushnumber(L, {name}_val);\n",
+        BindingType.FloatArray(var len) => GenCppFloatArrayOutput(name, tableIdx, len),
+        _ => $"    /* unsupported output push for {name} */\n"
+    };
+
+    private static string GenCppFloatArrayInput(string name, int idx, int len, bool required)
+    {
+        var sb = $"    float {name}[{len}] = {{0}};\n";
+        if (required)
+            sb += $"    luaL_checktype(L, {idx}, LUA_TTABLE);\n";
+        else
+            sb += $"    if (lua_istable(L, {idx}))\n";
+        var indent = required ? "    " : "        ";
+        if (!required) sb += "    {\n";
+        for (var i = 0; i < len; i++)
+            sb += $"{indent}lua_rawgeti(L, {idx}, {i + 1}); {name}[{i}] = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n";
+        if (!required) sb += "    }\n";
+        return sb;
+    }
+
+    private static string GenCppFloatArrayOutput(string name, int tableIdx, int len)
+    {
+        var sb = "";
+        // Write modified values back to the input table
+        for (var i = 0; i < len; i++)
+            sb += $"    lua_pushnumber(L, {name}[{i}]); lua_rawseti(L, {tableIdx}, {i + 1});\n";
+        // Push the modified table as return value
+        sb += $"    lua_pushvalue(L, {tableIdx});\n";
+        return sb;
+    }
+
+    private static string GenCppReturnCapture(BindingType retType, string callExpr) => retType switch
+    {
+        BindingType.Int => $"    lua_pushinteger(L, {callExpr});\n",
+        BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64 or BindingType.Size
+            => $"    lua_pushinteger(L, (lua_Integer){callExpr});\n",
+        BindingType.Bool => $"    lua_pushboolean(L, {callExpr});\n",
+        BindingType.Float => $"    lua_pushnumber(L, {callExpr});\n",
+        BindingType.Double => $"    lua_pushnumber(L, (lua_Number){callExpr});\n",
+        BindingType.Str => $"    lua_pushstring(L, {callExpr});\n",
+        BindingType.Enum(_, _) => $"    lua_pushinteger(L, (lua_Integer){callExpr});\n",
+        BindingType.VoidPtr => $"    lua_pushlightuserdata(L, (void*){callExpr});\n",
+        BindingType.Vec2 => $$"""
+                ImVec2 _result = {{callExpr}};
+                lua_newtable(L);
+                lua_pushnumber(L, _result.x); lua_rawseti(L, -2, 1);
+                lua_pushnumber(L, _result.y); lua_rawseti(L, -2, 2);
+
+            """,
+        BindingType.Vec4 => $$"""
+                ImVec4 _result = {{callExpr}};
+                lua_newtable(L);
+                lua_pushnumber(L, _result.x); lua_rawseti(L, -2, 1);
+                lua_pushnumber(L, _result.y); lua_rawseti(L, -2, 2);
+                lua_pushnumber(L, _result.z); lua_rawseti(L, -2, 3);
+                lua_pushnumber(L, _result.w); lua_rawseti(L, -2, 4);
+
+            """,
+        _ => $"    {callExpr};\n"
+    };
 
     /// <summary>
     /// sg_range 専用コンストラクタ (string / table 両対応)
@@ -685,6 +1011,9 @@ public static class CBindingGen
         BindingType.Callback(var parms, var ret) => new Type.FuncPtr(
             parms.Select(p => ToOldType(p.Type)).ToList(),
             ret != null ? ToOldType(ret) : new Type.Void()),
+        BindingType.Vec2 => new Type.Struct("ImVec2"),
+        BindingType.Vec4 => new Type.Struct("ImVec4"),
+        BindingType.FloatArray(_) => new Type.Struct("float[]"),
         BindingType.Custom(var cTypeName, _, _, _, _, _) => new Type.Struct(cTypeName),
         _ => new Type.Void()
     };

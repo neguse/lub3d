@@ -127,8 +127,15 @@ public static class LuaCatsGen
             moduleFields.Add($"---@field {ot.PascalName}Init fun(): {ot.LuaClassName}");
         foreach (var f in spec.Funcs)
         {
-            var parms = f.Params.Select(p => (p.Name, ToLuaCatsType(p.Type)));
-            var ret = f.ReturnType is BindingType.Void ? null : ToLuaCatsType(f.ReturnType);
+            var parms = f.Params
+                .Where(p => !p.IsOutput)
+                .Select(p => (p.IsOptional ? p.Name + "?" : p.Name, ToLuaCatsType(p.Type)));
+            var retTypes = new List<Type>();
+            if (f.ReturnType is not BindingType.Void)
+                retTypes.Add(ToLuaCatsType(f.ReturnType));
+            foreach (var op in f.Params.Where(p => p.IsOutput))
+                retTypes.Add(ToLuaCatsType(op.Type));
+            var ret = retTypes.Count > 0 ? retTypes[0] : null;
             moduleFields.Add(FuncField(f.LuaName, parms, ret, f.SourceLink));
         }
         sb += ModuleClass(spec.ModuleName, moduleFields);
@@ -175,6 +182,9 @@ public static class LuaCatsGen
             => new Type.Fun(
                 parms.Select(p => (p.Name, ToLuaCatsType(p.Type))).ToList(),
                 ret != null ? ToLuaCatsType(ret) : null),
+        BindingType.Vec2 => new Type.Primitive("number[]"),
+        BindingType.Vec4 => new Type.Primitive("number[]"),
+        BindingType.FloatArray(_) => new Type.Primitive("number[]"),
         BindingType.Custom(_, var luaCatsType, _, _, _, _)
             => new Type.Primitive(luaCatsType),
         _ => new Type.Primitive("any")

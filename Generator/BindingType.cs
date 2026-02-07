@@ -31,6 +31,11 @@ public abstract record BindingType
     public sealed record FixedArray(BindingType Inner, int Length) : BindingType;
     public sealed record Callback(List<(string Name, BindingType Type)> Params, BindingType? Ret) : BindingType;
 
+    // C++ ImGui 用型
+    public sealed record Vec2 : BindingType;               // ImVec2 → table {x, y}
+    public sealed record Vec4 : BindingType;               // ImVec4 → table {x, y, z, w}
+    public sealed record FloatArray(int Length) : BindingType; // float[N] → table
+
     // エスケープハッチ — sg_range 等の自動演繹不可な型
     public sealed record Custom(
         string CTypeName, string LuaCatsType,

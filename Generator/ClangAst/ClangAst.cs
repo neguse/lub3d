@@ -40,7 +40,8 @@ public record Funcs(
     [property: JsonPropertyName("type")] string TypeStr,
     [property: JsonPropertyName("params")] List<Param> Params,
     bool IsDep, string? DepPrefix,
-    [property: JsonPropertyName("line")] int? Line = null
+    [property: JsonPropertyName("line")] int? Line = null,
+    [property: JsonIgnore] string? Namespace = null
 ) : Decl(IsDep, DepPrefix);
 
 public record Enums(
@@ -71,7 +72,8 @@ public record Field(
 /// </summary>
 public record Param(
     [property: JsonPropertyName("name")] string Name,
-    [property: JsonPropertyName("type")] string TypeStr
+    [property: JsonPropertyName("type")] string TypeStr,
+    [property: JsonIgnore] bool HasDefault = false
 )
 {
     public Types ParsedType => CTypeParser.Parse(TypeStr);
@@ -156,6 +158,121 @@ public static class ClangRunner
     }
 
     /// <summary>
+    /// C++ ヘッダを clang++ でパースし、raw JSON + Module を返す
+    /// </summary>
+    public static (string RawJson, Module Parsed) ParseCppHeadersWithRawJson(
+        string clangPath,
+        List<string> headerPaths,
+        List<string> namespaces,
+        List<string> includePaths,
+        List<string>? extraDefines = null)
+    {
+        var json = RunClangCpp(clangPath, headerPaths, includePaths, extraDefines ?? []);
+        return (json, ParseCppAstJson(json, namespaces));
+    }
+
+    /// <summary>
+    /// C++ AST JSON をパースし、指定 namespace の関数と ImGui prefix の enum を抽出
+    /// </summary>
+    public static Module ParseCppAstJson(string json, List<string> namespaces)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        var decls = new List<Decl>();
+        var nsSet = namespaces.ToHashSet();
+
+        foreach (var node in root.GetProperty("inner").EnumerateArray())
+        {
+            var kind = node.GetProperty("kind").GetString() ?? "";
+            var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+            var line = GetLine(node);
+
+            switch (kind)
+            {
+                case "NamespaceDecl" when nsSet.Contains(name):
+                    if (node.TryGetProperty("inner", out var nsInner))
+                    {
+                        foreach (var child in nsInner.EnumerateArray())
+                        {
+                            var childKind = child.GetProperty("kind").GetString() ?? "";
+                            if (childKind == "FunctionDecl")
+                            {
+                                var func = ParseCppFunc(child, name);
+                                decls.Add(func);
+                            }
+                            else if (childKind == "EnumDecl")
+                            {
+                                var eName = child.TryGetProperty("name", out var en) ? en.GetString() ?? "" : "";
+                                if (!string.IsNullOrEmpty(eName))
+                                    decls.Add(ParseEnum(child, false, null, GetLine(child)));
+                            }
+                        }
+                    }
+                    break;
+
+                case "EnumDecl":
+                    // Top-level enums with ImGui prefix
+                    if (name.StartsWith("ImGui"))
+                        decls.Add(ParseEnum(node, false, null, line));
+                    break;
+            }
+        }
+
+        return new Module("imgui", "", [], decls);
+    }
+
+    private static Funcs ParseCppFunc(JsonElement node, string ns)
+    {
+        var name = node.GetProperty("name").GetString()!;
+        var typeStr = node.GetProperty("type").GetProperty("qualType").GetString()!;
+        var line = GetLine(node);
+        var parms = new List<Param>();
+
+        if (node.TryGetProperty("inner", out var inner))
+        {
+            foreach (var child in inner.EnumerateArray())
+            {
+                if (child.GetProperty("kind").GetString() != "ParmVarDecl") continue;
+                var pName = child.TryGetProperty("name", out var pn) ? pn.GetString() ?? "" : "";
+                var pType = child.GetProperty("type").GetProperty("qualType").GetString()!;
+                var hasDefault = DetectDefaultArg(child);
+                parms.Add(new Param(pName, pType, hasDefault));
+            }
+        }
+
+        return new Funcs(name, typeStr, parms, false, null, line, ns);
+    }
+
+    private static bool DetectDefaultArg(JsonElement parmNode)
+    {
+        // clang sets "init" on ParmVarDecl with default values
+        if (parmNode.TryGetProperty("init", out _)) return true;
+
+        if (!parmNode.TryGetProperty("inner", out var inner)) return false;
+        foreach (var child in inner.EnumerateArray())
+        {
+            var kind = child.GetProperty("kind").GetString() ?? "";
+            if (kind is "CXXDefaultArgExpr" or "IntegerLiteral" or "FloatingLiteral"
+                or "CXXBoolLiteralExpr" or "CXXConstructExpr")
+                return true;
+            if (kind == "ImplicitCastExpr")
+            {
+                if (child.TryGetProperty("inner", out var castInner))
+                {
+                    foreach (var castChild in castInner.EnumerateArray())
+                    {
+                        var castKind = castChild.GetProperty("kind").GetString() ?? "";
+                        if (castKind is "IntegerLiteral" or "FloatingLiteral" or "CXXBoolLiteralExpr"
+                            or "StringLiteral" or "GNUNullExpr" or "CXXNullPtrLiteralExpr")
+                            return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
     /// unified Module から特定 prefix の view を生成（IsDep 再計算）
     /// </summary>
     public static Module CreateView(Module unified, string ownPrefix, string moduleName)
@@ -215,6 +332,64 @@ public static class ClangRunner
 
         if (proc.ExitCode != 0)
             throw new InvalidOperationException($"clang failed (exit {proc.ExitCode}):\n{stderr}");
+
+        return stdout;
+    }
+
+    private static string RunClangCpp(string clangPath, List<string> headerPaths, List<string> includePaths, List<string> extraDefines)
+    {
+        var wrapperPath = Path.Combine(Path.GetTempPath(), "generator_wrapper.cpp");
+        var includes = string.Join("\n", headerPaths.Select(h => $"#include \"{Path.GetFileName(h)}\""));
+        File.WriteAllText(wrapperPath, $"""
+            #include <stdint.h>
+            #include <stddef.h>
+            {includes}
+            """);
+
+        var args = new List<string>
+        {
+            "-Xclang", "-ast-dump=json",
+            "-fsyntax-only",
+            "-std=c++17"
+        };
+        foreach (var def in extraDefines)
+            args.Add($"-D{def}");
+        foreach (var headerPath in headerPaths)
+        {
+            var headerDir = Path.GetDirectoryName(headerPath);
+            if (headerDir != null)
+                args.AddRange(["-I", headerDir]);
+        }
+        foreach (var inc in includePaths)
+            args.AddRange(["-I", inc]);
+        args.Add(wrapperPath);
+
+        // Use clang++ (replace clang.exe → clang++.exe or clang → clang++)
+        var clangCppPath = clangPath;
+        if (clangCppPath.EndsWith("clang.exe", StringComparison.OrdinalIgnoreCase))
+            clangCppPath = clangCppPath[..^9] + "clang++.exe";
+        else if (clangCppPath.EndsWith("clang", StringComparison.OrdinalIgnoreCase))
+            clangCppPath = clangCppPath + "++";
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = clangCppPath,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        };
+        foreach (var arg in args)
+            psi.ArgumentList.Add(arg);
+
+        using var proc = Process.Start(psi)
+            ?? throw new InvalidOperationException($"Failed to start clang++: {clangCppPath}");
+        var stdout = proc.StandardOutput.ReadToEnd();
+        var stderr = proc.StandardError.ReadToEnd();
+        proc.WaitForExit();
+
+        if (proc.ExitCode != 0)
+            throw new InvalidOperationException($"clang++ failed (exit {proc.ExitCode}):\n{stderr}");
 
         return stdout;
     }
