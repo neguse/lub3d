@@ -57,7 +57,12 @@ void main() {
 @program simple vs fs
 ]]
 
-local function init_game()
+local M = {}
+M.width = 800
+M.height = 600
+M.window_title = "Lub3d - Simple Triangle with ImGui"
+
+function M.init()
     log.info("Simple triangle example init")
 
     -- Initialize sokol.gfx
@@ -118,7 +123,7 @@ local function init_game()
     log.info("init() complete")
 end
 
-local function update_frame()
+function M.frame()
     imgui.NewFrame()
 
     -- Update rotation
@@ -187,13 +192,13 @@ local function update_frame()
     gfx.Commit()
 end
 
-local function cleanup_game()
+function M.cleanup()
     imgui.Shutdown()
     gfx.Shutdown()
     log.info("cleanup")
 end
 
-local function handle_event(ev)
+function M.event(ev)
     -- Let ImGui handle events first
     if imgui.HandleEvent(ev) then
         return
@@ -207,13 +212,4 @@ local function handle_event(ev)
     end
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 800,
-    height = 600,
-    window_title = "Lub3d - Simple Triangle with ImGui",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M

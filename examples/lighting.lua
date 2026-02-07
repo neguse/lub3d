@@ -248,7 +248,12 @@ local function make_sphere_indices(segments, rings)
     return indices
 end
 
-local function init_game()
+local M = {}
+M.width = 1280
+M.height = 720
+M.window_title = "Lub3d - Lighting"
+
+function M.init()
     log.info("Lighting example init")
 
     -- Initialize sokol.gfx
@@ -339,7 +344,7 @@ local function init_game()
     log.info("Init complete")
 end
 
-local function update_frame()
+function M.frame()
     t = t + 1 / 60
 
     -- Update camera based on input
@@ -456,7 +461,7 @@ local function update_frame()
     gfx.Commit()
 end
 
-local function handle_event(ev)
+function M.event(ev)
     local evtype = ev.type
     if evtype == app.EventType.KEY_DOWN then
         local key = ev.key_code
@@ -507,18 +512,9 @@ local function handle_event(ev)
     end
 end
 
-local function cleanup_game()
+function M.cleanup()
     gfx.Shutdown()
     log.info("Lighting cleanup")
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 1280,
-    height = 720,
-    window_title = "Lub3d - Lighting",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M
