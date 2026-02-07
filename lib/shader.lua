@@ -177,7 +177,7 @@ end
 ---@param uniform_blocks? table uniform block descriptors
 ---@param attrs? table vertex attribute semantics for D3D11
 ---@param texture_sampler_pairs? table texture-sampler pair descriptors
----@return gfx.Shader? shader shader handle or nil on failure
+---@return sokol.gfx.Shader? shader shader handle or nil on failure
 function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
     if not shdc then
         log.error("shdc module not available (requires MANE3D_BUILD_SHDC=ON)")
@@ -271,7 +271,7 @@ end
 ---@param source string shader source code
 ---@param program_name string program name in shader
 ---@param shader_desc table full shader descriptor (uniform_blocks, views, samplers, texture_sampler_pairs, attrs)
----@return gfx.Shader? shader shader handle or nil on failure
+---@return sokol.gfx.Shader? shader shader handle or nil on failure
 function M.compile_full(source, program_name, shader_desc)
     if not shdc then
         log.error("shdc module not available (requires MANE3D_BUILD_SHDC=ON)")

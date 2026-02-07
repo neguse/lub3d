@@ -15,7 +15,7 @@ local auto_rotate = true
 
 -- Graphics resources
 local shader = nil
----@type gfx.Pipeline
+---@type sokol.gfx.Pipeline
 local pipeline = nil
 local vbuf = nil
 

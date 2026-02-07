@@ -21,7 +21,7 @@ local ambient_color = glm.vec3(0.2, 0.2, 0.25)
 
 -- Graphics resources
 local shader = nil
----@type gfx.Pipeline
+---@type sokol.gfx.Pipeline
 local pipeline = nil
 local meshes = {} -- { vbuf, index_count, diffuse_img, diffuse_smp, normal_img, normal_smp, material }
 ---@type table<string, {img: gpu.Image, view: gpu.View, smp: gpu.Sampler}>
@@ -199,7 +199,7 @@ local function add_tangents(vertices)
 end
 
 -- Load texture with caching (returns raw handles for bindings)
----@return gfx.View?, gfx.Sampler?
+---@return sokol.gfx.View?, sokol.gfx.Sampler?
 local function load_texture_cached(path)
     if textures_cache[path] then
         return textures_cache[path].view.handle, textures_cache[path].smp.handle
@@ -340,9 +340,9 @@ local function init_game()
                 }))
 
                 -- Get textures (views)
-                ---@type gfx.View, gfx.Sampler
+                ---@type sokol.gfx.View, sokol.gfx.Sampler
                 local diffuse_view, diffuse_smp = default_diffuse_view, default_diffuse_smp
-                ---@type gfx.View, gfx.Sampler
+                ---@type sokol.gfx.View, sokol.gfx.Sampler
                 local normal_view, normal_smp = default_normal_view, default_normal_smp
 
                 if mesh.textures and #mesh.textures > 0 then

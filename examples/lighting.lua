@@ -22,7 +22,7 @@ local ambient_color = glm.vec3(0.5, 0.5, 0.5) -- brighter
 
 -- Graphics resources
 local shader = nil
----@type gfx.Pipeline
+---@type sokol.gfx.Pipeline
 local pipeline = nil
 local cube_vbuf = nil
 local cube_ibuf = nil

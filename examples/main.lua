@@ -8,11 +8,11 @@ local util = require("lib.util")
 local licenses = require("mane3d.licenses")
 
 local t = 0
----@type gfx.Shader?
+---@type sokol.gfx.Shader?
 local shader = nil
----@type gfx.Pipeline?
+---@type sokol.gfx.Pipeline?
 local pipeline = nil
----@type gfx.Buffer?
+---@type sokol.gfx.Buffer?
 local vbuf = nil
 
 -- Shader source (inline GLSL)

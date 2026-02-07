@@ -8,11 +8,11 @@ local log = require("lib.log")
 local shaderMod = require("lib.shader")
 local util = require("lib.util")
 
----@type gfx.Shader?
+---@type sokol.gfx.Shader?
 local shader = nil
----@type gfx.Pipeline?
+---@type sokol.gfx.Pipeline?
 local pipeline = nil
----@type gfx.Buffer?
+---@type sokol.gfx.Buffer?
 local vbuf = nil
 local t = 0
 local last_time = 0

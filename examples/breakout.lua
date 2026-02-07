@@ -31,13 +31,13 @@ local t = 0
 local keys_down = {}
 
 -- Graphics resources
----@type gfx.Shader?
+---@type sokol.gfx.Shader?
 local shader = nil
----@type gfx.Pipeline?
+---@type sokol.gfx.Pipeline?
 local pipeline = nil
----@type gfx.Buffer?
+---@type sokol.gfx.Buffer?
 local vbuf = nil
----@type gfx.Buffer?
+---@type sokol.gfx.Buffer?
 local ibuf = nil
 
 -- Shader with MVP matrix and color uniform
