@@ -1,6 +1,6 @@
 # Lübertà3d / lub3d
 
-![Lübertà3d](public/lub3d.png)
+![Lübertà3d](public/lub3d.jpg)
 
 A lightweight game framework for Lua 5.5 built on the Sokol ecosystem.
 
