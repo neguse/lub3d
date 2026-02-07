@@ -37,7 +37,7 @@ M.height = 800
 M.window_title = "hakonotaiatari"
 M.high_dpi = true
 
-function M.init()
+function M:init()
     log.info("hakonotaiatari starting...")
 
     -- Initialize sokol.gfx (required for Lua entry point)
@@ -76,7 +76,7 @@ function M.init()
     log.info("hakonotaiatari initialized")
 end
 
-function M.frame()
+function M:frame()
     local frame_dt = app.FrameDuration()
     local fixed_dt = const.DELTA_T -- 1/60 sec
 
@@ -194,7 +194,7 @@ function M.frame()
     input.end_frame()
 end
 
-function M.event(ev)
+function M:event(ev)
     -- Pass to input handler
     input.handle_event(ev)
 
@@ -209,7 +209,7 @@ function M.event(ev)
     end
 end
 
-function M.cleanup()
+function M:cleanup()
     audio.cleanup()
     renderer.cleanup() -- gl.Shutdown() is called inside
     gfx.Shutdown()

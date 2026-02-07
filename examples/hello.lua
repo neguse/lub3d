@@ -13,14 +13,14 @@ M.width = 800
 M.height = 600
 M.window_title = "Hello Lub3d (Lua Entry Point)"
 
-function M.init()
+function M:init()
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
     }))
     gl.Setup(gl.Desc({}))
 end
 
-function M.frame()
+function M:frame()
     frame_count = frame_count + 1
 
     -- Clear with animated color
@@ -57,12 +57,12 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.cleanup()
+function M:cleanup()
     gl.Shutdown()
     gfx.Shutdown()
 end
 
-function M.event(ev)
+function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
             app.Quit()

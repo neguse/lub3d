@@ -402,7 +402,7 @@ local function load_model()
     log.info("Loaded " .. #meshes .. " meshes")
 end
 
-function M.init()
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -425,7 +425,7 @@ function M.init()
     load_model()
 end
 
-function M.frame()
+function M:frame()
     local width, height = app.Width(), app.Height()
     ctx.ensure_size(width, height)
 
@@ -458,7 +458,7 @@ function M.frame()
     pipeline.execute(ctx, frame_data)
 end
 
-function M.cleanup()
+function M:cleanup()
     imgui.Shutdown()
     notify.shutdown()
 
@@ -497,7 +497,7 @@ function M.cleanup()
     gfx.Shutdown()
 end
 
-function M.event(ev)
+function M:event(ev)
     if imgui.HandleEvent(ev) then
         return
     end

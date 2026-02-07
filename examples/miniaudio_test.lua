@@ -59,7 +59,7 @@ M.width = 640
 M.height = 480
 M.window_title = "miniaudio test"
 
-function M.init()
+function M:init()
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
     }))
@@ -83,7 +83,7 @@ function M.init()
     print("miniaudio: playing sine wave (440Hz)")
 end
 
-function M.frame()
+function M:frame()
     frame_count = frame_count + 1
     local t = frame_count / 60.0
 
@@ -124,7 +124,7 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.cleanup()
+function M:cleanup()
     -- sound/engine are freed by GC (__gc metamethod)
     sound = nil
     engine = nil
@@ -134,7 +134,7 @@ function M.cleanup()
     os.remove(wav_path)
 end
 
-function M.event(ev)
+function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
             app.Quit()

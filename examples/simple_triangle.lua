@@ -62,7 +62,7 @@ M.width = 800
 M.height = 600
 M.window_title = "Lub3d - Simple Triangle with ImGui"
 
-function M.init()
+function M:init()
     log.info("Simple triangle example init")
 
     -- Initialize sokol.gfx
@@ -123,7 +123,7 @@ function M.init()
     log.info("init() complete")
 end
 
-function M.frame()
+function M:frame()
     imgui.NewFrame()
 
     -- Update rotation
@@ -192,13 +192,13 @@ function M.frame()
     gfx.Commit()
 end
 
-function M.cleanup()
+function M:cleanup()
     imgui.Shutdown()
     gfx.Shutdown()
     log.info("cleanup")
 end
 
-function M.event(ev)
+function M:event(ev)
     -- Let ImGui handle events first
     if imgui.HandleEvent(ev) then
         return
