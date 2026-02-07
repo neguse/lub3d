@@ -129,6 +129,7 @@ add_custom_command(
            ${NEWGEN_DIR}/sokol_gl.c ${NEWGEN_DIR}/sokol_gl.lua
            ${NEWGEN_DIR}/sokol_debugtext.c ${NEWGEN_DIR}/sokol_debugtext.lua
            ${NEWGEN_DIR}/sokol_shape.c ${NEWGEN_DIR}/sokol_shape.lua
+           ${NEWGEN_DIR}/sokol_imgui.c ${NEWGEN_DIR}/sokol_imgui.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${NEWGEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
@@ -143,6 +144,7 @@ add_custom_command(
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_debugtext.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_shape.h
         ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_glue.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_imgui.h
         ${GENERATOR_DIR}/Program.cs
         ${GENERATOR_DIR}/IModule.cs
         ${GENERATOR_DIR}/ModuleSpec.cs
@@ -164,6 +166,7 @@ add_custom_command(
         ${GENERATOR_DIR}/Modules/Sokol/Log.cs
         ${GENERATOR_DIR}/Modules/Sokol/Shape.cs
         ${GENERATOR_DIR}/Modules/Sokol/Time.cs
+        ${GENERATOR_DIR}/Modules/Sokol/Imgui.cs
     COMMENT "Running Generator (header -> bindings)"
 )
 
@@ -435,6 +438,7 @@ if(MANE3D_BUILD_IMGUI)
     endif()
 
     # Link ImGui to mane3d
+    target_sources(mane3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/newgen/sokol_imgui.c)
     target_link_libraries(mane3d PUBLIC imgui_lib)
     target_compile_definitions(mane3d PUBLIC MANE3D_HAS_IMGUI)
 

@@ -95,12 +95,11 @@ public abstract class SokolModule : IModule
                 GetLink(e, sourceLink)));
         }
 
-        // All Sokol headers in dependency order
         var includes = new List<string>
         {
             "sokol_log.h", "sokol_gfx.h", "sokol_app.h", "sokol_time.h",
             "sokol_audio.h", "sokol_gl.h", "sokol_debugtext.h",
-            "sokol_shape.h", "sokol_glue.h"
+            "sokol_shape.h", "sokol_glue.h", "sokol_imgui.h"
         };
 
         return new ModuleSpec(

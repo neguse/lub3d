@@ -49,7 +49,7 @@ rootCommand.SetAction(parseResult =>
     {
         "sokol_log.h", "sokol_gfx.h", "sokol_app.h", "sokol_time.h",
         "sokol_audio.h", "sokol_gl.h", "sokol_debugtext.h",
-        "sokol_shape.h", "sokol_glue.h"
+        "sokol_shape.h", "sokol_glue.h", "sokol_imgui.h"
     };
     var sokolIncludePaths = new List<string>
     {
@@ -60,7 +60,7 @@ rootCommand.SetAction(parseResult =>
     // --- モジュール定義 ---
     IModule[] modules = [
         new App(), new Audio(), new DebugText(), new Gfx(),
-        new Gl(), new Glue(), new Log(), new Shape(), new Time()
+        new Gl(), new Glue(), new Imgui(), new Log(), new Shape(), new Time()
     ];
 
     var prefixToModule = modules.ToDictionary(m => m.Prefix, m => m.ModuleName);
@@ -88,16 +88,16 @@ rootCommand.SetAction(parseResult =>
         var view = ClangRunner.CreateView(unified, mod.Prefix, mod.ModuleName);
         var reg = TypeRegistry.FromModule(view);
 
-        // SourceLink: find the header that corresponds to this module's prefix
+        // SourceLink: find the header that corresponds to this module
+        var moduleSuffix = mod.ModuleName.Split('.').Last();
         var headerFile = sokolHeaders.FirstOrDefault(h =>
-        {
-            var fullPath = FindHeader(h, sokolIncludePaths);
-            return fullPath != null;
-        });
+            h.Equals($"sokol_{moduleSuffix}.h", StringComparison.OrdinalIgnoreCase));
         SourceLink? sourceLink = null;
         if (headerFile != null)
         {
-            var relPath = headerFile.Contains("util")
+            var fullPath = FindHeader(headerFile, sokolIncludePaths);
+            var isUtil = fullPath.Replace('\\', '/').Contains("/util/");
+            var relPath = isUtil
                 ? $"sokol/util/{headerFile}"
                 : $"sokol/{headerFile}";
             sourceLink = SourceLink.FromHeader(depsDir, relPath);

@@ -25,6 +25,7 @@ extern int luaopen_shdc(lua_State *L);
 #endif
 
 #ifdef MANE3D_HAS_IMGUI
+extern int luaopen_sokol_imgui(lua_State *L);
 extern int luaopen_imgui(lua_State *L);
 #else
 /* Dummy imgui module for headless testing */
@@ -131,6 +132,8 @@ void mane3d_lua_register_all(lua_State *L)
 #endif
 
 #ifdef MANE3D_HAS_IMGUI
+    luaL_requiref(L, "sokol.imgui", luaopen_sokol_imgui, 0);
+    lua_pop(L, 1);
     luaL_requiref(L, "imgui", luaopen_imgui, 0);
     lua_pop(L, 1);
 #else
