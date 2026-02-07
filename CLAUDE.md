@@ -11,6 +11,8 @@ scripts\build.bat                    # Windows default (win-d3d11-debug)
 scripts\build.bat win-d3d11-release  # Specify preset
 dotnet test Generator.Tests          # Generator unit tests (338 tests)
 scripts\run_tests.bat                # Headless example tests (13 tests)
+python scripts/check.py              # Lua type-check (lua-language-server)
+python scripts/check.py --doc        # Lua type-check + doc.json generation
 ```
 
 Presets: `win-d3d11-{debug,release}`, `win-gl-debug`, `win-dummy-{debug,release}`, `macos-metal-release`, `linux-gl-debug`, `linux-dummy-{debug,release}`, `wasm-{debug,release}`

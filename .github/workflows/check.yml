@@ -28,7 +28,9 @@ jobs:
           curl -L https://github.com/LuaLS/lua-language-server/releases/download/3.16.4/lua-language-server-3.16.4-linux-x64.tar.gz | tar xz -C /tmp
 
       - name: Run Lua check
-        run: /tmp/bin/lua-language-server --configpath .luarc.json --check .
+        run: python scripts/check.py
+        env:
+          LUA_LS: /tmp/bin/lua-language-server
 
   headless-test:
     strategy:
