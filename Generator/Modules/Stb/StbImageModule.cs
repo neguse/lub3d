@@ -4,20 +4,55 @@ using Generator.ClangAst;
 
 /// <summary>
 /// stb_image Lua バインディングモジュール
-/// Clang AST パース不要 — ModuleSpec を直接構築
+/// Clang AST パースで関数を取得し、単純な関数は自動生成、
+/// malloc+output params の特殊パターンは ExtraCCode でカスタムラッパー
 /// </summary>
 public class StbImageModule : IModule
 {
     public string ModuleName => "stb.image";
     public string Prefix => "stbi_";
 
-    public ModuleSpec BuildSpec()
+    /// <summary>
+    /// 自動生成する関数 (Clang AST から型情報を取得して CBindingGen で生成)
+    /// </summary>
+    private static readonly HashSet<string> AllowedFuncs =
+    [
+        "stbi_is_hdr",
+        "stbi_is_hdr_from_memory",
+        "stbi_is_16_bit",
+        "stbi_is_16_bit_from_memory",
+        "stbi_failure_reason",
+        "stbi_set_flip_vertically_on_load",
+        "stbi_set_flip_vertically_on_load_thread",
+        "stbi_set_unpremultiply_on_load",
+        "stbi_set_unpremultiply_on_load_thread",
+        "stbi_convert_iphone_png_to_rgb",
+        "stbi_convert_iphone_png_to_rgb_thread",
+        "stbi_hdr_to_ldr_gamma",
+        "stbi_hdr_to_ldr_scale",
+        "stbi_ldr_to_hdr_gamma",
+        "stbi_ldr_to_hdr_scale",
+    ];
+
+    public ModuleSpec BuildSpec(TypeRegistry reg, SourceLink? sourceLink = null)
     {
+        // Clang AST から自動生成する関数を抽出
+        var funcs = new List<FuncBinding>();
+        foreach (var f in reg.OwnFuncs)
+        {
+            if (!AllowedFuncs.Contains(f.Name)) continue;
+
+            var retType = Resolve(CTypeParser.ParseReturnType(f.TypeStr));
+            var parms = f.Params.Select(p => new ParamBinding(p.Name, Resolve(p.ParsedType))).ToList();
+            var luaName = Pipeline.ToPascalCase(Pipeline.StripPrefix(f.Name, Prefix));
+            funcs.Add(new FuncBinding(f.Name, luaName, parms, retType, GetLink(f, sourceLink)));
+        }
+
         return new ModuleSpec(
             ModuleName, Prefix,
             ["stb_image.h"],
             ExtraCCode(),
-            [], [], [],
+            [], funcs, [],
             [
                 ("load", "l_stbi_load"),
                 ("load_from_memory", "l_stbi_load_from_memory"),
@@ -46,40 +81,39 @@ public class StbImageModule : IModule
             ]);
     }
 
+    // ===== IModule 実装 =====
+
     public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
     {
-        var spec = BuildSpec();
+        var spec = BuildSpec(reg);
         return CBinding.CBindingGen.Generate(spec);
     }
 
     public string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
-        var spec = BuildSpec();
-        return GenerateLuaManual(sourceLink);
+        var spec = BuildSpec(reg, sourceLink);
+        return LuaCats.LuaCatsGen.Generate(spec);
     }
 
-    /// <summary>
-    /// LuaCATS 型注釈を手書き生成
-    /// ExtraLuaFuncs の多値返却パターンは LuaCatsGen の FuncField では表現しにくいため直接生成
-    /// </summary>
-    private string GenerateLuaManual(SourceLink? sourceLink)
+    // ===== 型解決 =====
+
+    private static BindingType Resolve(Types t) => t switch
     {
-        var src = sourceLink != null ? $" [source]({sourceLink.GetLink(0)})" : "";
-        return $$"""
-            ---@meta
-            -- LuaCATS type definitions for stb.image
-            -- Auto-generated, do not edit
+        Types.Int => new BindingType.Int(),
+        Types.Float => new BindingType.Float(),
+        Types.Bool => new BindingType.Bool(),
+        Types.String => new BindingType.Str(),
+        Types.Void => new BindingType.Void(),
+        Types.ConstPtr(Types.String) => new BindingType.Str(),
+        Types.Ptr(Types.Void) => new BindingType.VoidPtr(),
+        // stbi_uc = unsigned char, stbi_us = unsigned short — treat as int
+        Types.StructRef("stbi_uc") => new BindingType.Int(),
+        Types.StructRef("stbi_us") => new BindingType.Int(),
+        Types.ConstPtr(Types.StructRef("stbi_uc")) => new BindingType.Str(),
+        _ => new BindingType.Void(),
+    };
 
-            ---@class stb.image
-            ---@field load fun(filename: string, desired_channels?: integer): integer, integer, integer, string | nil, string{{src}}
-            ---@field load_from_memory fun(buffer: string, desired_channels?: integer): integer, integer, integer, string | nil, string{{src}}
-            ---@field info fun(filename: string): integer, integer, integer | nil, string{{src}}
-            ---@type stb.image
-            local M = {}
-
-            return M
-            """;
-    }
+    // ===== カスタムラッパー (malloc + output params) =====
 
     private static string ExtraCCode() => """
         /* Load image from file
@@ -164,4 +198,17 @@ public class StbImageModule : IModule
         }
 
         """;
+
+    // ===== ヘルパー =====
+
+    private static string? GetLink(Decl d, SourceLink? sourceLink)
+    {
+        if (sourceLink == null) return null;
+        var line = d switch
+        {
+            Funcs f => f.Line,
+            _ => null
+        };
+        return line is int l ? sourceLink.GetLink(l) : null;
+    }
 }
