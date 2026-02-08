@@ -201,8 +201,11 @@ public static class CBindingGen
     public static string StructPairs(string structName, string metatable, IEnumerable<FieldInit> fields)
     {
         var accessibleFields = fields.Where(f => f.Type is not Type.FuncPtr).ToList();
-        var fieldNames = string.Join(",\n", accessibleFields.Select(f =>
-            $"        \"{f.LuaFieldName}\""));
+        var fieldEntries = accessibleFields.Select(f =>
+            $"        \"{f.LuaFieldName}\"").ToList();
+        // Avoid empty array initializer (triggers MSVC ICE)
+        if (fieldEntries.Count == 0) fieldEntries.Add("        NULL");
+        var fieldNames = string.Join(",\n", fieldEntries);
         return $$"""
             static int l_{{structName}}__pairs_next(lua_State *L) {
                 static const char* fields[] = {
