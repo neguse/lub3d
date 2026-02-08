@@ -59,7 +59,7 @@ local function update_ui()
 
         -- Global ambient
         local achanged, new_ambient = imgui.ColorEdit3("Global Ambient",
-            {light.light_model_ambient.x, light.light_model_ambient.y, light.light_model_ambient.z})
+            { light.light_model_ambient.x, light.light_model_ambient.y, light.light_model_ambient.z })
         if achanged then
             light.light_model_ambient = glm.vec4(new_ambient[1], new_ambient[2], new_ambient[3], 1.0)
         end
@@ -126,7 +126,7 @@ local function update_ui()
                     imgui.TextUnformatted("Type: Directional")
                     -- Direction (stored negated in position.xyz)
                     local dchanged, new_dir = imgui.InputFloat3("Direction",
-                        {-src.position.x, -src.position.y, -src.position.z})
+                        { -src.position.x, -src.position.y, -src.position.z })
                     if dchanged then
                         local dir = glm.vec3(new_dir[1], new_dir[2], new_dir[3]):normalize()
                         src.position = glm.vec4(-dir.x, -dir.y, -dir.z, 0)
@@ -134,14 +134,14 @@ local function update_ui()
                 else
                     imgui.TextUnformatted(is_spot and "Type: Spotlight" or "Type: Point")
                     local pchanged, new_pos = imgui.InputFloat3("Position",
-                        {src.position.x, src.position.y, src.position.z})
+                        { src.position.x, src.position.y, src.position.z })
                     if pchanged then
                         src.position = glm.vec4(new_pos[1], new_pos[2], new_pos[3], src.position.w)
                     end
 
                     if is_spot then
                         local sdchanged, new_spot_dir = imgui.InputFloat3("Spot Dir",
-                            {src.spot_direction.x, src.spot_direction.y, src.spot_direction.z})
+                            { src.spot_direction.x, src.spot_direction.y, src.spot_direction.z })
                         if sdchanged then
                             local dir = glm.vec3(new_spot_dir[1], new_spot_dir[2], new_spot_dir[3]):normalize()
                             src.spot_direction = glm.vec4(dir.x, dir.y, dir.z, src.spot_direction.w)
@@ -149,13 +149,14 @@ local function update_ui()
 
                         local expchanged, exp = imgui.SliderFloat("Exponent", src.spot_direction.w, 0, 20)
                         if expchanged then
-                            src.spot_direction = glm.vec4(src.spot_direction.x, src.spot_direction.y, src.spot_direction.z, exp)
+                            src.spot_direction = glm.vec4(src.spot_direction.x, src.spot_direction.y,
+                                src.spot_direction.z, exp)
                         end
                     end
 
                     -- Attenuation
                     local atchanged, new_atten = imgui.InputFloat3("Atten (c,l,q)",
-                        {src.attenuation.x, src.attenuation.y, src.attenuation.z})
+                        { src.attenuation.x, src.attenuation.y, src.attenuation.z })
                     if atchanged then
                         src.attenuation = glm.vec4(new_atten[1], new_atten[2], new_atten[3], 0)
                     end
@@ -163,7 +164,7 @@ local function update_ui()
 
                 -- Color (diffuse)
                 local cchanged, new_color = imgui.ColorEdit3("Color",
-                    {src.diffuse.x, src.diffuse.y, src.diffuse.z})
+                    { src.diffuse.x, src.diffuse.y, src.diffuse.z })
                 if cchanged then
                     src.color = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
                     src.diffuse = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
@@ -190,7 +191,7 @@ local function load_model()
     local lua_mtime = get_mtime(lua_path)
     local luac_mtime = get_mtime(luac_path)
 
-    if luac_mtime > 0 and luac_mtime >= lua_mtime then
+    if luac_mtime and lua_mtime and luac_mtime >= lua_mtime then
         -- Load from cache
         log.info("Loading cached bytecode...")
         local chunk, err = loadfile(luac_path)
@@ -329,7 +330,8 @@ local function load_model()
         if not default_diffuse then
             local white = string.pack("BBBB", 255, 255, 255, 255)
             local img = gpu.image(gfx.ImageDesc({
-                width = 1, height = 1,
+                width = 1,
+                height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { white } },
             }))
@@ -343,7 +345,8 @@ local function load_model()
             -- Flat normal: (0.5, 0.5, 1.0) = pointing up in tangent space
             local flat = string.pack("BBBB", 128, 128, 255, 255)
             local img = gpu.image(gfx.ImageDesc({
-                width = 1, height = 1,
+                width = 1,
+                height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { flat } },
             }))
@@ -357,7 +360,8 @@ local function load_model()
             -- Default specular: R=0.5 (intensity), G=0.25 (shininess=32), B=0.5 (fresnel)
             local spec = string.pack("BBBB", 128, 64, 128, 255)
             local img = gpu.image(gfx.ImageDesc({
-                width = 1, height = 1,
+                width = 1,
+                height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { spec } },
             }))

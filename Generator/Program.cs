@@ -6,6 +6,7 @@ using Generator.ClangAst;
 using Generator.Modules.Sokol;
 using Generator.Modules.Miniaudio;
 using Generator.Modules.Imgui;
+using Generator.Modules.Stb;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -202,6 +203,41 @@ rootCommand.SetAction(parseResult =>
     else
     {
         Console.WriteLine("Skipping Dear ImGui (deps/imgui/imgui.h not found)");
+    }
+
+    // --- ヘッダグループ (stb_image) ---
+    {
+        var stbImageModule = new StbImageModule();
+        var stbHeader = Path.Combine(depsDir, "stb", "stb_image.h");
+        var stbIncludePaths = new List<string> { Path.Combine(depsDir, "stb") };
+
+        Console.WriteLine("Parsing stb_image header with clang ...");
+        var (stbRawJson, stbUnified) = ClangRunner.ParseHeadersWithRawJson(
+            clangPath, [stbHeader], [stbImageModule.Prefix], stbIncludePaths);
+
+        var stbAstPath = Path.Combine(outputDir, "stb_image_clang_ast.json");
+        File.WriteAllText(stbAstPath, stbRawJson);
+        Console.WriteLine($"Generated: {stbAstPath} (raw clang AST)");
+        Console.WriteLine($"  Found {stbUnified.Decls.Count} declarations total");
+
+        var stbView = ClangRunner.CreateView(stbUnified, stbImageModule.Prefix, stbImageModule.ModuleName);
+        var stbReg = TypeRegistry.FromModule(stbView);
+        var stbPrefixToModule = new Dictionary<string, string> { [stbImageModule.Prefix] = stbImageModule.ModuleName };
+        var stbSourceLink = SourceLink.FromHeader(depsDir, "stb/stb_image.h");
+
+        var stbModuleId = stbImageModule.ModuleName.Replace('.', '_');
+
+        var stbJsonPath = Path.Combine(outputDir, $"{stbModuleId}.json");
+        File.WriteAllText(stbJsonPath, JsonSerializer.Serialize(stbView, jsonOptions));
+        Console.WriteLine($"Generated: {stbJsonPath}");
+
+        var stbCPath = Path.Combine(outputDir, $"{stbModuleId}.c");
+        File.WriteAllText(stbCPath, stbImageModule.GenerateC(stbReg, stbPrefixToModule));
+        Console.WriteLine($"Generated: {stbCPath}");
+
+        var stbLuaPath = Path.Combine(outputDir, $"{stbModuleId}.lua");
+        File.WriteAllText(stbLuaPath, stbImageModule.GenerateLua(stbReg, stbPrefixToModule, stbSourceLink));
+        Console.WriteLine($"Generated: {stbLuaPath}");
     }
 
     return 0;
