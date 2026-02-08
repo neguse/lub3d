@@ -64,8 +64,6 @@ void main() {
 ---@field tex_h number atlas height in pixels
 ---@field verts number[] vertex data accumulator
 ---@field quad_count number quads queued this frame
----@field pipeline gpu.Pipeline
----@field shader gpu.Shader
 ---@field vbuf gpu.Buffer
 ---@field ibuf gpu.Buffer
 ---@field screen_w number logical screen width
@@ -98,7 +96,7 @@ local shared_shader = nil -- raw handle for pipeline creation
 local shared_pipeline = nil -- raw handle for draw calls
 
 local function ensure_shared_resources()
-    if shared_shader then return end
+    if shared_pipeline then return end
 
     local shd = shaderMod.compile_full(shader_source, "sprite", {
         uniform_blocks = {
@@ -111,7 +109,7 @@ local function ensure_shared_resources()
             },
         },
         views = {
-            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType._2D, sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
         },
         samplers = {
             { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
@@ -156,6 +154,12 @@ local function ensure_shared_resources()
             write_enabled = false,
         },
     }))
+    if gfx.QueryPipelineState(pip) ~= gfx.ResourceState.VALID then
+        log.error("sprite: failed to create pipeline")
+        gfx.DestroyShader(shd)
+        shared_shader = nil
+        return
+    end
     shared_pipeline = pip
 end
 
@@ -244,8 +248,8 @@ function M.draw(batch, sx, sy, sw, sh, dx, dy, opts)
     -- Apply rotation and translate to destination
     local cos_r, sin_r = math.cos(rotate), math.sin(rotate)
     local function transform(lx, ly)
-        return dx + origin_x * scale_x + lx * cos_r - ly * sin_r,
-               dy + origin_y * scale_y + lx * sin_r + ly * cos_r
+        return dx + origin_x + lx * cos_r - ly * sin_r,
+               dy + origin_y + lx * sin_r + ly * cos_r
     end
 
     local ax, ay = transform(x0, y0)
@@ -297,6 +301,25 @@ function M.flush(batch)
     -- Reset
     batch.verts = {}
     batch.quad_count = 0
+end
+
+--- Destroy a batch's GPU resources (call before gfx.Shutdown)
+---@param batch sprite.Batch
+function M.destroy_batch(batch)
+    if batch.vbuf then batch.vbuf:destroy(); batch.vbuf = nil end
+    if batch.ibuf then batch.ibuf:destroy(); batch.ibuf = nil end
+end
+
+--- Shutdown shared resources (call before gfx.Shutdown)
+function M.shutdown()
+    if shared_pipeline then
+        gfx.DestroyPipeline(shared_pipeline)
+        shared_pipeline = nil
+    end
+    if shared_shader then
+        gfx.DestroyShader(shared_shader)
+        shared_shader = nil
+    end
 end
 
 return M
