@@ -7,12 +7,12 @@ local M = {}
 local lume = require("deps.lume.lume")
 
 -- Configuration
-M.interval = 0.5  -- seconds between checks
+M.interval = 0.5 -- seconds between checks
 M.enabled = true
 
 -- Internal state
-local watched = {}      -- { [filepath] = mtime }
-local mod_to_path = {}  -- { [modname] = filepath }
+local watched = {}     -- { [filepath] = mtime }
+local mod_to_path = {} -- { [modname] = filepath }
 local last_check = 0
 
 -- Resolve module name to file path
@@ -22,7 +22,7 @@ local function resolve_path(modname)
     for pattern in path:gmatch("[^;]+") do
         local filepath = pattern:gsub("%?", name)
         local mtime = get_mtime(filepath)
-        if mtime > 0 then
+        if mtime then
             return filepath
         end
     end
@@ -63,7 +63,7 @@ function M.update()
 
     for filepath, old_mtime in pairs(watched) do
         local new_mtime = get_mtime(filepath)
-        if new_mtime > 0 and new_mtime ~= old_mtime then
+        if new_mtime and new_mtime ~= old_mtime then
             -- Find module name for this file
             for modname, path in pairs(mod_to_path) do
                 if path == filepath then

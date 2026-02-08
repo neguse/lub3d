@@ -44,7 +44,7 @@ local function write_file(path, data)
     return true
 end
 
--- get_mtime is a global function registered by lub3d_lua.c
+-- get_mtime is a global function registered by lub3d_lua.c (returns nil if not found)
 ---@type fun(path: string): number|nil
 local file_mtime = get_mtime
 
