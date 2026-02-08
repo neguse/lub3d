@@ -40,7 +40,12 @@ void main() {
 @program triangle vs fs
 ]]
 
-local function init_game()
+local M = {}
+M.width = 800
+M.height = 600
+M.window_title = "Lub3d - Triangle"
+
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -81,7 +86,7 @@ local function init_game()
     }))
 end
 
-local function update_frame()
+function M:frame()
     t = t + 1.0 / 60.0
     if not pipeline or not vbuf then return end
 
@@ -120,23 +125,14 @@ local function update_frame()
     gfx.Commit()
 end
 
-local function cleanup_game()
+function M:cleanup()
     gfx.Shutdown()
 end
 
-local function handle_event(ev)
+function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
         app.Quit()
     end
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 800,
-    height = 600,
-    window_title = "Lub3d - Triangle",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M

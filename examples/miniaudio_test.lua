@@ -54,91 +54,92 @@ end
 
 local frame_count = 0
 
-app.Run(app.Desc({
-    width = 640,
-    height = 480,
-    window_title = "miniaudio test",
+local M = {}
+M.width = 640
+M.height = 480
+M.window_title = "miniaudio test"
 
-    init = function()
-        gfx.Setup(gfx.Desc({
-            environment = glue.Environment(),
-        }))
-        gl.Setup(gl.Desc({}))
+function M:init()
+    gfx.Setup(gfx.Desc({
+        environment = glue.Environment(),
+    }))
+    gl.Setup(gl.Desc({}))
 
-        -- Generate test WAV
-        generate_wav(wav_path, 440, 2.0)
+    -- Generate test WAV
+    generate_wav(wav_path, 440, 2.0)
 
-        -- Init engine & play sound
-        engine = ma.EngineInit()
-        engine:Start()
-        engine:SetVolume(0.5)
-        print("engine channels: " .. engine:GetChannels())
-        print("engine sample rate: " .. engine:GetSampleRate())
+    -- Init engine & play sound
+    engine = ma.EngineInit()
+    engine:Start()
+    engine:SetVolume(0.5)
+    print("engine channels: " .. engine:GetChannels())
+    print("engine sample rate: " .. engine:GetSampleRate())
 
-        sound = ma.SoundInitFromFile(engine, wav_path, 0)
-        sound:SetLooping(true)
-        sound:SetVolume(0.8)
-        sound:Start()
+    sound = ma.SoundInitFromFile(engine, wav_path, 0)
+    sound:SetLooping(true)
+    sound:SetVolume(0.8)
+    sound:Start()
 
-        print("miniaudio: playing sine wave (440Hz)")
-    end,
+    print("miniaudio: playing sine wave (440Hz)")
+end
 
-    frame = function()
-        frame_count = frame_count + 1
-        local t = frame_count / 60.0
+function M:frame()
+    frame_count = frame_count + 1
+    local t = frame_count / 60.0
 
-        -- Oscillate volume
-        local vol = 0.3 + 0.5 * (math.sin(t * 0.5) + 1) / 2
-        if sound then
-            sound:SetVolume(vol)
+    -- Oscillate volume
+    local vol = 0.3 + 0.5 * (math.sin(t * 0.5) + 1) / 2
+    if sound then
+        sound:SetVolume(vol)
+    end
+
+    gfx.BeginPass(gfx.Pass({
+        action = gfx.PassAction({
+            colors = {
+                gfx.ColorAttachmentAction({
+                    load_action = gfx.LoadAction.CLEAR,
+                    clear_value = gfx.Color({ r = 0.1, g = 0.1, b = 0.15, a = 1.0 }),
+                }),
+            },
+        }),
+        swapchain = glue.Swapchain(),
+    }))
+
+    -- Draw volume indicator
+    gl.Defaults()
+    gl.MatrixModeProjection()
+    gl.Ortho(-1, 1, -1, 1, -1, 1)
+
+    -- Volume bar
+    local bar_w = vol * 1.5
+    gl.BeginQuads()
+    gl.V2fC3f(-0.75, -0.1, 0.2, 0.8, 0.3)
+    gl.V2fC3f(-0.75, 0.1, 0.2, 0.8, 0.3)
+    gl.V2fC3f(-0.75 + bar_w, 0.1, 0.3, 1.0, 0.4)
+    gl.V2fC3f(-0.75 + bar_w, -0.1, 0.3, 1.0, 0.4)
+    gl.End()
+
+    gl.Draw()
+    gfx.EndPass()
+    gfx.Commit()
+end
+
+function M:cleanup()
+    -- sound/engine are freed by GC (__gc metamethod)
+    sound = nil
+    engine = nil
+    collectgarbage()
+    gl.Shutdown()
+    gfx.Shutdown()
+    os.remove(wav_path)
+end
+
+function M:event(ev)
+    if ev.type == app.EventType.KEY_DOWN then
+        if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
+            app.Quit()
         end
+    end
+end
 
-        gfx.BeginPass(gfx.Pass({
-            action = gfx.PassAction({
-                colors = {
-                    gfx.ColorAttachmentAction({
-                        load_action = gfx.LoadAction.CLEAR,
-                        clear_value = gfx.Color({ r = 0.1, g = 0.1, b = 0.15, a = 1.0 }),
-                    }),
-                },
-            }),
-            swapchain = glue.Swapchain(),
-        }))
-
-        -- Draw volume indicator
-        gl.Defaults()
-        gl.MatrixModeProjection()
-        gl.Ortho(-1, 1, -1, 1, -1, 1)
-
-        -- Volume bar
-        local bar_w = vol * 1.5
-        gl.BeginQuads()
-        gl.V2fC3f(-0.75, -0.1, 0.2, 0.8, 0.3)
-        gl.V2fC3f(-0.75, 0.1, 0.2, 0.8, 0.3)
-        gl.V2fC3f(-0.75 + bar_w, 0.1, 0.3, 1.0, 0.4)
-        gl.V2fC3f(-0.75 + bar_w, -0.1, 0.3, 1.0, 0.4)
-        gl.End()
-
-        gl.Draw()
-        gfx.EndPass()
-        gfx.Commit()
-    end,
-
-    cleanup = function()
-        -- sound/engine are freed by GC (__gc metamethod)
-        sound = nil
-        engine = nil
-        collectgarbage()
-        gl.Shutdown()
-        gfx.Shutdown()
-        os.remove(wav_path)
-    end,
-
-    event = function(ev)
-        if ev.type == app.EventType.KEY_DOWN then
-            if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
-                app.Quit()
-            end
-        end
-    end,
-}))
+return M

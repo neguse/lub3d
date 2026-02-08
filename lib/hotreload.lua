@@ -78,7 +78,7 @@ function M.update()
                         -- Call reload hook if module defines one
                         local hook_ok = true
                         if mod and type(mod.on_reload) == "function" then
-                            local ok, hook_err = pcall(mod.on_reload)
+                            local ok, hook_err = pcall(mod.on_reload, mod)
                             if not ok then
                                 print(string.format("[hotreload] on_reload error: %s", hook_err))
                                 hook_ok = false

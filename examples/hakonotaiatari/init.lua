@@ -31,8 +31,13 @@ local camera
 local last_score = 0
 local time_accumulator = 0 -- For fixed timestep
 
--- Initialize game
-local function init_game()
+local M = {}
+M.width = 800
+M.height = 800
+M.window_title = "hakonotaiatari"
+M.high_dpi = true
+
+function M:init()
     log.info("hakonotaiatari starting...")
 
     -- Initialize sokol.gfx (required for Lua entry point)
@@ -71,8 +76,7 @@ local function init_game()
     log.info("hakonotaiatari initialized")
 end
 
--- Frame update and render
-local function update_frame()
+function M:frame()
     local frame_dt = app.FrameDuration()
     local fixed_dt = const.DELTA_T -- 1/60 sec
 
@@ -190,8 +194,7 @@ local function update_frame()
     input.end_frame()
 end
 
--- Handle events
-local function handle_event(ev)
+function M:event(ev)
     -- Pass to input handler
     input.handle_event(ev)
 
@@ -206,22 +209,11 @@ local function handle_event(ev)
     end
 end
 
--- Cleanup
-local function cleanup_game()
+function M:cleanup()
     audio.cleanup()
     renderer.cleanup() -- gl.Shutdown() is called inside
     gfx.Shutdown()
     log.info("hakonotaiatari cleanup complete")
 end
 
--- Run the application (Lua entry point)
-app.Run(app.Desc({
-    width = 800,
-    height = 800,
-    window_title = "hakonotaiatari",
-    high_dpi = true,
-    init = init_game,
-    frame = update_frame,
-    event = handle_event,
-    cleanup = cleanup_game,
-}))
+return M

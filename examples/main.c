@@ -177,7 +177,7 @@ static int fetch_and_dostring(lua_State *L, const char *url)
         free(data);
         if (result == LUA_OK)
         {
-            result = lua_pcall(L, 0, LUA_MULTRET, 0);
+            result = lua_pcall(L, 0, 1, 0);
         }
         return result;
     }
@@ -277,6 +277,43 @@ static void setup_fetch_searcher(lua_State *L)
 }
 #endif
 
+/* Run boot.lua (with _lub3d_script or _lub3d_module already set) */
+static int run_boot(lua_State *L)
+{
+#ifdef __EMSCRIPTEN__
+    if (fetch_and_dostring(L, "lib/boot.lua") != LUA_OK)
+#else
+    if (luaL_dofile(L, "lib/boot.lua") != LUA_OK)
+#endif
+    {
+        const char *err = lua_tostring(L, -1);
+        slog_func("boot", 0, 0, err ? err : "(no message)", 0, "lib/boot.lua", 0);
+        lua_pop(L, 1);
+        return -1;
+    }
+    return 0;
+}
+
+/* Set _lub3d_script (Lua module name) and run boot.lua */
+static int boot_script(lua_State *L, const char *modname)
+{
+    lua_pushstring(L, modname);
+    lua_setglobal(L, "_lub3d_script");
+    return run_boot(L);
+}
+
+/* Playground: top of stack is return value. If table, set _lub3d_module and run boot. */
+static int try_boot_module(lua_State *L)
+{
+    if (lua_istable(L, -1))
+    {
+        lua_setglobal(L, "_lub3d_module");
+        return run_boot(L);
+    }
+    lua_settop(L, 0);
+    return 0; /* legacy path */
+}
+
 static int lub3d_main(int argc, char *argv[])
 {
     slog_func("main", 3, 0, "=== lub3d starting (Lua entry point) ===", 0, "", 0);
@@ -302,38 +339,20 @@ static int lub3d_main(int argc, char *argv[])
     /* Register all sokol and lub3d modules */
     lub3d_lua_register_all(L);
 
-    /* Load script */
+    /* Load module name */
 #ifdef __EMSCRIPTEN__
     js_get_script_param(g_script_path, sizeof(g_script_path));
     const char *script = g_script_path;
-#else
-    const char *script = (argc > 1) ? argv[1] : "main.lua";
-    strncpy(g_script_path, script, sizeof(g_script_path) - 1);
-#endif
     extract_dir(script, g_script_dir, sizeof(g_script_dir));
-    slog_func("lua", 3, 0, "Loading script", 0, script, 0);
-    slog_func("lua", 3, 0, "Script directory", 0, g_script_dir, 0);
+#else
+    /* argv[1] is a Lua module name (e.g. "examples.hello") */
+    const char *script = (argc > 1) ? argv[1] : "examples.hello";
+#endif
+    slog_func("lua", 3, 0, "Loading module", 0, script, 0);
 
     /* Export get_mtime to Lua for hot reload */
     lua_pushcfunction(L, l_get_mtime);
     lua_setglobal(L, "get_mtime");
-
-#ifndef __EMSCRIPTEN__
-    /* Add script directory and project root to package.path */
-    {
-        lua_getglobal(L, "package");
-        lua_getfield(L, -1, "path");
-        const char *old_path = lua_tostring(L, -1);
-        char new_path[2048];
-        /* Add: script_dir/?.lua, script_dir/../?.lua (project root), old_path */
-        snprintf(new_path, sizeof(new_path), "%s/?.lua;%s/../?.lua;%s",
-                 g_script_dir, g_script_dir, old_path ? old_path : "");
-        lua_pop(L, 1);
-        lua_pushstring(L, new_path);
-        lua_setfield(L, -2, "path");
-        lua_pop(L, 1);
-    }
-#endif
 
     /* Execute Lua script - script calls app.run() to start the application */
 #ifdef __EMSCRIPTEN__
@@ -345,11 +364,15 @@ static int lub3d_main(int argc, char *argv[])
         {
             if (luaL_loadbuffer(L, code, len, "editor") == LUA_OK)
             {
-                if (lua_pcall(L, 0, LUA_MULTRET, 0) != LUA_OK)
+                if (lua_pcall(L, 0, 1, 0) != LUA_OK)
                 {
                     const char *err = lua_tostring(L, -1);
                     slog_func("lua", 0, 0, err ? err : "(no message)", 0, "editor", 0);
                     lua_pop(L, 1);
+                }
+                else
+                {
+                    try_boot_module(L);
                 }
             }
             else
@@ -362,19 +385,14 @@ static int lub3d_main(int argc, char *argv[])
         }
         js_notify_ready();
     }
-    else if (fetch_and_dostring(L, script) != LUA_OK)
+    else
     {
-        const char *err = lua_tostring(L, -1);
-        slog_func("lua", 0, 0, err ? err : "(no message)", 0, script, 0);
-        lua_pop(L, 1);
+        boot_script(L, script);
     }
     /* Emscripten: sapp_run returns immediately, Lua state stays alive for callbacks */
 #else
-    if (luaL_dofile(L, script) != LUA_OK)
+    if (boot_script(L, script) != 0)
     {
-        const char *err = lua_tostring(L, -1);
-        fprintf(stderr, "Lua error: %s\n", err ? err : "(no message)");
-        slog_func("lua", 0, 0, err ? err : "(no message)", 0, script, 0);
         lua_close(L);
         return 1;
     }

@@ -55,22 +55,6 @@ extern void shdc_init(void);
 extern void shdc_shutdown(void);
 #endif
 
-static void extract_dir(const char *path, char *dir, size_t dir_size)
-{
-    strncpy(dir, path, dir_size - 1);
-    dir[dir_size - 1] = '\0';
-    char *last_sep = NULL;
-    for (char *p = dir; *p; p++)
-    {
-        if (*p == '/' || *p == '\\')
-            last_sep = p;
-    }
-    if (last_sep)
-        *last_sep = '\0';
-    else
-        strcpy(dir, ".");
-}
-
 /* Lua panic handler: last resort before abort */
 static int panic_handler(lua_State *L)
 {
@@ -90,16 +74,21 @@ static int msghandler(lua_State *L)
     return 1;
 }
 
-/* Run a Lua script with traceback error handler */
-static int run_script(lua_State *L, const char *script)
+/* Run a module via boot.lua (argv[1] is a Lua module name) */
+static int run_script(lua_State *L, const char *modname)
 {
     lua_pushcfunction(L, msghandler);
     int msgh = lua_gettop(L);
 
-    int status = luaL_loadfile(L, script);
+    lua_pushstring(L, modname);
+    lua_setglobal(L, "_lub3d_script");
+
+    int status = luaL_loadfile(L, "lib/boot.lua");
     if (status != LUA_OK)
     {
-        test_log(LOG_ERROR, "%s", lua_tostring(L, -1));
+        test_log(LOG_ERROR, "boot.lua: %s", lua_tostring(L, -1));
+        lua_pop(L, 1);
+        lua_remove(L, msgh);
         return 1;
     }
 
@@ -117,32 +106,19 @@ static int run_test(int argc, char *argv[])
 {
     if (argc < 2)
     {
-        fprintf(stderr, "Usage: %s <script.lua> [num_frames]\n", argv[0]);
+        fprintf(stderr, "Usage: %s <module.name> [num_frames]\n", argv[0]);
         return 3;
     }
 
-    const char *script = argv[1];
+    const char *modname = argv[1];
     int num_frames = (argc > 2) ? atoi(argv[2]) : 10;
 
-    test_log(LOG_INFO, "[TEST] Running %s for %d frames", script, num_frames);
-
-    /* Check file exists */
-    FILE *f = fopen(script, "r");
-    if (!f)
-    {
-        test_log(LOG_ERROR, "Script not found: %s", script);
-        return 2;
-    }
-    fclose(f);
+    test_log(LOG_INFO, "[TEST] Running %s for %d frames", modname, num_frames);
 
     /* Setup Lua */
     lua_State *L = luaL_newstate();
     lua_atpanic(L, panic_handler);
     luaL_openlibs(L);
-
-    char script_dir[512];
-    extract_dir(script, script_dir, sizeof(script_dir));
-    lub3d_lua_setup_path(L, script_dir);
     lub3d_lua_register_all(L);
 
     /* Set _headless_frames global before running script */
@@ -153,8 +129,8 @@ static int run_test(int argc, char *argv[])
     shdc_init();
 #endif
 
-    /* Run script with traceback handler */
-    int result = run_script(L, script);
+    /* Run module via boot.lua */
+    int result = run_script(L, modname);
 
 #ifdef LUB3D_HAS_SHDC
     shdc_shutdown();
@@ -162,7 +138,7 @@ static int run_test(int argc, char *argv[])
     lua_close(L);
 
     if (result == 0)
-        test_log(LOG_INFO, "[PASS] %s", script);
+        test_log(LOG_INFO, "[PASS] %s", modname);
     return result;
 }
 

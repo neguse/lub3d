@@ -10,7 +10,12 @@ local slider_val = 0.5
 local checkbox_val = true
 local color = { 0.4, 0.7, 1.0 }
 
-local function init_game()
+local M = {}
+M.width = 800
+M.height = 600
+M.window_title = "Lub3d - ImGui Test"
+
+function M:init()
     -- Initialize sokol.gfx
     gfx.Setup(gfx.Desc({
         environment = glue.Environment(),
@@ -19,7 +24,7 @@ local function init_game()
     imgui.Setup()
 end
 
-local function update_frame()
+function M:frame()
     imgui.NewFrame()
 
     -- Main debug window
@@ -63,22 +68,13 @@ local function update_frame()
     gfx.Commit()
 end
 
-local function handle_event(ev)
+function M:event(ev)
     imgui.HandleEvent(ev)
 end
 
-local function cleanup_game()
+function M:cleanup()
     imgui.Shutdown()
     gfx.Shutdown()
 end
 
--- Run the application
-app.Run(app.Desc({
-    width = 800,
-    height = 600,
-    window_title = "Lub3d - ImGui Test",
-    init = init_game,
-    frame = update_frame,
-    cleanup = cleanup_game,
-    event = handle_event,
-}))
+return M
