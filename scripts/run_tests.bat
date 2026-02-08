@@ -48,8 +48,10 @@ REM Run subdirectory examples (examples\foo\init.lua → examples.foo)
 for /d %%d in (examples\*) do (
     if exist "%%d\init.lua" (
         set DIRNAME=%%~nxd
-        REM Skip rendering (asset-dependent, crashes without model files)
+        REM Skip asset-dependent examples (crash without model/texture files in dummy backend)
         if /i "!DIRNAME!"=="rendering" (
+            echo Skipped: examples.!DIRNAME! [asset-dependent]
+        ) else if /i "!DIRNAME!"=="cna" (
             echo Skipped: examples.!DIRNAME! [asset-dependent]
         ) else (
             set MODNAME=examples.!DIRNAME!
