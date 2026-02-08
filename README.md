@@ -2,7 +2,7 @@
 
 ![Lübertà3d](public/lub3d.jpg)
 
-A lightweight game framework for Lua 5.5 built on the Sokol ecosystem.
+A game framework / engine for built on Lua 5.5 and various libraries.
 
 ## Architecture
 
@@ -15,7 +15,7 @@ graph TD
     E -->|parse headers| C
 ```
 
-The C# Generator parses C/C++ headers via Clang AST, then emits both C binding code and Lua type annotations (`gen/`). Lua scripts call these bindings directly.
+The C# Generator parses C/C++ headers via Clang AST, then emits both C binding code and Lua type annotations and documentation. Lua scripts call these bindings directly.
 
 ## What Works Now
 
