@@ -2,7 +2,20 @@
 
 ![Lübertà3d](public/lub3d.jpg)
 
-A lightweight game framework for Lua 5.5 built on the Sokol ecosystem.
+A game engine / framework for free and comfortable game programming, built on Lua 5.5 and C/C++ libraries.
+
+## Architecture
+
+```mermaid
+graph TD
+    A[Lua 5.5 – Game logic / hot reload] -->|require| B[Auto-generated C/C++ bindings — gen/]
+    B --> C[C/C++ libraries — Sokol / Dear ImGui / miniaudio / Box2D / Jolt Physics / …]
+    D[C# Generator .NET 10] -->|codegen| B
+    D -->|parse AST| E[Clang]
+    E -->|parse headers| C
+```
+
+The C# Generator parses C/C++ headers via Clang AST, then emits both C binding code and Lua type annotations and documentation. Lua scripts call these bindings directly.
 
 ## What Works Now
 
@@ -10,38 +23,38 @@ Thin Lua bindings over Sokol libraries with runtime shader compilation and hot r
 
 ```lua
 local gfx = require("sokol.gfx")
-local app = require("sokol.app")
 
-function init()
-    shader = util.compile_shader(shader_source, "triangle")
-    pipeline = gfx.make_pipeline(gfx.PipelineDesc({ ... }))
+local M = {}
+M.width = 800
+M.height = 600
+M.window_title = "Triangle"
+
+function M:init()
+    self.shader = util.compile_shader(shader_source, "triangle")
+    self.pipeline = gfx.make_pipeline(gfx.PipelineDesc({ ... }))
 end
 
-function frame()
+function M:frame()
     gfx.begin_pass(...)
-    gfx.apply_pipeline(pipeline)
+    gfx.apply_pipeline(self.pipeline)
     gfx.draw(0, 3, 1)
     gfx.end_pass()
     gfx.commit()
 end
+
+return M
 ```
 
 ### Available Modules
 
-| Module                | Description                                |
-| --------------------- | ------------------------------------------ |
-| `sokol.gfx`           | Graphics API                               |
-| `sokol.app`           | Window/events                              |
-| `sokol.gl`            | Immediate mode rendering                   |
-| `sokol.debugtext`     | Debug text                                 |
-| `sokol.time`          | Timing                                     |
-| `sokol.log`           | Logging                                    |
-| `sokol.glue`          | gfx/app glue                               |
-| `shdc`                | Shader compilation                         |
-| `lib.hotreload`       | Hot reload with file watching              |
-| `lib.glm`             | GLM-like math (vec2/vec3/vec4/mat4)        |
-| `lib.gpu`             | GC-safe GPU resource wrappers              |
-| `lib.render_pipeline` | Render pass management with error recovery |
+| Module      | Description                                                   |
+| ----------- | ------------------------------------------------------------- |
+| `sokol.*`   | gfx, app, gl, debugtext, time, log, glue, audio, shape, imgui |
+| `imgui`     | Dear ImGui API                                                |
+| `shdc`      | Runtime shader compilation                                    |
+| `miniaudio` | Audio engine                                                  |
+| `stb.image` | Image loading                                                 |
+| `bc7enc`    | BC7 texture encoder                                           |
 
 ### Supported Backends
 
@@ -69,7 +82,8 @@ cmake --build --preset linux-gl-debug
 Run the example:
 
 ```bash
-./build/win-d3d11-debug/example.exe examples/main.lua
+./build/win-d3d11-debug/examples/lub3d-example.exe examples.hello
+./build/win-d3d11-debug/examples/lub3d-example.exe examples.triangle
 ```
 
 See [docs/building.md](docs/building.md) for more options.

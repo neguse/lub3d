@@ -40,6 +40,7 @@ lib/                    Lua libraries (require("lib.xxx"))
   glm.lua               vec2/vec3/vec4/mat4 math with LuaCATS annotations
   gpu.lua               GC-safe GPU resource wrappers
   util.lua              Shader compilation, texture loading helpers
+  boot.lua              Module bootloader (requires entry script, calls app.Run)
   hotreload.lua         File-watching hot reload via lume.hotswap
   render_pipeline.lua   Render pass management with pcall error recovery
   render_pass.lua       Render pass abstraction
@@ -130,10 +131,19 @@ Pipeline: Clang AST → TypeRegistry → ModuleSpec → C/C++ bindings + LuaCATS
 - Miniaudio: `IModule` direct, opaque pointer support
 - CMake invokes Generator once, outputs all modules to `gen/`
 
+## Running
+
+```bash
+build\win-d3d11-debug\examples\lub3d-example.exe examples.hello    # Run specific module
+build\win-d3d11-debug\examples\lub3d-example.exe examples.triangle  # Another module
+```
+
+The executable takes a Lua module name as argv[1] (default: `examples.hello`). `lib/boot.lua` loads the module via `require()`, extracts `app.Desc` fields from the module table, and calls `app.Run()`.
+
 ## Conventions
 
 - **Require paths**: root-relative (`require("lib.util")`, `require("examples.deferred.camera")`). Do NOT manipulate `package.path`.
-- **Event loop**: Lua scripts implement `init()`, `frame()`, `event(ev)`, `cleanup()` callbacks.
+- **Module return pattern**: Lua scripts return a module table `M` with desc fields (`width`, `height`, `window_title`, etc.) and callback methods (`M:init()`, `M:frame()`, `M:event(ev)`, `M:cleanup()`). `lib/boot.lua` handles `app.Run()`.
 - **Shader compilation**: `util.compile_shader()` with auto backend detection (D3D11→hlsl5, Metal→metal_macos, WGPU→wgsl, GL→glsl430/glsl300es). Requires `LUB3D_BUILD_SHDC=ON`.
 
 ## Asset Pipeline
