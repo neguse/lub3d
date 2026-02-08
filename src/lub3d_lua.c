@@ -70,7 +70,11 @@ static int l_get_mtime(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
     time_t mtime = get_file_mtime(path);
-    lua_pushinteger(L, (lua_Integer)mtime);
+    if (mtime == 0) {
+        lua_pushnil(L);
+    } else {
+        lua_pushinteger(L, (lua_Integer)mtime);
+    }
     return 1;
 }
 

@@ -44,12 +44,9 @@ local function write_file(path, data)
     return true
 end
 
--- Get file modification time (returns nil if file doesn't exist)
----@param path string file path
----@return number|nil mtime modification time or nil
-local function get_mtime(path)
-    return stb.mtime(path)
-end
+-- get_mtime is a global function registered by lub3d_lua.c
+---@type fun(path: string): number|nil
+local file_mtime = get_mtime
 
 ---@class texture.ImageData
 ---@field w integer
@@ -154,8 +151,8 @@ function M.load_bc7(filename, opts)
     local w, h, compressed
 
     -- Check timestamps: use BC7 cache only if it's newer than source
-    local src_mtime = get_mtime(resolved)
-    local bc7_mtime = get_mtime(resolved_bc7)
+    local src_mtime = file_mtime(resolved)
+    local bc7_mtime = file_mtime(resolved_bc7)
     local use_cache = bc7_mtime and src_mtime and bc7_mtime >= src_mtime
 
     -- Try to load existing BC7 file if cache is valid

@@ -6,6 +6,7 @@ using Generator.ClangAst;
 using Generator.Modules.Sokol;
 using Generator.Modules.Miniaudio;
 using Generator.Modules.Imgui;
+using Generator.Modules.Stb;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -202,6 +203,24 @@ rootCommand.SetAction(parseResult =>
     else
     {
         Console.WriteLine("Skipping Dear ImGui (deps/imgui/imgui.h not found)");
+    }
+
+    // --- stb_image (Clang AST パース不要) ---
+    {
+        var stbImageModule = new StbImageModule();
+        var stbEmptyReg = TypeRegistry.FromModule(new Module("stb.image", "stbi_", [], []));
+        var stbPrefixToModule = new Dictionary<string, string> { [stbImageModule.Prefix] = stbImageModule.ModuleName };
+        var stbSourceLink = SourceLink.FromHeader(depsDir, "stb/stb_image.h");
+
+        var stbModuleId = stbImageModule.ModuleName.Replace('.', '_');
+
+        var stbCPath = Path.Combine(outputDir, $"{stbModuleId}.c");
+        File.WriteAllText(stbCPath, stbImageModule.GenerateC(stbEmptyReg, stbPrefixToModule));
+        Console.WriteLine($"Generated: {stbCPath}");
+
+        var stbLuaPath = Path.Combine(outputDir, $"{stbModuleId}.lua");
+        File.WriteAllText(stbLuaPath, stbImageModule.GenerateLua(stbEmptyReg, stbPrefixToModule, stbSourceLink));
+        Console.WriteLine($"Generated: {stbLuaPath}");
     }
 
     return 0;

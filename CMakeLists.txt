@@ -109,6 +109,7 @@ set(LUB3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_debugtext.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/sokol_shape.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/miniaudio.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/gen/stb_image.c
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
@@ -133,6 +134,7 @@ add_custom_command(
            ${GEN_DIR}/sokol_imgui.c ${GEN_DIR}/sokol_imgui.lua
            ${GEN_DIR}/miniaudio.c ${GEN_DIR}/miniaudio.lua
            ${GEN_DIR}/imgui_gen.cpp ${GEN_DIR}/imgui.lua
+           ${GEN_DIR}/stb_image.c ${GEN_DIR}/stb_image.lua
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${GEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
@@ -174,6 +176,8 @@ add_custom_command(
         ${GENERATOR_DIR}/Modules/Sokol/Imgui.cs
         ${GENERATOR_DIR}/Modules/Miniaudio/MiniaudioModule.cs
         ${GENERATOR_DIR}/Modules/Imgui/ImguiModule.cs
+        ${GENERATOR_DIR}/Modules/Stb/StbImageModule.cs
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb/stb_image.h
     COMMENT "Running Generator (header -> bindings)"
 )
 
@@ -198,7 +202,7 @@ target_link_libraries(lfs PRIVATE ${LUA_TARGET})
 set(LUB3D_SOURCES
     src/sokol_impl.c
     src/miniaudio_impl.c
-    src/stb_image_lua.c
+    src/stb_image_impl.c
     src/lub3d_lua.c
     src/encoding_lua.c
     ${LUB3D_GENERATED}
