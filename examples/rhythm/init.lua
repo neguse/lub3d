@@ -450,14 +450,14 @@ local function cleanup()
     gfx.Shutdown()
 end
 
--- Run the app
-app.Run(app.Desc({
-    init = init,
-    frame = frame,
-    event = event,
-    cleanup = cleanup,
-    width = const.SCREEN_WIDTH,
-    height = const.SCREEN_HEIGHT,
-    window_title = "lub3d-rhythm",
-    logger = { func = slog.Func },
-}))
+local M = {}
+M.width = const.SCREEN_WIDTH
+M.height = const.SCREEN_HEIGHT
+M.window_title = "lub3d-rhythm"
+
+function M:init() init() end
+function M:frame() frame() end
+function M:event(ev) event(ev) end
+function M:cleanup() cleanup() end
+
+return M
