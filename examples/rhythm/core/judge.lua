@@ -226,7 +226,7 @@ function JudgeEngine:on_key_press(lane, time_us)
     end
 
     -- Evaluate timing
-    local judgment, timing = self:evaluate_with_timing(diff)
+    local judgment, timing = self:evaluate_with_timing(diff --[[@as integer]])
 
     if not judgment then
         -- Outside all windows - treat as empty press

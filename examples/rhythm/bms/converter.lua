@@ -215,6 +215,8 @@ end
 ---@field wav_id integer 0-1295
 ---@field judged boolean
 ---@field note_type string "normal"|"long"
+---@field judgment string|nil judgment result (set by JudgeEngine)
+---@field timing string|nil timing indicator (set by JudgeEngine)
 
 ---@class BgmEvent
 ---@field beat number
@@ -230,6 +232,7 @@ end
 ---@field bpm number initial BPM
 ---@field playlevel integer
 ---@field difficulty integer
+---@field total number|nil total gauge value
 
 ---@class UniversalChart
 ---@field meta ChartMeta

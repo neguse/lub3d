@@ -116,7 +116,7 @@ function EffectRenderer:draw(current_time_us)
         return
     end
 
-    local display = self.judgment_display
+    local display = self.judgment_display --[[@as JudgmentEffect]]
     local elapsed = current_time_us - display.start_time_us
     local progress = elapsed / display.duration_us
     local alpha = 1.0 - progress

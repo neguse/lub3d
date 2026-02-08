@@ -186,7 +186,7 @@ end
 ---@param s string
 ---@return string
 local function escape_string(s)
-    return s:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\n", "\\n"):gsub("\r", "\\r")
+    return (s:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\n", "\\n"):gsub("\r", "\\r"))
 end
 
 --- Save songs to cache file

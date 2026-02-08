@@ -54,7 +54,7 @@ end
 local function test_roundtrip()
     for i = 0, 1295 do
         local encoded = base36.encode(i)
-        local decoded = base36.decode(encoded)
+        local decoded = base36.decode(encoded --[[@as string]])
         assert(decoded == i, string.format("roundtrip failed for %d", i))
     end
     print("  roundtrip (0-1295): OK")
