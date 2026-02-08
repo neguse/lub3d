@@ -7,6 +7,7 @@ using Generator.Modules.Sokol;
 using Generator.Modules.Miniaudio;
 using Generator.Modules.Imgui;
 using Generator.Modules.Stb;
+using Generator.Modules.Box2d;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -238,6 +239,59 @@ rootCommand.SetAction(parseResult =>
         var stbLuaPath = Path.Combine(outputDir, $"{stbModuleId}.lua");
         File.WriteAllText(stbLuaPath, stbImageModule.GenerateLua(stbReg, stbPrefixToModule, stbSourceLink));
         Console.WriteLine($"Generated: {stbLuaPath}");
+    }
+
+    // --- ヘッダグループ (Box2D) ---
+    var box2dHeaderPath = Path.Combine(depsDir, "box2d", "include", "box2d", "box2d.h");
+    if (File.Exists(box2dHeaderPath))
+    {
+        var box2dModule = new Box2dModule();
+        var box2dHeaders = new List<string>
+        {
+            Path.Combine(depsDir, "box2d", "include", "box2d", "box2d.h"),
+            Path.Combine(depsDir, "box2d", "include", "box2d", "types.h"),
+            Path.Combine(depsDir, "box2d", "include", "box2d", "math_functions.h"),
+            Path.Combine(depsDir, "box2d", "include", "box2d", "collision.h"),
+            Path.Combine(depsDir, "box2d", "include", "box2d", "id.h"),
+            Path.Combine(depsDir, "box2d", "include", "box2d", "base.h"),
+        };
+        var box2dIncludePaths = new List<string>
+        {
+            Path.Combine(depsDir, "box2d", "include")
+        };
+
+        Console.WriteLine("Parsing Box2D headers with clang ...");
+        var (b2RawJson, b2Unified) = ClangRunner.ParseHeadersWithRawJson(
+            clangPath, box2dHeaders, [box2dModule.Prefix],
+            box2dIncludePaths);
+
+        var b2AstPath = Path.Combine(outputDir, "box2d_clang_ast.json");
+        File.WriteAllText(b2AstPath, b2RawJson);
+        Console.WriteLine($"Generated: {b2AstPath} (raw clang AST)");
+        Console.WriteLine($"  Found {b2Unified.Decls.Count} declarations total");
+
+        var b2View = ClangRunner.CreateView(b2Unified, box2dModule.Prefix, box2dModule.ModuleName);
+        var b2Reg = TypeRegistry.FromModule(b2View);
+        var b2PrefixToModule = new Dictionary<string, string> { [box2dModule.Prefix] = box2dModule.ModuleName };
+        var b2SourceLink = SourceLink.FromHeader(depsDir, "box2d/include/box2d/box2d.h");
+
+        var b2ModuleId = box2dModule.ModuleName.Replace('.', '_');
+
+        var b2JsonPath = Path.Combine(outputDir, $"{b2ModuleId}.json");
+        File.WriteAllText(b2JsonPath, JsonSerializer.Serialize(b2View, jsonOptions));
+        Console.WriteLine($"Generated: {b2JsonPath}");
+
+        var b2CPath = Path.Combine(outputDir, $"{b2ModuleId}.c");
+        File.WriteAllText(b2CPath, box2dModule.GenerateC(b2Reg, b2PrefixToModule));
+        Console.WriteLine($"Generated: {b2CPath}");
+
+        var b2LuaPath = Path.Combine(outputDir, $"{b2ModuleId}.lua");
+        File.WriteAllText(b2LuaPath, box2dModule.GenerateLua(b2Reg, b2PrefixToModule, b2SourceLink));
+        Console.WriteLine($"Generated: {b2LuaPath}");
+    }
+    else
+    {
+        Console.WriteLine("Skipping Box2D (deps/box2d/include/box2d/box2d.h not found)");
     }
 
     return 0;

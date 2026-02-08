@@ -238,7 +238,8 @@ public class Box2dModule : IModule
     public ModuleSpec BuildSpec(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
         var enumNames = reg.AllDecls.OfType<Enums>().Select(e => e.Name).ToHashSet();
-        var allStructs = reg.AllDecls.OfType<Structs>().ToDictionary(s => s.Name);
+        var allStructs = reg.AllDecls.OfType<Structs>()
+            .GroupBy(s => s.Name).ToDictionary(g => g.Key, g => g.First());
 
         // 型解決
         BindingType Resolve(Types t) => t switch
