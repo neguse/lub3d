@@ -1,0 +1,15 @@
+*---------------------- HEADER FIELD
+#PLAYER 1
+#GENRE Test
+#TITLE Measure Length Test
+#ARTIST mane3d
+#BPM 120
+#PLAYLEVEL 1
+
+#WAV01 test_kick.wav
+
+*---------------------- MAIN DATA FIELD
+
+#00002:0.75
+#00011:010101
+#00111:01

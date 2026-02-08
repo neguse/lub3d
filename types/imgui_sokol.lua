@@ -5,8 +5,15 @@
 ---@class imgui
 local imgui = {}
 
+---@class imgui.SetupOpts
+---@field max_vertices? integer
+---@field no_default_font? boolean
+---@field japanese_font? string
+---@field font_size? number
+
 ---Setup imgui with sokol integration
-function imgui.Setup() end
+---@param opts? imgui.SetupOpts
+function imgui.Setup(opts) end
 
 ---Shutdown imgui
 function imgui.Shutdown() end
