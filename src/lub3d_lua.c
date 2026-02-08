@@ -54,6 +54,10 @@ static int luaopen_imgui_dummy(lua_State *L)
 extern int luaopen_bc7enc(lua_State *L);
 #endif
 
+#ifdef LUB3D_HAS_BOX2D
+extern int luaopen_b2d(lua_State *L);
+#endif
+
 /* Get file modification time */
 static time_t get_file_mtime(const char *path)
 {
@@ -156,6 +160,11 @@ void lub3d_lua_register_all(lua_State *L)
 
 #ifdef LUB3D_HAS_BC7ENC
     luaL_requiref(L, "bc7enc", luaopen_bc7enc, 0);
+    lua_pop(L, 1);
+#endif
+
+#ifdef LUB3D_HAS_BOX2D
+    luaL_requiref(L, "b2d", luaopen_b2d, 0);
     lua_pop(L, 1);
 #endif
 }

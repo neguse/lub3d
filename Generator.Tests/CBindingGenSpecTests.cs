@@ -426,8 +426,9 @@ public class CBindingGenSpecTests
     }
 
     [Fact]
-    public void Generate_StructField_PushesNilInIndex()
+    public void Generate_StructField_NonOwnStruct_CopiesInIndex()
     {
+        // 非 ownStructs の struct フィールドは userdata コピーで __index 対応
         var spec = new ModuleSpec(
             "sokol.test", "stest_", ["sokol_test.h"], null,
             [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", true,
@@ -436,12 +437,15 @@ public class CBindingGenSpecTests
                 null)],
             [], [], []);
         var code = CBindingGen.Generate(spec);
-        Assert.Contains("lua_pushnil(L)", code);
+        Assert.Contains("lua_newuserdatauv(L, sizeof(stest_range), 0)", code);
+        Assert.Contains("*_ud = self->range", code);
+        Assert.Contains("luaL_setmetatable(L, \"sokol.test.Range\")", code);
     }
 
     [Fact]
-    public void Generate_StructField_ErrorInNewindex()
+    public void Generate_StructField_NonOwnStruct_CopiesInNewindex()
     {
+        // 非 ownStructs の struct フィールドは userdata コピーで __newindex 対応
         var spec = new ModuleSpec(
             "sokol.test", "stest_", ["sokol_test.h"], null,
             [new StructBinding("stest_desc", "Desc", "sokol.test.Desc", true,
@@ -450,7 +454,7 @@ public class CBindingGenSpecTests
                 null)],
             [], [], []);
         var code = CBindingGen.Generate(spec);
-        Assert.Contains("luaL_error(L, \"unsupported type for field: %s\", key)", code);
+        Assert.Contains("luaL_checkudata(L, 3, \"sokol.test.Range\")", code);
     }
 
     // ===== 構造体 return — userdata 生成 =====
@@ -552,5 +556,93 @@ public class CBindingGenSpecTests
             [], [], []);
         var code = CBindingGen.Generate(spec);
         Assert.Contains("lua_isstring(L, -1) || lua_istable(L, -1)", code);
+    }
+
+    // ===== Custom 型フィールド — PushCode / SetCode =====
+
+    [Fact]
+    public void Generate_CustomField_UsesPushCodeInIndex()
+    {
+        var customType = new BindingType.Custom(
+            "b2Vec2", "number[]", null,
+            "    b2Vec2 {name} = *(b2Vec2*)luaL_checkudata(L, {idx}, \"b2Vec2\");",
+            "lua_newtable(L);\n        lua_pushnumber(L, {value}.x); lua_rawseti(L, -2, 1);\n        lua_pushnumber(L, {value}.y); lua_rawseti(L, -2, 2);\n        return 1",
+            "luaL_checktype(L, 3, LUA_TTABLE);\n            lua_rawgeti(L, 3, 1); self->{fieldName}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n            lua_rawgeti(L, 3, 2); self->{fieldName}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1)");
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", true,
+                [new FieldBinding("position", "position", customType)],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // __index uses PushCode with {value} replaced by self->position
+        Assert.Contains("self->position.x", code);
+        Assert.Contains("self->position.y", code);
+        Assert.Contains("lua_newtable(L)", code);
+    }
+
+    [Fact]
+    public void Generate_CustomField_UsesSetCodeInNewindex()
+    {
+        var customType = new BindingType.Custom(
+            "b2Vec2", "number[]", null, null,
+            "lua_newtable(L);\n        lua_pushnumber(L, {value}.x); lua_rawseti(L, -2, 1);\n        return 1",
+            "luaL_checktype(L, 3, LUA_TTABLE);\n            lua_rawgeti(L, 3, 1); self->{fieldName}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n            lua_rawgeti(L, 3, 2); self->{fieldName}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1)");
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", true,
+                [new FieldBinding("gravity", "gravity", customType)],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // __newindex uses SetCode with {fieldName} replaced by gravity
+        Assert.Contains("self->gravity.x", code);
+        Assert.Contains("self->gravity.y", code);
+        Assert.Contains("luaL_checktype(L, 3, LUA_TTABLE)", code);
+    }
+
+    // ===== Custom 型パラメータ =====
+
+    [Fact]
+    public void Generate_CustomParam_UsesCheckCode()
+    {
+        var customType = new BindingType.Custom(
+            "b2Vec2", "number[]", null,
+            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n    b2Vec2 {name};\n    lua_rawgeti(L, {idx}, 1); {name}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n    lua_rawgeti(L, {idx}, 2); {name}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);",
+            null, null);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [],
+            [new FuncBinding("b2Body_SetPosition", "BodySetPosition",
+                [new ParamBinding("pos", customType)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checktype(L, 1, LUA_TTABLE)", code);
+        Assert.Contains("b2Vec2 pos", code);
+        Assert.Contains("pos.x = (float)lua_tonumber(L, -1)", code);
+    }
+
+    // ===== Custom 型戻り値 =====
+
+    [Fact]
+    public void Generate_CustomReturn_UsesPushCode()
+    {
+        var customType = new BindingType.Custom(
+            "b2Vec2", "number[]", null, null,
+            "b2Vec2 _tmp = {value};\n    lua_newtable(L);\n    lua_pushnumber(L, _tmp.x); lua_rawseti(L, -2, 1);\n    lua_pushnumber(L, _tmp.y); lua_rawseti(L, -2, 2);",
+            null);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [],
+            [new FuncBinding("b2Body_GetPosition", "BodyGetPosition",
+                [new ParamBinding("bodyId", new BindingType.Struct("b2BodyId", "b2d.BodyId", "b2d.BodyId"))],
+                customType, null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2Body_GetPosition(bodyId)", code);
+        Assert.Contains("lua_newtable(L)", code);
+        Assert.Contains("lua_pushnumber(L, _tmp.x)", code);
+        Assert.Contains("return 1", code);
     }
 }

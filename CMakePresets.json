@@ -158,6 +158,7 @@
         "LUB3D_BUILD_TESTS": "ON",
         "LUB3D_BUILD_SHDC": "ON",
         "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_BOX2D": "ON",
         "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     },
@@ -172,6 +173,7 @@
         "LUB3D_BUILD_TESTS": "ON",
         "LUB3D_BUILD_SHDC": "ON",
         "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_BOX2D": "ON",
         "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     },
@@ -186,6 +188,7 @@
         "LUB3D_BUILD_TESTS": "ON",
         "LUB3D_BUILD_SHDC": "ON",
         "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_BOX2D": "ON",
         "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     },
@@ -200,6 +203,7 @@
         "LUB3D_BUILD_TESTS": "ON",
         "LUB3D_BUILD_SHDC": "ON",
         "LUB3D_BUILD_IMGUI": "ON",
+        "LUB3D_BUILD_BOX2D": "ON",
         "LUB3D_BUILD_EXAMPLE": "OFF"
       }
     }

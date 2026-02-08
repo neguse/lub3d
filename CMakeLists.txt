@@ -32,6 +32,7 @@ option(LUB3D_BACKEND_D3D11 "Use Direct3D 11 backend" OFF)
 option(LUB3D_BACKEND_METAL "Use Metal backend" OFF)
 option(LUB3D_BACKEND_WGPU "Use WebGPU backend" OFF)
 option(LUB3D_BACKEND_DUMMY "Use Dummy backend for headless testing" OFF)
+option(LUB3D_BUILD_BOX2D "Build Box2D physics integration" OFF)
 option(LUB3D_BUILD_TESTS "Build test runner" OFF)
 
 # Lua 5.5
@@ -113,6 +114,10 @@ set(LUB3D_GENERATED
     ${CMAKE_CURRENT_SOURCE_DIR}/gen/licenses.c
 )
 
+if(LUB3D_BUILD_BOX2D)
+    list(APPEND LUB3D_GENERATED ${CMAKE_CURRENT_SOURCE_DIR}/gen/b2d.c)
+endif()
+
 # C# Generator for all Sokol modules
 set(GENERATOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Generator")
 set(GEN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gen")
@@ -121,65 +126,87 @@ find_program(CLANG_EXECUTABLE NAMES clang clang.exe
     HINTS "${CLANGPP_EXECUTABLE}/.."
     REQUIRED)
 
+set(GENERATOR_OUTPUTS
+    ${GEN_DIR}/sokol_app.c ${GEN_DIR}/sokol_app.lua
+    ${GEN_DIR}/sokol_log.c ${GEN_DIR}/sokol_log.lua
+    ${GEN_DIR}/sokol_time.c ${GEN_DIR}/sokol_time.lua
+    ${GEN_DIR}/sokol_gfx.c ${GEN_DIR}/sokol_gfx.lua
+    ${GEN_DIR}/sokol_glue.c ${GEN_DIR}/sokol_glue.lua
+    ${GEN_DIR}/sokol_audio.c ${GEN_DIR}/sokol_audio.lua
+    ${GEN_DIR}/sokol_gl.c ${GEN_DIR}/sokol_gl.lua
+    ${GEN_DIR}/sokol_debugtext.c ${GEN_DIR}/sokol_debugtext.lua
+    ${GEN_DIR}/sokol_shape.c ${GEN_DIR}/sokol_shape.lua
+    ${GEN_DIR}/sokol_imgui.c ${GEN_DIR}/sokol_imgui.lua
+    ${GEN_DIR}/miniaudio.c ${GEN_DIR}/miniaudio.lua
+    ${GEN_DIR}/imgui_gen.cpp ${GEN_DIR}/imgui.lua
+    ${GEN_DIR}/stb_image.c ${GEN_DIR}/stb_image.lua
+)
+set(GENERATOR_DEPENDS
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_app.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_log.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_time.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_gfx.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_audio.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_gl.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_debugtext.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_shape.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_glue.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_imgui.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio/miniaudio.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
+    ${GENERATOR_DIR}/Program.cs
+    ${GENERATOR_DIR}/IModule.cs
+    ${GENERATOR_DIR}/ModuleSpec.cs
+    ${GENERATOR_DIR}/BindingType.cs
+    ${GENERATOR_DIR}/Pipeline.cs
+    ${GENERATOR_DIR}/ClangAst/ClangAst.cs
+    ${GENERATOR_DIR}/ClangAst/TypeRegistry.cs
+    ${GENERATOR_DIR}/CBinding/CBinding.cs
+    ${GENERATOR_DIR}/CBinding/CBindingGen.cs
+    ${GENERATOR_DIR}/LuaCats/LuaCats.cs
+    ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
+    ${GENERATOR_DIR}/Modules/Sokol/SokolModule.cs
+    ${GENERATOR_DIR}/Modules/Sokol/App.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Audio.cs
+    ${GENERATOR_DIR}/Modules/Sokol/DebugText.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Gfx.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Gl.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Glue.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Log.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Shape.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Time.cs
+    ${GENERATOR_DIR}/Modules/Sokol/Imgui.cs
+    ${GENERATOR_DIR}/Modules/Miniaudio/MiniaudioModule.cs
+    ${GENERATOR_DIR}/Modules/Imgui/ImguiModule.cs
+    ${GENERATOR_DIR}/Modules/Stb/StbImageModule.cs
+    ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb/stb_image.h
+)
+if(LUB3D_BUILD_BOX2D)
+    list(APPEND GENERATOR_OUTPUTS
+        ${GEN_DIR}/b2d.c ${GEN_DIR}/b2d.lua
+    )
+    list(APPEND GENERATOR_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d/include/box2d/box2d.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d/include/box2d/types.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d/include/box2d/math_functions.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d/include/box2d/collision.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d/include/box2d/id.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d/include/box2d/base.h
+        ${GENERATOR_DIR}/Modules/Box2d/Box2dModule.cs
+    )
+endif()
+
 add_custom_command(
-    OUTPUT ${GEN_DIR}/sokol_app.c ${GEN_DIR}/sokol_app.lua
-           ${GEN_DIR}/sokol_log.c ${GEN_DIR}/sokol_log.lua
-           ${GEN_DIR}/sokol_time.c ${GEN_DIR}/sokol_time.lua
-           ${GEN_DIR}/sokol_gfx.c ${GEN_DIR}/sokol_gfx.lua
-           ${GEN_DIR}/sokol_glue.c ${GEN_DIR}/sokol_glue.lua
-           ${GEN_DIR}/sokol_audio.c ${GEN_DIR}/sokol_audio.lua
-           ${GEN_DIR}/sokol_gl.c ${GEN_DIR}/sokol_gl.lua
-           ${GEN_DIR}/sokol_debugtext.c ${GEN_DIR}/sokol_debugtext.lua
-           ${GEN_DIR}/sokol_shape.c ${GEN_DIR}/sokol_shape.lua
-           ${GEN_DIR}/sokol_imgui.c ${GEN_DIR}/sokol_imgui.lua
-           ${GEN_DIR}/miniaudio.c ${GEN_DIR}/miniaudio.lua
-           ${GEN_DIR}/imgui_gen.cpp ${GEN_DIR}/imgui.lua
-           ${GEN_DIR}/stb_image.c ${GEN_DIR}/stb_image.lua
+    OUTPUT ${GENERATOR_OUTPUTS}
     COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
         ${GEN_DIR}
         --deps ${CMAKE_CURRENT_SOURCE_DIR}/deps
         --clang ${CLANG_EXECUTABLE}
-    DEPENDS
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_app.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_log.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_time.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_gfx.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_audio.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_gl.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_debugtext.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_shape.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/sokol_glue.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util/sokol_imgui.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio/miniaudio.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/imgui/imgui.h
-        ${GENERATOR_DIR}/Program.cs
-        ${GENERATOR_DIR}/IModule.cs
-        ${GENERATOR_DIR}/ModuleSpec.cs
-        ${GENERATOR_DIR}/BindingType.cs
-        ${GENERATOR_DIR}/Pipeline.cs
-        ${GENERATOR_DIR}/ClangAst/ClangAst.cs
-        ${GENERATOR_DIR}/ClangAst/TypeRegistry.cs
-        ${GENERATOR_DIR}/CBinding/CBinding.cs
-        ${GENERATOR_DIR}/CBinding/CBindingGen.cs
-        ${GENERATOR_DIR}/LuaCats/LuaCats.cs
-        ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
-        ${GENERATOR_DIR}/Modules/Sokol/SokolModule.cs
-        ${GENERATOR_DIR}/Modules/Sokol/App.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Audio.cs
-        ${GENERATOR_DIR}/Modules/Sokol/DebugText.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Gfx.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Gl.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Glue.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Log.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Shape.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Time.cs
-        ${GENERATOR_DIR}/Modules/Sokol/Imgui.cs
-        ${GENERATOR_DIR}/Modules/Miniaudio/MiniaudioModule.cs
-        ${GENERATOR_DIR}/Modules/Imgui/ImguiModule.cs
-        ${GENERATOR_DIR}/Modules/Stb/StbImageModule.cs
-        ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb/stb_image.h
+    DEPENDS ${GENERATOR_DEPENDS}
     COMMENT "Running Generator (header -> bindings)"
 )
+
+
 
 # License generator (Python)
 if(Python3_FOUND)
@@ -450,6 +477,18 @@ if(LUB3D_BUILD_IMGUI)
     if(IMGUI_GEN_SOURCE)
         target_compile_definitions(imgui_lib PRIVATE LUB3D_GEN_IMGUI)
     endif()
+endif()
+
+# Box2D physics (optional)
+if(LUB3D_BUILD_BOX2D)
+    set(BOX2D_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/box2d)
+    add_subdirectory(${BOX2D_DIR} ${CMAKE_CURRENT_BINARY_DIR}/box2d)
+
+    target_sources(lub3d PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/gen/b2d.c)
+    target_include_directories(lub3d PRIVATE ${BOX2D_DIR}/include)
+    target_compile_definitions(lub3d PUBLIC LUB3D_HAS_BOX2D)
+    target_link_libraries(lub3d PUBLIC box2d)
+
 endif()
 
 # BC7 encoder library (optional)
