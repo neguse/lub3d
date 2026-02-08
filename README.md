@@ -2,7 +2,7 @@
 
 ![Lübertà3d](public/lub3d.jpg)
 
-A game framework / engine for built on Lua 5.5 and various libraries.
+A game engine / framework for free and comfortable game programming, built on Lua 5.5 and C/C++ libraries.
 
 ## Architecture
 
