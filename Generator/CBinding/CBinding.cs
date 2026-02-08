@@ -38,11 +38,15 @@ public abstract record Type
 /// <param name="LuaFieldName">Lua 側のフィールド名（異なる場合）</param>
 /// <param name="Type">C 型</param>
 /// <param name="InitCode">null ならデフォルト生成、"" なら除外（lua_pop のみ）</param>
+/// <param name="PushCode">__index 用カスタムコード（null ならデフォルト生成）</param>
+/// <param name="SetCode">__newindex 用カスタムコード（null ならデフォルト生成）</param>
 public record FieldInit(
     string FieldName,
     string LuaFieldName,
     Type Type,
-    string? InitCode
+    string? InitCode,
+    string? PushCode = null,
+    string? SetCode = null
 );
 
 /// <summary>
