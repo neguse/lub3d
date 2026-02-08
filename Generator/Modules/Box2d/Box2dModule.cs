@@ -32,6 +32,22 @@ public class Box2dModule : IModule
             "            lua_rawgeti(L, 3, 1); self->{fieldName}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
             "            lua_rawgeti(L, 3, 2); self->{fieldName}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1)");
 
+    /// <summary>b2CosSin → Lua table {cosine, sine}</summary>
+    private static readonly BindingType B2CosSinType = new BindingType.Custom(
+        "b2CosSin", "number[]",
+        InitCode: null,
+        CheckCode:
+            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n" +
+            "    b2CosSin {name};\n" +
+            "    lua_rawgeti(L, {idx}, 1); {name}.cosine = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
+            "    lua_rawgeti(L, {idx}, 2); {name}.sine = (float)lua_tonumber(L, -1); lua_pop(L, 1);",
+        PushCode:
+            "b2CosSin _cs = {value};\n" +
+            "    lua_newtable(L);\n" +
+            "    lua_pushnumber(L, _cs.cosine); lua_rawseti(L, -2, 1);\n" +
+            "    lua_pushnumber(L, _cs.sine); lua_rawseti(L, -2, 2);",
+        SetCode: null);
+
     /// <summary>b2Rot → Lua table {c, s}</summary>
     private static readonly BindingType B2RotType = new BindingType.Custom(
         "b2Rot", "number[]",
@@ -151,6 +167,14 @@ public class Box2dModule : IModule
         "b2StoreShapeId", "b2LoadShapeId",
         "b2StoreChainId", "b2LoadChainId",
         "b2StoreJointId", "b2LoadJointId",
+        // Timer (output pointer param)
+        "b2GetMillisecondsAndReset",
+    ];
+
+    private static readonly string[] SkipFuncPrefixes =
+    [
+        // DynamicTree is internal broad-phase API
+        "b2DynamicTree_",
     ];
 
     private static readonly HashSet<string> SkipStructs =
@@ -282,7 +306,7 @@ public class Box2dModule : IModule
                 new BindingType.Struct(name,
                     $"{ModuleName}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, Prefix))}",
                     $"{ModuleName}.{Pipeline.ToPascalCase(Pipeline.StripPrefix(name, Prefix))}"),
-            Types.StructRef("b2CosSin") => B2Vec2Type, // treat CosSin like Vec2 {cosine, sine}
+            Types.StructRef("b2CosSin") => B2CosSinType,
             // Fixed arrays
             Types.Array(var inner, var len) => new BindingType.FixedArray(Resolve(inner), len),
             Types.Void => new BindingType.Void(),
@@ -292,9 +316,11 @@ public class Box2dModule : IModule
         // ===== Structs =====
         var structs = new List<StructBinding>();
 
+        var processedStructs = new HashSet<string>();
         foreach (var s in reg.OwnStructs)
         {
             if (SkipStructs.Contains(s.Name)) continue;
+            if (!processedStructs.Add(s.Name)) continue;
             if (!DefStructs.Contains(s.Name) && !HandleStructs.Contains(s.Name) && !GeometryStructs.Contains(s.Name))
                 continue;
 
@@ -331,6 +357,7 @@ public class Box2dModule : IModule
         foreach (var f in reg.OwnFuncs)
         {
             if (SkipFuncs.Contains(f.Name)) continue;
+            if (SkipFuncPrefixes.Any(p => f.Name.StartsWith(p))) continue;
             // Skip inline math functions
             if (f.Name.StartsWith("b2") && !f.Name.Contains("_") && !IsTopLevelFunc(f.Name)) continue;
 
@@ -343,6 +370,12 @@ public class Box2dModule : IModule
                 var pt = Resolve(p.ParsedType);
                 // Skip functions with unsupported parameter types
                 if (pt is BindingType.Void && p.ParsedType is not Types.Void)
+                {
+                    skip = true;
+                    break;
+                }
+                // Skip functions with ConstPtr/Ptr to Void (unresolved struct)
+                if (pt is BindingType.ConstPtr(BindingType.Void) or BindingType.Ptr(BindingType.Void))
                 {
                     skip = true;
                     break;
