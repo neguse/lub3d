@@ -623,6 +623,75 @@ public class CBindingGenSpecTests
         Assert.Contains("pos.x = (float)lua_tonumber(L, -1)", code);
     }
 
+    // ===== ExtraMetamethods =====
+
+    private static ModuleSpec SpecWithExtraMetamethods() => new(
+        "b2d", "b2", ["box2d.h"], null,
+        [new StructBinding("b2ShapeId", "ShapeId", "b2d.ShapeId", false,
+            [new FieldBinding("index1", "index1", new BindingType.Int())],
+            null,
+            ExtraMetamethods:
+            [
+                new MetamethodSpec("__eq", "memcmp_eq"),
+                new MetamethodSpec("__tostring", "hex_tostring"),
+            ])],
+        [], [], []);
+
+    [Fact]
+    public void Generate_ExtraMetamethods_ContainsEqFunc()
+    {
+        var code = CBindingGen.Generate(SpecWithExtraMetamethods());
+        Assert.Contains("l_b2ShapeId__eq", code);
+        Assert.Contains("memcmp(a, b, sizeof(b2ShapeId))", code);
+    }
+
+    [Fact]
+    public void Generate_ExtraMetamethods_ContainsTostringFunc()
+    {
+        var code = CBindingGen.Generate(SpecWithExtraMetamethods());
+        Assert.Contains("l_b2ShapeId__tostring", code);
+        Assert.Contains("b2d.ShapeId:", code);
+        Assert.Contains("luaL_buffinit", code);
+    }
+
+    [Fact]
+    public void Generate_ExtraMetamethods_RegisteredInMetatable()
+    {
+        var code = CBindingGen.Generate(SpecWithExtraMetamethods());
+        Assert.Contains("lua_setfield(L, -2, \"__eq\")", code);
+        Assert.Contains("lua_setfield(L, -2, \"__tostring\")", code);
+    }
+
+    // ===== SpecTransform =====
+
+    [Fact]
+    public void ExpandHandleTypes_AddsExtraMetamethods()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ShapeId", "ShapeId", "b2d.ShapeId", false,
+                [], null, IsHandleType: true)],
+            [], [], []);
+        var expanded = SpecTransform.ExpandHandleTypes(spec);
+        var s = expanded.Structs[0];
+        Assert.NotNull(s.ExtraMetamethods);
+        Assert.Equal(2, s.ExtraMetamethods!.Count);
+        Assert.Contains(s.ExtraMetamethods, m => m.Name == "__eq" && m.Kind == "memcmp_eq");
+        Assert.Contains(s.ExtraMetamethods, m => m.Name == "__tostring" && m.Kind == "hex_tostring");
+    }
+
+    [Fact]
+    public void ExpandHandleTypes_SkipsNonHandle()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", true,
+                [], null, IsHandleType: false)],
+            [], [], []);
+        var expanded = SpecTransform.ExpandHandleTypes(spec);
+        Assert.Null(expanded.Structs[0].ExtraMetamethods);
+    }
+
     // ===== Custom 型戻り値 =====
 
     [Fact]
