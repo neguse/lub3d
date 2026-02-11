@@ -45,6 +45,7 @@ lib/                    Lua libraries (require("lib.xxx"))
   render_pipeline.lua   Render pass management with pcall error recovery
   render_pass.lua       Render pass abstraction
   render_target.lua     Render target utilities
+  audio.lua             Shared miniaudio engine creation with VFS (WASM support)
   shader.lua            Shader utilities
   texture.lua           Texture utilities
   headless_app.lua      Headless mode app stub
@@ -59,6 +60,8 @@ src/                    Manual C/C++ source
   sokol_impl.c          Sokol implementation defines
   miniaudio_impl.c      Miniaudio implementation
   lub3d_lua.c          Module registration entry point
+  lub3d_fs.c            File system module (Native fopen/stat, WASM sync XHR)
+  lub3d_fs.h            File system module header
   stb_image_lua.c       stb_image Lua bindings
   imgui_impl.cpp        Dear ImGui core implementation
   imgui_sokol.cpp       ImGui-Sokol integration
@@ -109,6 +112,7 @@ Always available:
 | `sokol.shape` | `sshape_` | Shape generation |
 | `miniaudio` | — | Audio engine |
 | `stb.image` | — | Image loading |
+| `lub3d.fs` | — | File system abstraction (Native + WASM) |
 | `lub3d.licenses` | — | Third-party license info |
 
 Conditional:
