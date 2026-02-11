@@ -373,44 +373,24 @@ public static class CBindingGen
         // Functions
         foreach (var f in spec.Funcs)
         {
-            var parms = f.Params.Select((p, i) => ToParam(p, i + 1)).ToList();
-
-            if (f.ReturnType is BindingType.Struct(var retCName, var retMt, _))
+            // Validation: Callback/FixedArray in params or return → hard error
+            foreach (var p in f.Params)
             {
-                // 構造体 return は Func() をバイパスして直接 userdata 生成
-                var paramDecls = string.Join("\n", parms.Select((p, i) => GenParamDecl(p, i + 1, "")).Where(s => s != ""));
-                var argNames = string.Join(", ", parms.Select(p => p.Name));
-                sb += $$"""
-                    static int l_{{f.CName}}(lua_State *L) {
-                    {{paramDecls}}
-                        {{retCName}} result = {{f.CName}}({{argNames}});
-                        {{retCName}}* ud = ({{retCName}}*)lua_newuserdatauv(L, sizeof({{retCName}}), 0);
-                        *ud = result;
-                        luaL_setmetatable(L, "{{retMt}}");
-                        return 1;
-                    }
+                if (p.Type is BindingType.Callback)
+                    throw new InvalidOperationException(
+                        $"Function '{f.CName}' has Callback parameter '{p.Name}'. " +
+                        "Callback parameters must be excluded from spec.Funcs (use ExtraLuaFuncs + ExtraCCode instead).");
+                if (p.Type is BindingType.FixedArray)
+                    throw new InvalidOperationException(
+                        $"Function '{f.CName}' has FixedArray parameter '{p.Name}'. " +
+                        "FixedArray is field-only (C array parameters decay to pointers).");
+            }
+            if (f.ReturnType is BindingType.Callback)
+                throw new InvalidOperationException(
+                    $"Function '{f.CName}' has Callback return type. " +
+                    "Callback return types must be excluded from spec.Funcs.");
 
-                    """;
-            }
-            else if (f.ReturnType is BindingType.Custom(var cType, _, _, _, var pushCode, _) && pushCode != null)
-            {
-                // Custom 戻り値は PushCode を展開
-                var paramDecls = string.Join("\n", parms.Select((p, i) => GenParamDecl(p, i + 1, "")).Where(s => s != ""));
-                var argNames = string.Join(", ", parms.Select(p => p.Name));
-                var pushExpanded = pushCode.Replace("{value}", $"{f.CName}({argNames})");
-                sb += $$"""
-                    static int l_{{f.CName}}(lua_State *L) {
-                    {{paramDecls}}
-                        {{pushExpanded}}
-                        return 1;
-                    }
-
-                    """;
-            }
-            else
-            {
-                sb += Func(f.CName, parms, ToOldType(f.ReturnType), "");
-            }
+            sb += GenBindingFunc(f);
         }
 
         // Opaque types
@@ -968,6 +948,59 @@ public static class CBindingGen
             """;
     }
 
+    // ===== BindingType ベース パラメータ/戻り値生成 =====
+
+    private static string GenBindingParamDecl(ParamBinding p, int idx) => p.Type switch
+    {
+        BindingType.Custom(_, _, _, var cc, _, _) when cc != null =>
+            cc.Replace("{idx}", idx.ToString()).Replace("{name}", p.Name),
+        _ => GenOpaqueParamDecl(p, idx)
+    };
+
+    private static string GenBindingReturnPush(BindingType ret, string callExpr) => ret switch
+    {
+        BindingType.Void => $"    {callExpr};\n    return 0;",
+        BindingType.Int => $"    lua_pushinteger(L, {callExpr});\n    return 1;",
+        BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64 or BindingType.Size
+            or BindingType.UIntPtr or BindingType.IntPtr
+            => $"    lua_pushinteger(L, (lua_Integer){callExpr});\n    return 1;",
+        BindingType.Bool => $"    lua_pushboolean(L, {callExpr});\n    return 1;",
+        BindingType.Float => $"    lua_pushnumber(L, {callExpr});\n    return 1;",
+        BindingType.Double => $"    lua_pushnumber(L, (lua_Number){callExpr});\n    return 1;",
+        BindingType.Str or BindingType.ConstPtr(BindingType.Str)
+            => $"    lua_pushstring(L, {callExpr});\n    return 1;",
+        BindingType.VoidPtr or BindingType.Ptr(BindingType.Void)
+            or BindingType.ConstPtr(BindingType.Void)
+            => $"    lua_pushlightuserdata(L, (void*){callExpr});\n    return 1;",
+        BindingType.Enum(_, _)
+            => $"    lua_pushinteger(L, (lua_Integer){callExpr});\n    return 1;",
+        BindingType.Struct(var retCName, var retMt, _) =>
+            $"    {retCName} result = {callExpr};\n" +
+            $"    {retCName}* ud = ({retCName}*)lua_newuserdatauv(L, sizeof({retCName}), 0);\n" +
+            $"    *ud = result;\n" +
+            $"    luaL_setmetatable(L, \"{retMt}\");\n" +
+            $"    return 1;",
+        BindingType.Custom(_, _, _, _, var pushCode, _) when pushCode != null =>
+            $"    {pushCode.Replace("{value}", callExpr)}\n    return 1;",
+        _ => $"    {callExpr};\n    return 0;"
+    };
+
+    private static string GenBindingFunc(FuncBinding f)
+    {
+        var paramDecls = string.Join("\n", f.Params.Select((p, i) =>
+            GenBindingParamDecl(p, i + 1)).Where(s => s != ""));
+        var argNames = string.Join(", ", f.Params.Select(p => p.Name));
+        var call = GenBindingReturnPush(f.ReturnType, $"{f.CName}({argNames})");
+
+        return $$"""
+            static int l_{{f.CName}}(lua_State *L) {
+            {{paramDecls}}
+            {{call}}
+            }
+
+            """;
+    }
+
     private static string GenOpaqueParamDecl(ParamBinding p, int idx) => p.Type switch
     {
         BindingType.Int => $"    int {p.Name} = (int)luaL_checkinteger(L, {idx});",
@@ -986,6 +1019,10 @@ public static class CBindingGen
             $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
         BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
             $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        BindingType.Ptr(BindingType.Custom(var cName, _, _, _, _, _)) =>
+            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"\");",
+        BindingType.ConstPtr(BindingType.Custom(var cName, _, _, _, _, _)) =>
+            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"\");",
         BindingType.Struct(var cName, var mt, _) =>
             $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
         _ => $"    /* unsupported param type for {p.Name} */"

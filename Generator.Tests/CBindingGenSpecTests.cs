@@ -318,6 +318,86 @@ public class CBindingGenSpecTests
         Assert.Contains("luaL_checkinteger(L, 1)", code);
     }
 
+    // ===== 追加パラメータ型 =====
+
+    [Fact]
+    public void Generate_IntParam_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_width", "SetWidth",
+                [new ParamBinding("width", new BindingType.Int())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_StringParam_ChecksString()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_name", "SetName",
+                [new ParamBinding("name", new BindingType.Str())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkstring(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_SizeParam_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_alloc", "Alloc",
+                [new ParamBinding("size", new BindingType.Size())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(size_t)luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_VoidPtrParam_ChecksUserdata()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_ptr", "SetPtr",
+                [new ParamBinding("ptr", new BindingType.VoidPtr())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_touserdata(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_StructParam_ChecksUdata()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_apply", "Apply",
+                [new ParamBinding("desc", new BindingType.Struct("stest_desc", "sokol.test.Desc", "sokol.test.Desc"))],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checkudata(L, 1, \"sokol.test.Desc\")", code);
+    }
+
+    [Fact]
+    public void Generate_DoubleParam_ChecksNumber()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_time", "SetTime",
+                [new ParamBinding("time", new BindingType.Double())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checknumber(L, 1)", code);
+    }
+
     // ===== Enum フィールド初期化 =====
 
     [Fact]
@@ -599,6 +679,75 @@ public class CBindingGenSpecTests
         Assert.Contains("self->gravity.x", code);
         Assert.Contains("self->gravity.y", code);
         Assert.Contains("luaL_checktype(L, 3, LUA_TTABLE)", code);
+    }
+
+    // ===== Callback / FixedArray バリデーション =====
+
+    [Fact]
+    public void Generate_CallbackParam_ThrowsInvalidOperation()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_cb", "SetCb",
+                [new ParamBinding("cb", new BindingType.Callback(
+                    [("ctx", new BindingType.VoidPtr())], null))],
+                new BindingType.Void(), null)],
+            [], []);
+        Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
+    [Fact]
+    public void Generate_CallbackReturn_ThrowsInvalidOperation()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_get_cb", "GetCb", [],
+                new BindingType.Callback(
+                    [("ctx", new BindingType.VoidPtr())], null), null)],
+            [], []);
+        Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
+    [Fact]
+    public void Generate_FixedArrayParam_ThrowsInvalidOperation()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_data", "SetData",
+                [new ParamBinding("data", new BindingType.FixedArray(new BindingType.Int(), 4))],
+                new BindingType.Void(), null)],
+            [], []);
+        Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
+    // ===== ConstPtr(Custom) / Ptr(Custom) パラメータ =====
+
+    [Fact]
+    public void Generate_ConstPtrCustomParam_GeneratesCheckudata()
+    {
+        var customType = new BindingType.Custom("b2Vec2", "number[]", null, null, null, null);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2MakeAABB", "MakeAABB",
+                [new ParamBinding("points", new BindingType.ConstPtr(customType))],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("const b2Vec2* points = (const b2Vec2*)luaL_checkudata(L, 1, \"\")", code);
+    }
+
+    [Fact]
+    public void Generate_PtrCustomParam_GeneratesCheckudata()
+    {
+        var customType = new BindingType.Custom("b2Vec2", "number[]", null, null, null, null);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2ModifyVec", "ModifyVec",
+                [new ParamBinding("vec", new BindingType.Ptr(customType))],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2Vec2* vec = (b2Vec2*)luaL_checkudata(L, 1, \"\")", code);
     }
 
     // ===== Custom 型パラメータ =====
