@@ -170,7 +170,7 @@ public class OpaqueTypeGenTests
     public void Lua_ContainsConstructorInModule()
     {
         var code = LuaCatsGen.Generate(OpaqueSpec());
-        Assert.Contains("---@field EngineInit fun(): miniaudio.Engine", code);
+        Assert.Contains("---@field EngineInit fun(config?: any): miniaudio.Engine", code);
     }
 
     [Fact]

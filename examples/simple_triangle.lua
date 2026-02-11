@@ -77,9 +77,9 @@ function M:init()
     -- Each vertex: pos (x, y), color (r, g, b)
     local vertices = {
         -- pos          -- color
-        0.0, 0.5, 1.0, 0.0, 0.0,       -- top (red)
-        0.5, -0.5, 0.0, 1.0, 0.0,      -- bottom right (green)
-        -0.5, -0.5, 0.0, 0.0, 1.0,     -- bottom left (blue)
+        0.0, 0.5, 1.0, 0.0, 0.0,   -- top (red)
+        0.5, -0.5, 0.0, 1.0, 0.0,  -- bottom right (green)
+        -0.5, -0.5, 0.0, 0.0, 1.0, -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
     vbuf = gfx.MakeBuffer(gfx.BufferDesc({

@@ -14,10 +14,11 @@ local gc_supported = (function()
     local _ = setmetatable({}, {
         __gc = function() test_flag.called = true end
     })
-    _ = nil  ---@diagnostic disable-line: cast-local-type
+    _ = nil ---@diagnostic disable-line: cast-local-type
     collectgarbage("collect")
     if not test_flag.called then
-        slog.Func("lua", 2, 0, "[gpu] Table __gc not supported - GPU resources may leak if not explicitly destroyed", 0, "", nil)
+        slog.Func("lua", 2, 0, "[gpu] Table __gc not supported - GPU resources may leak if not explicitly destroyed", 0,
+            "", nil)
     end
     return test_flag.called
 end)()
@@ -58,6 +59,7 @@ local function wrap(handle, destroy_fn)
             self.handle = nil
         end
     end
+
     return setmetatable(obj, gc_mt)
 end
 

@@ -5,9 +5,9 @@ local sdtx = require("sokol.debugtext")
 local M = {}
 
 -- Configuration
-M.duration = 3.0      -- seconds to show
-M.max_items = 5       -- max visible notifications
-M.fade_time = 0.5     -- fade out duration
+M.duration = 3.0  -- seconds to show
+M.max_items = 5   -- max visible notifications
+M.fade_time = 0.5 -- fade out duration
 
 -- Notification queue
 local notifications = {}
@@ -60,8 +60,11 @@ end
 
 -- Convenience functions
 function M.info(text) M.add(text, "info") end
+
 function M.ok(text) M.add(text, "ok") end
+
 function M.warn(text) M.add(text, "warn") end
+
 function M.error(text) M.add(text, "error") end
 
 ---Draw notifications (call during a swapchain render pass)
@@ -71,9 +74,9 @@ function M.draw(width, height)
     if not initialized then return end
 
     local now = os.clock()
-    local y = 1.0  -- Start from top
+    local y = 1.0                      -- Start from top
 
-    sdtx.Canvas(width / 4, height / 4)  -- smaller text (more chars = smaller font)
+    sdtx.Canvas(width / 4, height / 4) -- smaller text (more chars = smaller font)
     sdtx.Origin(0, 0)
 
     local visible = 0

@@ -31,9 +31,6 @@
 [submodule "deps/miniaudio"]
 	path = deps/miniaudio
 	url = https://github.com/mackron/miniaudio.git
-[submodule "deps/luafilesystem"]
-	path = deps/luafilesystem
-	url = https://github.com/lunarmodules/luafilesystem
 [submodule "deps/box2d"]
 	path = deps/box2d
 	url = https://github.com/erincatto/box2d.git

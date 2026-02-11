@@ -403,10 +403,10 @@ mat3.__index = mat3
 ---@overload fun(m1: number, m2: number, m3: number, m4: number, m5: number, m6: number, m7: number, m8: number, m9: number): mat3
 ---@return mat3
 function glm.mat3(...)
-    local args = {...}
+    local args = { ... }
     local m = {}
     if #args == 0 then
-        m = {1,0,0, 0,1,0, 0,0,1}
+        m = { 1, 0, 0, 0, 1, 0, 0, 0, 1 }
     elseif #args == 9 then
         m = args
     else
@@ -426,7 +426,7 @@ function mat3.__mul(a, b)
             for row = 0, 2 do
                 local sum = 0
                 for k = 0, 2 do
-                    sum = sum + a[k*3 + row + 1] * b[col*3 + k + 1]
+                    sum = sum + a[k * 3 + row + 1] * b[col * 3 + k + 1]
                 end
                 r[#r + 1] = sum
             end
@@ -435,9 +435,9 @@ function mat3.__mul(a, b)
     elseif getmetatable(b) == vec3 then
         ---@cast b vec3
         return glm.vec3(
-            a[1]*b.x + a[4]*b.y + a[7]*b.z,
-            a[2]*b.x + a[5]*b.y + a[8]*b.z,
-            a[3]*b.x + a[6]*b.y + a[9]*b.z
+            a[1] * b.x + a[4] * b.y + a[7] * b.z,
+            a[2] * b.x + a[5] * b.y + a[8] * b.z,
+            a[3] * b.x + a[6] * b.y + a[9] * b.z
         )
     else
         error("mat3 multiplication: unsupported operand")
@@ -451,7 +451,7 @@ function mat3.__tostring(m)
     for row = 0, 2 do
         local cols = {}
         for col = 0, 2 do
-            cols[#cols + 1] = string.format("%8.4f", m[col*3 + row + 1])
+            cols[#cols + 1] = string.format("%8.4f", m[col * 3 + row + 1])
         end
         rows[#rows + 1] = table.concat(cols, " ")
     end
@@ -479,23 +479,23 @@ end
 ---@return mat3
 function mat3:inverse()
     local m = self
-    local det = m[1]*(m[5]*m[9] - m[8]*m[6])
-              - m[4]*(m[2]*m[9] - m[8]*m[3])
-              + m[7]*(m[2]*m[6] - m[5]*m[3])
+    local det = m[1] * (m[5] * m[9] - m[8] * m[6])
+        - m[4] * (m[2] * m[9] - m[8] * m[3])
+        + m[7] * (m[2] * m[6] - m[5] * m[3])
     if math.abs(det) < 1e-10 then
         return glm.mat3()
     end
     local invDet = 1.0 / det
     return glm.mat3(
-        (m[5]*m[9] - m[8]*m[6]) * invDet,
-        (m[3]*m[8] - m[2]*m[9]) * invDet,
-        (m[2]*m[6] - m[3]*m[5]) * invDet,
-        (m[6]*m[7] - m[4]*m[9]) * invDet,
-        (m[1]*m[9] - m[3]*m[7]) * invDet,
-        (m[3]*m[4] - m[1]*m[6]) * invDet,
-        (m[4]*m[8] - m[5]*m[7]) * invDet,
-        (m[2]*m[7] - m[1]*m[8]) * invDet,
-        (m[1]*m[5] - m[2]*m[4]) * invDet
+        (m[5] * m[9] - m[8] * m[6]) * invDet,
+        (m[3] * m[8] - m[2] * m[9]) * invDet,
+        (m[2] * m[6] - m[3] * m[5]) * invDet,
+        (m[6] * m[7] - m[4] * m[9]) * invDet,
+        (m[1] * m[9] - m[3] * m[7]) * invDet,
+        (m[3] * m[4] - m[1] * m[6]) * invDet,
+        (m[4] * m[8] - m[5] * m[7]) * invDet,
+        (m[2] * m[7] - m[1] * m[8]) * invDet,
+        (m[1] * m[5] - m[2] * m[4]) * invDet
     )
 end
 
@@ -519,15 +519,15 @@ mat4.__index = mat4
 ---@overload fun(m1: number, m2: number, m3: number, m4: number, m5: number, m6: number, m7: number, m8: number, m9: number, m10: number, m11: number, m12: number, m13: number, m14: number, m15: number, m16: number): mat4
 ---@return mat4
 function glm.mat4(...)
-    local args = {...}
+    local args = { ... }
     local m = {}
     if #args == 0 then
         -- Identity matrix
-        m = {1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1}
+        m = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 }
     elseif #args == 1 and type(args[1]) == "number" then
         -- Diagonal matrix
         local d = args[1]
-        m = {d,0,0,0, 0,d,0,0, 0,0,d,0, 0,0,0,d}
+        m = { d, 0, 0, 0, 0, d, 0, 0, 0, 0, d, 0, 0, 0, 0, d }
     elseif #args == 16 then
         m = args
     else
@@ -548,7 +548,7 @@ function mat4.__mul(a, b)
             for row = 0, 3 do
                 local sum = 0
                 for k = 0, 3 do
-                    sum = sum + a[k*4 + row + 1] * b[col*4 + k + 1]
+                    sum = sum + a[k * 4 + row + 1] * b[col * 4 + k + 1]
                 end
                 r[#r + 1] = sum
             end
@@ -558,19 +558,19 @@ function mat4.__mul(a, b)
         ---@cast b vec4
         -- mat4 * vec4
         return glm.vec4(
-            a[1]*b.x + a[5]*b.y + a[9]*b.z  + a[13]*b.w,
-            a[2]*b.x + a[6]*b.y + a[10]*b.z + a[14]*b.w,
-            a[3]*b.x + a[7]*b.y + a[11]*b.z + a[15]*b.w,
-            a[4]*b.x + a[8]*b.y + a[12]*b.z + a[16]*b.w
+            a[1] * b.x + a[5] * b.y + a[9] * b.z + a[13] * b.w,
+            a[2] * b.x + a[6] * b.y + a[10] * b.z + a[14] * b.w,
+            a[3] * b.x + a[7] * b.y + a[11] * b.z + a[15] * b.w,
+            a[4] * b.x + a[8] * b.y + a[12] * b.z + a[16] * b.w
         )
     elseif getmetatable(b) == vec3 then
         ---@cast b vec3
         -- mat4 * vec3 (assume w=1)
-        local w = a[4]*b.x + a[8]*b.y + a[12]*b.z + a[16]
+        local w = a[4] * b.x + a[8] * b.y + a[12] * b.z + a[16]
         return glm.vec3(
-            (a[1]*b.x + a[5]*b.y + a[9]*b.z  + a[13]) / w,
-            (a[2]*b.x + a[6]*b.y + a[10]*b.z + a[14]) / w,
-            (a[3]*b.x + a[7]*b.y + a[11]*b.z + a[15]) / w
+            (a[1] * b.x + a[5] * b.y + a[9] * b.z + a[13]) / w,
+            (a[2] * b.x + a[6] * b.y + a[10] * b.z + a[14]) / w,
+            (a[3] * b.x + a[7] * b.y + a[11] * b.z + a[15]) / w
         )
     else
         error("mat4 multiplication: unsupported operand")
@@ -584,7 +584,7 @@ function mat4.__tostring(m)
     for row = 0, 3 do
         local cols = {}
         for col = 0, 3 do
-            cols[#cols + 1] = string.format("%8.4f", m[col*4 + row + 1])
+            cols[#cols + 1] = string.format("%8.4f", m[col * 4 + row + 1])
         end
         rows[#rows + 1] = table.concat(cols, " ")
     end
@@ -612,7 +612,7 @@ end
 function mat4:transpose()
     local m = self
     return glm.mat4(
-        m[1], m[5], m[9],  m[13],
+        m[1], m[5], m[9], m[13],
         m[2], m[6], m[10], m[14],
         m[3], m[7], m[11], m[15],
         m[4], m[8], m[12], m[16]
@@ -641,38 +641,54 @@ end
 function mat4:inverse()
     local m = self
     -- Calculate cofactors
-    local c00 = m[6]*m[11]*m[16] - m[6]*m[12]*m[15] - m[10]*m[7]*m[16] + m[10]*m[8]*m[15] + m[14]*m[7]*m[12] - m[14]*m[8]*m[11]
-    local c01 = -m[5]*m[11]*m[16] + m[5]*m[12]*m[15] + m[9]*m[7]*m[16] - m[9]*m[8]*m[15] - m[13]*m[7]*m[12] + m[13]*m[8]*m[11]
-    local c02 = m[5]*m[10]*m[16] - m[5]*m[12]*m[14] - m[9]*m[6]*m[16] + m[9]*m[8]*m[14] + m[13]*m[6]*m[12] - m[13]*m[8]*m[10]
-    local c03 = -m[5]*m[10]*m[15] + m[5]*m[11]*m[14] + m[9]*m[6]*m[15] - m[9]*m[7]*m[14] - m[13]*m[6]*m[11] + m[13]*m[7]*m[10]
+    local c00 = m[6] * m[11] * m[16] - m[6] * m[12] * m[15] - m[10] * m[7] * m[16] + m[10] * m[8] * m[15] +
+        m[14] * m[7] * m[12] - m[14] * m[8] * m[11]
+    local c01 = -m[5] * m[11] * m[16] + m[5] * m[12] * m[15] + m[9] * m[7] * m[16] - m[9] * m[8] * m[15] -
+        m[13] * m[7] * m[12] + m[13] * m[8] * m[11]
+    local c02 = m[5] * m[10] * m[16] - m[5] * m[12] * m[14] - m[9] * m[6] * m[16] + m[9] * m[8] * m[14] +
+        m[13] * m[6] * m[12] - m[13] * m[8] * m[10]
+    local c03 = -m[5] * m[10] * m[15] + m[5] * m[11] * m[14] + m[9] * m[6] * m[15] - m[9] * m[7] * m[14] -
+        m[13] * m[6] * m[11] + m[13] * m[7] * m[10]
 
-    local c10 = -m[2]*m[11]*m[16] + m[2]*m[12]*m[15] + m[10]*m[3]*m[16] - m[10]*m[4]*m[15] - m[14]*m[3]*m[12] + m[14]*m[4]*m[11]
-    local c11 = m[1]*m[11]*m[16] - m[1]*m[12]*m[15] - m[9]*m[3]*m[16] + m[9]*m[4]*m[15] + m[13]*m[3]*m[12] - m[13]*m[4]*m[11]
-    local c12 = -m[1]*m[10]*m[16] + m[1]*m[12]*m[14] + m[9]*m[2]*m[16] - m[9]*m[4]*m[14] - m[13]*m[2]*m[12] + m[13]*m[4]*m[10]
-    local c13 = m[1]*m[10]*m[15] - m[1]*m[11]*m[14] - m[9]*m[2]*m[15] + m[9]*m[3]*m[14] + m[13]*m[2]*m[11] - m[13]*m[3]*m[10]
+    local c10 = -m[2] * m[11] * m[16] + m[2] * m[12] * m[15] + m[10] * m[3] * m[16] - m[10] * m[4] * m[15] -
+        m[14] * m[3] * m[12] + m[14] * m[4] * m[11]
+    local c11 = m[1] * m[11] * m[16] - m[1] * m[12] * m[15] - m[9] * m[3] * m[16] + m[9] * m[4] * m[15] +
+        m[13] * m[3] * m[12] - m[13] * m[4] * m[11]
+    local c12 = -m[1] * m[10] * m[16] + m[1] * m[12] * m[14] + m[9] * m[2] * m[16] - m[9] * m[4] * m[14] -
+        m[13] * m[2] * m[12] + m[13] * m[4] * m[10]
+    local c13 = m[1] * m[10] * m[15] - m[1] * m[11] * m[14] - m[9] * m[2] * m[15] + m[9] * m[3] * m[14] +
+        m[13] * m[2] * m[11] - m[13] * m[3] * m[10]
 
-    local c20 = m[2]*m[7]*m[16] - m[2]*m[8]*m[15] - m[6]*m[3]*m[16] + m[6]*m[4]*m[15] + m[14]*m[3]*m[8] - m[14]*m[4]*m[7]
-    local c21 = -m[1]*m[7]*m[16] + m[1]*m[8]*m[15] + m[5]*m[3]*m[16] - m[5]*m[4]*m[15] - m[13]*m[3]*m[8] + m[13]*m[4]*m[7]
-    local c22 = m[1]*m[6]*m[16] - m[1]*m[8]*m[14] - m[5]*m[2]*m[16] + m[5]*m[4]*m[14] + m[13]*m[2]*m[8] - m[13]*m[4]*m[6]
-    local c23 = -m[1]*m[6]*m[15] + m[1]*m[7]*m[14] + m[5]*m[2]*m[15] - m[5]*m[3]*m[14] - m[13]*m[2]*m[7] + m[13]*m[3]*m[6]
+    local c20 = m[2] * m[7] * m[16] - m[2] * m[8] * m[15] - m[6] * m[3] * m[16] + m[6] * m[4] * m[15] + m[14] * m[3] *
+        m[8] - m[14] * m[4] * m[7]
+    local c21 = -m[1] * m[7] * m[16] + m[1] * m[8] * m[15] + m[5] * m[3] * m[16] - m[5] * m[4] * m[15] - m[13] * m[3] *
+        m[8] + m[13] * m[4] * m[7]
+    local c22 = m[1] * m[6] * m[16] - m[1] * m[8] * m[14] - m[5] * m[2] * m[16] + m[5] * m[4] * m[14] + m[13] * m[2] *
+        m[8] - m[13] * m[4] * m[6]
+    local c23 = -m[1] * m[6] * m[15] + m[1] * m[7] * m[14] + m[5] * m[2] * m[15] - m[5] * m[3] * m[14] - m[13] * m[2] *
+        m[7] + m[13] * m[3] * m[6]
 
-    local c30 = -m[2]*m[7]*m[12] + m[2]*m[8]*m[11] + m[6]*m[3]*m[12] - m[6]*m[4]*m[11] - m[10]*m[3]*m[8] + m[10]*m[4]*m[7]
-    local c31 = m[1]*m[7]*m[12] - m[1]*m[8]*m[11] - m[5]*m[3]*m[12] + m[5]*m[4]*m[11] + m[9]*m[3]*m[8] - m[9]*m[4]*m[7]
-    local c32 = -m[1]*m[6]*m[12] + m[1]*m[8]*m[10] + m[5]*m[2]*m[12] - m[5]*m[4]*m[10] - m[9]*m[2]*m[8] + m[9]*m[4]*m[6]
-    local c33 = m[1]*m[6]*m[11] - m[1]*m[7]*m[10] - m[5]*m[2]*m[11] + m[5]*m[3]*m[10] + m[9]*m[2]*m[7] - m[9]*m[3]*m[6]
+    local c30 = -m[2] * m[7] * m[12] + m[2] * m[8] * m[11] + m[6] * m[3] * m[12] - m[6] * m[4] * m[11] - m[10] * m[3] *
+        m[8] + m[10] * m[4] * m[7]
+    local c31 = m[1] * m[7] * m[12] - m[1] * m[8] * m[11] - m[5] * m[3] * m[12] + m[5] * m[4] * m[11] + m[9] * m[3] *
+        m[8] - m[9] * m[4] * m[7]
+    local c32 = -m[1] * m[6] * m[12] + m[1] * m[8] * m[10] + m[5] * m[2] * m[12] - m[5] * m[4] * m[10] - m[9] * m[2] *
+        m[8] + m[9] * m[4] * m[6]
+    local c33 = m[1] * m[6] * m[11] - m[1] * m[7] * m[10] - m[5] * m[2] * m[11] + m[5] * m[3] * m[10] + m[9] * m[2] *
+        m[7] - m[9] * m[3] * m[6]
 
     -- Determinant
-    local det = m[1]*c00 + m[2]*c01 + m[3]*c02 + m[4]*c03
+    local det = m[1] * c00 + m[2] * c01 + m[3] * c02 + m[4] * c03
     if math.abs(det) < 1e-10 then
         return glm.mat4() -- Return identity if singular
     end
 
     local invDet = 1.0 / det
     return glm.mat4(
-        c00*invDet, c10*invDet, c20*invDet, c30*invDet,
-        c01*invDet, c11*invDet, c21*invDet, c31*invDet,
-        c02*invDet, c12*invDet, c22*invDet, c32*invDet,
-        c03*invDet, c13*invDet, c23*invDet, c33*invDet
+        c00 * invDet, c10 * invDet, c20 * invDet, c30 * invDet,
+        c01 * invDet, c11 * invDet, c21 * invDet, c31 * invDet,
+        c02 * invDet, c12 * invDet, c22 * invDet, c32 * invDet,
+        c03 * invDet, c13 * invDet, c23 * invDet, c33 * invDet
     )
 end
 
@@ -732,10 +748,10 @@ function glm.rotate(angle, axis)
     local x, y, z = n.x, n.y, n.z
 
     return glm.mat4(
-        t*x*x + c,    t*x*y + s*z,  t*x*z - s*y,  0,
-        t*x*y - s*z,  t*y*y + c,    t*y*z + s*x,  0,
-        t*x*z + s*y,  t*y*z - s*x,  t*z*z + c,    0,
-        0,            0,            0,            1
+        t * x * x + c, t * x * y + s * z, t * x * z - s * y, 0,
+        t * x * y - s * z, t * y * y + c, t * y * z + s * x, 0,
+        t * x * z + s * y, t * y * z - s * x, t * z * z + c, 0,
+        0, 0, 0, 1
     )
 end
 

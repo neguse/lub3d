@@ -88,31 +88,47 @@ function M.handle_event(ev)
     local key = ev.key_code
 
     if evtype == app.EventType.KEY_DOWN then
-        if key == app.Keycode.W then keys_down["W"] = true
-        elseif key == app.Keycode.S then keys_down["S"] = true
-        elseif key == app.Keycode.A then keys_down["A"] = true
-        elseif key == app.Keycode.D then keys_down["D"] = true
-        elseif key == app.Keycode.Q then keys_down["Q"] = true
-        elseif key == app.Keycode.E then keys_down["E"] = true
-        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = true
-        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = true
+        if key == app.Keycode.W then
+            keys_down["W"] = true
+        elseif key == app.Keycode.S then
+            keys_down["S"] = true
+        elseif key == app.Keycode.A then
+            keys_down["A"] = true
+        elseif key == app.Keycode.D then
+            keys_down["D"] = true
+        elseif key == app.Keycode.Q then
+            keys_down["Q"] = true
+        elseif key == app.Keycode.E then
+            keys_down["E"] = true
+        elseif key == app.Keycode.SPACE then
+            keys_down["SPACE"] = true
+        elseif key == app.Keycode.LEFT_SHIFT then
+            keys_down["LEFT_SHIFT"] = true
         elseif key == app.Keycode.ESCAPE then
             if M.mouse_captured then
                 app.ShowMouse(true)
                 app.LockMouse(false)
                 M.mouse_captured = false
-                return true  -- handled
+                return true -- handled
             end
         end
     elseif evtype == app.EventType.KEY_UP then
-        if key == app.Keycode.W then keys_down["W"] = false
-        elseif key == app.Keycode.S then keys_down["S"] = false
-        elseif key == app.Keycode.A then keys_down["A"] = false
-        elseif key == app.Keycode.D then keys_down["D"] = false
-        elseif key == app.Keycode.Q then keys_down["Q"] = false
-        elseif key == app.Keycode.E then keys_down["E"] = false
-        elseif key == app.Keycode.SPACE then keys_down["SPACE"] = false
-        elseif key == app.Keycode.LEFT_SHIFT then keys_down["LEFT_SHIFT"] = false
+        if key == app.Keycode.W then
+            keys_down["W"] = false
+        elseif key == app.Keycode.S then
+            keys_down["S"] = false
+        elseif key == app.Keycode.A then
+            keys_down["A"] = false
+        elseif key == app.Keycode.D then
+            keys_down["D"] = false
+        elseif key == app.Keycode.Q then
+            keys_down["Q"] = false
+        elseif key == app.Keycode.E then
+            keys_down["E"] = false
+        elseif key == app.Keycode.SPACE then
+            keys_down["SPACE"] = false
+        elseif key == app.Keycode.LEFT_SHIFT then
+            keys_down["LEFT_SHIFT"] = false
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         if ev.mouse_button == app.Mousebutton.RIGHT then

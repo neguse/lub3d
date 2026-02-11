@@ -73,7 +73,9 @@ void main() {
 local shared_ibuf_data = nil
 
 local function get_ibuf_data()
-    if shared_ibuf_data then return shared_ibuf_data end
+    if shared_ibuf_data then
+        return shared_ibuf_data
+    end
     local indices = {}
     for i = 0, MAX_QUADS - 1 do
         local base = i * VERTS_PER_QUAD
@@ -90,13 +92,15 @@ end
 
 -- Shared resources (lazily created, shared across batches)
 -- Keep gpu-wrapped refs to prevent GC
-local shared_shader_ref = nil -- gpu.Shader (prevents GC)
+local shared_shader_ref = nil   -- gpu.Shader (prevents GC)
 local shared_pipeline_ref = nil -- gpu.Pipeline (prevents GC)
-local shared_shader = nil -- raw handle for pipeline creation
-local shared_pipeline = nil -- raw handle for draw calls
+local shared_shader = nil       -- raw handle for pipeline creation
+local shared_pipeline = nil     -- raw handle for draw calls
 
 local function ensure_shared_resources()
-    if shared_pipeline then return end
+    if shared_pipeline then
+        return
+    end
 
     local shd = shaderMod.compile_full(shader_source, "sprite", {
         uniform_blocks = {
@@ -109,10 +113,23 @@ local function ensure_shared_resources()
             },
         },
         views = {
-            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
+            {
+                texture = {
+                    stage = gfx.ShaderStage.FRAGMENT,
+                    image_type = gfx.ImageType["2D"],
+                    sample_type = gfx.ImageSampleType.FLOAT,
+                    hlsl_register_t_n = 0,
+                    wgsl_group1_binding_n = 0,
+                },
+            },
         },
         samplers = {
-            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                sampler_type = gfx.SamplerType.FILTERING,
+                hlsl_register_s_n = 0,
+                wgsl_group1_binding_n = 32,
+            },
         },
         texture_sampler_pairs = {
             { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "tex_smp" },
@@ -248,8 +265,7 @@ function M.draw(batch, sx, sy, sw, sh, dx, dy, opts)
     -- Apply rotation and translate to destination
     local cos_r, sin_r = math.cos(rotate), math.sin(rotate)
     local function transform(lx, ly)
-        return dx + origin_x + lx * cos_r - ly * sin_r,
-               dy + origin_y + lx * sin_r + ly * cos_r
+        return dx + origin_x + lx * cos_r - ly * sin_r, dy + origin_y + lx * sin_r + ly * cos_r
     end
 
     local ax, ay = transform(x0, y0)
@@ -261,13 +277,41 @@ function M.draw(batch, sx, sy, sw, sh, dx, dy, opts)
     local v = batch.verts
     local n = #v
     -- top-left
-    v[n+1]=ax; v[n+2]=ay; v[n+3]=u0; v[n+4]=v0; v[n+5]=r; v[n+6]=g; v[n+7]=b; v[n+8]=a
+    v[n + 1] = ax
+    v[n + 2] = ay
+    v[n + 3] = u0
+    v[n + 4] = v0
+    v[n + 5] = r
+    v[n + 6] = g
+    v[n + 7] = b
+    v[n + 8] = a
     -- top-right
-    v[n+9]=bx; v[n+10]=by; v[n+11]=u1; v[n+12]=v0; v[n+13]=r; v[n+14]=g; v[n+15]=b; v[n+16]=a
+    v[n + 9] = bx
+    v[n + 10] = by
+    v[n + 11] = u1
+    v[n + 12] = v0
+    v[n + 13] = r
+    v[n + 14] = g
+    v[n + 15] = b
+    v[n + 16] = a
     -- bottom-right
-    v[n+17]=cx; v[n+18]=cy; v[n+19]=u1; v[n+20]=v1; v[n+21]=r; v[n+22]=g; v[n+23]=b; v[n+24]=a
+    v[n + 17] = cx
+    v[n + 18] = cy
+    v[n + 19] = u1
+    v[n + 20] = v1
+    v[n + 21] = r
+    v[n + 22] = g
+    v[n + 23] = b
+    v[n + 24] = a
     -- bottom-left
-    v[n+25]=ddx; v[n+26]=ddy; v[n+27]=u0; v[n+28]=v1; v[n+29]=r; v[n+30]=g; v[n+31]=b; v[n+32]=a
+    v[n + 25] = ddx
+    v[n + 26] = ddy
+    v[n + 27] = u0
+    v[n + 28] = v1
+    v[n + 29] = r
+    v[n + 30] = g
+    v[n + 31] = b
+    v[n + 32] = a
 
     batch.quad_count = batch.quad_count + 1
 end
@@ -276,7 +320,9 @@ end
 --- Must be called between gfx.BeginPass and gfx.EndPass
 ---@param batch sprite.Batch
 function M.flush(batch)
-    if batch.quad_count == 0 then return end
+    if batch.quad_count == 0 then
+        return
+    end
 
     -- Upload vertex data
     local packed = util.pack_floats(batch.verts)
@@ -306,8 +352,14 @@ end
 --- Destroy a batch's GPU resources (call before gfx.Shutdown)
 ---@param batch sprite.Batch
 function M.destroy_batch(batch)
-    if batch.vbuf then batch.vbuf:destroy(); batch.vbuf = nil end
-    if batch.ibuf then batch.ibuf:destroy(); batch.ibuf = nil end
+    if batch.vbuf then
+        batch.vbuf:destroy()
+        batch.vbuf = nil
+    end
+    if batch.ibuf then
+        batch.ibuf:destroy()
+        batch.ibuf = nil
+    end
 end
 
 --- Shutdown shared resources (call before gfx.Shutdown)

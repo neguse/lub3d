@@ -1,42 +1,43 @@
 -- cut'n'align - match-3 puzzle game
 -- Ported from neguse/ld44 (Go/Ebiten) to lub3d
-local gfx              = require("sokol.gfx")
-local app              = require("sokol.app")
-local glue             = require("sokol.glue")
-local texture          = require("lib.texture")
-local sprite           = require("lib.sprite")
-local log              = require("lib.log")
-local ma               = require("miniaudio")
+local gfx = require("sokol.gfx")
+local app = require("sokol.app")
+local glue = require("sokol.glue")
+local texture = require("lib.texture")
+local sprite = require("lib.sprite")
+local log = require("lib.log")
+local audio_lib = require("lib.audio")
+local ma = require("miniaudio")
 
 -- === Constants ===
 
-local SCREEN_W         = 200
-local SCREEN_H         = 300
-local BOARD_W          = 8
-local BOARD_H          = 16
-local STONE_W          = 16
-local STONE_H          = 16
-local PICK_MAX         = 6
-local RESERVE_NUM      = 6
-local JAMMER_TURN      = 5
+local SCREEN_W = 200
+local SCREEN_H = 300
+local BOARD_W = 8
+local BOARD_H = 16
+local STONE_W = 16
+local STONE_H = 16
+local PICK_MAX = 6
+local RESERVE_NUM = 6
+local JAMMER_TURN = 5
 local WAIT_ERASE_FRAME = 15
-local NUMBER_W         = 16
-local NUMBER_H         = 32
-local ALPHA_W          = 16
-local ALPHA_H          = 16
-local ORIGIN_X         = 10
-local ORIGIN_Y         = -10 + SCREEN_H - STONE_H * BOARD_H
+local NUMBER_W = 16
+local NUMBER_H = 32
+local ALPHA_W = 16
+local ALPHA_H = 16
+local ORIGIN_X = 10
+local ORIGIN_Y = -10 + SCREEN_H - STONE_H * BOARD_H
 
 -- Special number tile indices
-local NUM_CROSS        = 10
-local NUM_EQUAL        = 11
-local NUM_PERIOD       = 12
-local NUM_E            = 13
-local NUM_N            = 14
-local NUM_D            = 15
+local NUM_CROSS = 10
+local NUM_EQUAL = 11
+local NUM_PERIOD = 12
+local NUM_E = 13
+local NUM_N = 14
+local NUM_D = 15
 
 -- Color enum
-local Color            = {
+local Color = {
     None = 0,
     Red = 1,
     Blue = 2,
@@ -129,7 +130,9 @@ function M:board_init()
 end
 
 function M:board_get(x, y)
-    if x < 1 or x > BOARD_W or y < 1 or y > BOARD_H then return nil end
+    if x < 1 or x > BOARD_W or y < 1 or y > BOARD_H then
+        return nil
+    end
     return self.board[x][y]
 end
 
@@ -141,14 +144,18 @@ end
 
 function M:board_height_at(x)
     for y = 1, BOARD_H do
-        if self.board[x][y] then return BOARD_H - y end
+        if self.board[x][y] then
+            return BOARD_H - y
+        end
     end
     return 0
 end
 
 function M:board_is_full()
     for x = 2, BOARD_W - 1 do
-        if self:board_height_at(x) < BOARD_H - 2 then return false end
+        if self:board_height_at(x) < BOARD_H - 2 then
+            return false
+        end
     end
     return true
 end
@@ -206,13 +213,17 @@ function M:board_mark_erase()
 
     for y = 1, BOARD_H do
         local line = {}
-        for x = 1, BOARD_W do line[#line + 1] = { x, y } end
+        for x = 1, BOARD_W do
+            line[#line + 1] = { x, y }
+        end
         check_line(line)
     end
 
     for x = 1, BOARD_W do
         local line = {}
-        for y = 1, BOARD_H do line[#line + 1] = { x, y } end
+        for y = 1, BOARD_H do
+            line[#line + 1] = { x, y }
+        end
         check_line(line)
     end
 
@@ -221,7 +232,8 @@ function M:board_mark_erase()
         local x, y = start_x, 1
         while x <= BOARD_W and y <= BOARD_H do
             line[#line + 1] = { x, y }
-            x = x + 1; y = y + 1
+            x = x + 1
+            y = y + 1
         end
         check_line(line)
     end
@@ -230,7 +242,8 @@ function M:board_mark_erase()
         local x, y = 1, start_y
         while x <= BOARD_W and y <= BOARD_H do
             line[#line + 1] = { x, y }
-            x = x + 1; y = y + 1
+            x = x + 1
+            y = y + 1
         end
         check_line(line)
     end
@@ -240,7 +253,8 @@ function M:board_mark_erase()
         local x, y = start_x, BOARD_H
         while x <= BOARD_W and y >= 1 do
             line[#line + 1] = { x, y }
-            x = x + 1; y = y - 1
+            x = x + 1
+            y = y - 1
         end
         check_line(line)
     end
@@ -249,7 +263,8 @@ function M:board_mark_erase()
         local x, y = 1, start_y
         while x <= BOARD_W and y >= 1 do
             line[#line + 1] = { x, y }
-            x = x + 1; y = y - 1
+            x = x + 1
+            y = y - 1
         end
         check_line(line)
     end
@@ -290,9 +305,15 @@ end
 
 function M:color_count()
     local level = 3
-    if self.game.turn > 24 then level = level + 1 end
-    if self.game.turn > 48 then level = level + 1 end
-    if self.game.turn > 72 then level = level + 1 end
+    if self.game.turn > 24 then
+        level = level + 1
+    end
+    if self.game.turn > 48 then
+        level = level + 1
+    end
+    if self.game.turn > 72 then
+        level = level + 1
+    end
     return level
 end
 
@@ -363,7 +384,9 @@ function M:adjust_pick(cx, cy)
 end
 
 function M:fix_pick()
-    if self.game.pick_len <= 0 then return false end
+    if self.game.pick_len <= 0 then
+        return false
+    end
 
     local x = self.game.pick_x
     for i = 1, self.game.pick_len do
@@ -383,7 +406,9 @@ end
 
 function M:cause_jammer()
     local num = (math.floor(self.game.turn / JAMMER_TURN) + 2) % 3 + 1
-    if self.game.turn > 50 then num = num + 1 end
+    if self.game.turn > 50 then
+        num = num + 1
+    end
     for _ = 1, num do
         local x = math.random(2, BOARD_W - 1)
         local y = BOARD_H - self:board_height_at(x)
@@ -397,7 +422,7 @@ end
 
 function M:audio_init()
     self.audio = {}
-    self.audio.engine = ma.EngineInit()
+    self.audio.engine, self.audio.vfs = audio_lib.create_engine()
     self.audio.engine:Start()
     self.audio.engine:SetVolume(0.4)
 
@@ -418,7 +443,9 @@ function M:audio_init()
 end
 
 function M:audio_play_music(on)
-    if not self.audio or not self.audio.bgm or not self.audio.bgm_off then return end
+    if not self.audio or not self.audio.bgm or not self.audio.bgm_off then
+        return
+    end
     if on then
         local frame = self.audio.bgm_off:GetTimeInPcmFrames()
         self.audio.bgm:SeekToPcmFrame(frame)
@@ -433,7 +460,9 @@ function M:audio_play_music(on)
 end
 
 function M:audio_play_sfx(idx)
-    if not self.audio then return end
+    if not self.audio then
+        return
+    end
     local s = self.audio.sfx[idx]
     if s then
         s:SeekToPcmFrame(0)
@@ -442,7 +471,9 @@ function M:audio_play_sfx(idx)
 end
 
 function M:audio_cleanup()
-    if not self.audio then return end
+    if not self.audio then
+        return
+    end
     self.audio.sfx = {}
     self.audio.bgm = nil
     self.audio.bgm_off = nil
@@ -606,7 +637,9 @@ end
 
 function M:render_equation(equation, x, y, rot)
     local char_to_idx = {
-        ["x"] = NUM_CROSS, ["="] = NUM_EQUAL, ["."] = NUM_PERIOD,
+        ["x"] = NUM_CROSS,
+        ["="] = NUM_EQUAL,
+        ["."] = NUM_PERIOD,
     }
     local len = #equation
     for i = 1, len do
@@ -696,7 +729,9 @@ function M:init()
 end
 
 function M:frame()
-    if not self.batch then return end
+    if not self.batch then
+        return
+    end
 
     local frame_dt = app.FrameDuration()
     self.time_acc = (self.time_acc or 0) + frame_dt
@@ -757,7 +792,8 @@ end
 function M:cleanup()
     self:audio_cleanup()
     if self.batch then
-        sprite.destroy_batch(self.batch); self.batch = nil
+        sprite.destroy_batch(self.batch)
+        self.batch = nil
     end
     sprite.shutdown()
     if self.tex_result then
@@ -790,8 +826,10 @@ test.run("cna", {
         g:board_init()
         assert(g:board_height_at(2) == 0, "empty column should be 0")
         g:board_set(2, 2, { color = Color.Red, erased = false })
-        assert(g:board_height_at(2) == 14,
-            "height with stone at y=2: expected 14, got " .. tostring(g:board_height_at(2)))
+        assert(
+            g:board_height_at(2) == 14,
+            "height with stone at y=2: expected 14, got " .. tostring(g:board_height_at(2))
+        )
     end,
 
     board_mark_erase = function()
@@ -804,7 +842,7 @@ test.run("cna", {
                     { 3, 2, Color.Red,   true },
                     { 4, 2, Color.Red,   true },
                     { 5, 2, Color.Green, false },
-                }
+                },
             },
             {
                 name = "horizontal not",
@@ -813,7 +851,7 @@ test.run("cna", {
                     { 3, 2, Color.Red,   false },
                     { 4, 2, Color.Green, false },
                     { 5, 2, Color.Red,   false },
-                }
+                },
             },
             {
                 name = "vertical",
@@ -822,7 +860,7 @@ test.run("cna", {
                     { 2, 3, Color.Red,   true },
                     { 2, 4, Color.Red,   true },
                     { 2, 5, Color.Green, false },
-                }
+                },
             },
             {
                 name = "vertical not",
@@ -831,7 +869,7 @@ test.run("cna", {
                     { 2, 3, Color.Red,   false },
                     { 2, 4, Color.Green, false },
                     { 2, 5, Color.Red,   false },
-                }
+                },
             },
             {
                 name = "cross right down",
@@ -840,7 +878,7 @@ test.run("cna", {
                     { 3, 3, Color.Red,   true },
                     { 4, 4, Color.Red,   true },
                     { 5, 5, Color.Green, false },
-                }
+                },
             },
             {
                 name = "cross right down 2",
@@ -848,7 +886,7 @@ test.run("cna", {
                     { 4, 2, Color.Red, true },
                     { 5, 3, Color.Red, true },
                     { 6, 4, Color.Red, true },
-                }
+                },
             },
             {
                 name = "cross right up",
@@ -857,7 +895,7 @@ test.run("cna", {
                     { 3, 4, Color.Red,   true },
                     { 4, 3, Color.Red,   true },
                     { 5, 2, Color.Green, false },
-                }
+                },
             },
             {
                 name = "cross right up 2",
@@ -865,7 +903,7 @@ test.run("cna", {
                     { 4, 10, Color.Red, true },
                     { 5, 9,  Color.Red, true },
                     { 6, 8,  Color.Red, true },
-                }
+                },
             },
             {
                 name = "jammer",
@@ -874,7 +912,7 @@ test.run("cna", {
                     { 3, 4, Color.Red,    true },
                     { 4, 4, Color.Red,    true },
                     { 5, 4, Color.Jammer, true },
-                }
+                },
             },
         }
         for _, cs in ipairs(cases) do
@@ -887,9 +925,18 @@ test.run("cna", {
             for _, c in ipairs(cs.cells) do
                 local s = g:board_get(c[1], c[2])
                 assert(s, cs.name .. ": stone missing at " .. c[1] .. "," .. c[2])
-                assert(s.erased == c[4],
-                    cs.name .. ": erased mismatch at " .. c[1] .. "," .. c[2]
-                    .. " expected " .. tostring(c[4]) .. " got " .. tostring(s.erased))
+                assert(
+                    s.erased == c[4],
+                    cs.name
+                    .. ": erased mismatch at "
+                    .. c[1]
+                    .. ","
+                    .. c[2]
+                    .. " expected "
+                    .. tostring(c[4])
+                    .. " got "
+                    .. tostring(s.erased)
+                )
             end
         end
     end,
@@ -905,7 +952,7 @@ test.run("cna", {
                     { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX, pl = 0 },
                     { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX, pl = 1 },
                     { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX, pl = 2 },
-                }
+                },
             },
             {
                 name = "just",
@@ -915,7 +962,7 @@ test.run("cna", {
                     { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 1, pl = 0 },
                     { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 1, pl = 1 },
                     { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 1, pl = 2 },
-                }
+                },
             },
             {
                 name = "just-1",
@@ -926,7 +973,7 @@ test.run("cna", {
                     { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 2, pl = 0 },
                     { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 2, pl = 1 },
                     { cx = 2, cy = PICK_MAX - 3, px = 2, py = PICK_MAX - 2, pl = 2 },
-                }
+                },
             },
             {
                 name = "full+1",
@@ -935,7 +982,7 @@ test.run("cna", {
                     { cx = 2, cy = 3, px = 2, py = 1, pl = 0 },
                     { cx = 2, cy = 2, px = 2, py = 1, pl = 0 },
                     { cx = 2, cy = 1, px = 2, py = 1, pl = 1 },
-                }
+                },
             },
             {
                 name = "full",
@@ -944,7 +991,7 @@ test.run("cna", {
                     { cx = 2, cy = 2, px = 2, py = 0, pl = 0 },
                     { cx = 2, cy = 1, px = 2, py = 0, pl = 0 },
                     { cx = 2, cy = 0, px = 2, py = 0, pl = 0 },
-                }
+                },
             },
         }
         for _, cs in ipairs(cases) do
@@ -957,12 +1004,9 @@ test.run("cna", {
                 end
                 g:board_set(cs.cell[1], cs.cell[2], { color = cs.cell[3], erased = false })
                 g:adjust_pick(p.cx, p.cy)
-                assert(g.game.pick_x == p.px,
-                    cs.name .. " pick_x: expected " .. p.px .. " got " .. g.game.pick_x)
-                assert(g.game.pick_y == p.py,
-                    cs.name .. " pick_y: expected " .. p.py .. " got " .. g.game.pick_y)
-                assert(g.game.pick_len == p.pl,
-                    cs.name .. " pick_len: expected " .. p.pl .. " got " .. g.game.pick_len)
+                assert(g.game.pick_x == p.px, cs.name .. " pick_x: expected " .. p.px .. " got " .. g.game.pick_x)
+                assert(g.game.pick_y == p.py, cs.name .. " pick_y: expected " .. p.py .. " got " .. g.game.pick_y)
+                assert(g.game.pick_len == p.pl, cs.name .. " pick_len: expected " .. p.pl .. " got " .. g.game.pick_len)
             end
         end
     end,

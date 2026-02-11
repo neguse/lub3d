@@ -51,24 +51,24 @@ local M = {}
 -- Channel number definitions
 M.CHANNELS = {
     -- Special channels
-    BGM = 1,           -- 01: BGM
+    BGM = 1,            -- 01: BGM
     MEASURE_LENGTH = 2, -- 02: Measure length (special: value, not objects)
-    BPM_CHANGE = 3,    -- 03: BPM change (integer BPM)
-    BGA_BASE = 4,      -- 04: BGA base
-    BGA_POOR = 6,      -- 06: BGA poor
-    BGA_LAYER = 7,     -- 07: BGA layer
-    BPM_EXTENDED = 8,  -- 08: Extended BPM (references #BPMxx)
-    STOP = 9,          -- 09: STOP (references #STOPxx)
+    BPM_CHANGE = 3,     -- 03: BPM change (integer BPM)
+    BGA_BASE = 4,       -- 04: BGA base
+    BGA_POOR = 6,       -- 06: BGA poor
+    BGA_LAYER = 7,      -- 07: BGA layer
+    BPM_EXTENDED = 8,   -- 08: Extended BPM (references #BPMxx)
+    STOP = 9,           -- 09: STOP (references #STOPxx)
 
     -- 1P visible notes (11-19)
-    P1_KEY1 = 11,      -- 1P key 1 (scratch for 7key)
-    P1_KEY2 = 12,      -- 1P key 2
-    P1_KEY3 = 13,      -- 1P key 3
-    P1_KEY4 = 14,      -- 1P key 4
-    P1_KEY5 = 15,      -- 1P key 5
-    P1_KEY6 = 16,      -- 1P key 6 (for 7key: key 6)
-    P1_KEY7 = 18,      -- 1P key 7 (for 7key: key 7)
-    P1_KEY8 = 19,      -- 1P key 8 (for 7key: key 8/scratch?)
+    P1_KEY1 = 11, -- 1P key 1 (scratch for 7key)
+    P1_KEY2 = 12, -- 1P key 2
+    P1_KEY3 = 13, -- 1P key 3
+    P1_KEY4 = 14, -- 1P key 4
+    P1_KEY5 = 15, -- 1P key 5
+    P1_KEY6 = 16, -- 1P key 6 (for 7key: key 6)
+    P1_KEY7 = 18, -- 1P key 7 (for 7key: key 7)
+    P1_KEY8 = 19, -- 1P key 8 (for 7key: key 8/scratch?)
 
     -- 1P invisible notes (31-39)
     P1_INV_KEY1 = 31,
@@ -89,26 +89,26 @@ M.CHANNELS = {
 -- Lane mapping: BMS channel -> logical lane (1-8 for 7key+scratch)
 -- For 7key+scratch: lane 1 = scratch, lanes 2-8 = keys
 M.CHANNEL_TO_LANE = {
-    [11] = 1,  -- scratch
-    [12] = 2,  -- key 1
-    [13] = 3,  -- key 2
-    [14] = 4,  -- key 3
-    [15] = 5,  -- key 4
-    [18] = 6,  -- key 5
-    [19] = 7,  -- key 6
-    [16] = 8,  -- key 7
+    [11] = 1, -- scratch
+    [12] = 2, -- key 1
+    [13] = 3, -- key 2
+    [14] = 4, -- key 3
+    [15] = 5, -- key 4
+    [18] = 6, -- key 5
+    [19] = 7, -- key 6
+    [16] = 8, -- key 7
 }
 
 -- LN channel mapping: BMS channel -> logical lane (same as regular notes)
 M.LN_CHANNEL_TO_LANE = {
-    [51] = 1,  -- scratch LN
-    [52] = 2,  -- key 1 LN
-    [53] = 3,  -- key 2 LN
-    [54] = 4,  -- key 3 LN
-    [55] = 5,  -- key 4 LN
-    [56] = 8,  -- key 7 LN (mapped same as channel 16)
-    [58] = 6,  -- key 5 LN (mapped same as channel 18)
-    [59] = 7,  -- key 6 LN (mapped same as channel 19)
+    [51] = 1, -- scratch LN
+    [52] = 2, -- key 1 LN
+    [53] = 3, -- key 2 LN
+    [54] = 4, -- key 3 LN
+    [55] = 5, -- key 4 LN
+    [56] = 8, -- key 7 LN (mapped same as channel 16)
+    [58] = 6, -- key 5 LN (mapped same as channel 18)
+    [59] = 7, -- key 6 LN (mapped same as channel 19)
 }
 
 -- LN channels

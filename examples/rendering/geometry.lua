@@ -92,14 +92,53 @@ M.shader_desc = {
         { stage = gfx.ShaderStage.VERTEX, size = 192 }, -- 3x mat4
     },
     views = {
-        { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
-        { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
-        { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 2 } },
+        {
+            texture = {
+                stage = gfx.ShaderStage.FRAGMENT,
+                image_type = gfx.ImageType["2D"],
+                sample_type = gfx.ImageSampleType.FLOAT,
+                hlsl_register_t_n = 0,
+                wgsl_group1_binding_n = 0,
+            },
+        },
+        {
+            texture = {
+                stage = gfx.ShaderStage.FRAGMENT,
+                image_type = gfx.ImageType["2D"],
+                sample_type = gfx.ImageSampleType.FLOAT,
+                hlsl_register_t_n = 1,
+                wgsl_group1_binding_n = 1,
+            },
+        },
+        {
+            texture = {
+                stage = gfx.ShaderStage.FRAGMENT,
+                image_type = gfx.ImageType["2D"],
+                sample_type = gfx.ImageSampleType.FLOAT,
+                hlsl_register_t_n = 2,
+                wgsl_group1_binding_n = 2,
+            },
+        },
     },
     samplers = {
-        { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
-        { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 1 },
-        { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 2 },
+        {
+            stage = gfx.ShaderStage.FRAGMENT,
+            sampler_type = gfx.SamplerType.FILTERING,
+            hlsl_register_s_n = 0,
+            wgsl_group1_binding_n = 32,
+        },
+        {
+            stage = gfx.ShaderStage.FRAGMENT,
+            sampler_type = gfx.SamplerType.FILTERING,
+            hlsl_register_s_n = 1,
+            wgsl_group1_binding_n = 33,
+        },
+        {
+            stage = gfx.ShaderStage.FRAGMENT,
+            sampler_type = gfx.SamplerType.FILTERING,
+            hlsl_register_s_n = 2,
+            wgsl_group1_binding_n = 34,
+        },
     },
     texture_sampler_pairs = {
         { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "diffuse_tex_diffuse_smp" },
@@ -136,10 +175,10 @@ render_pass.setup(M, {
             cull_mode = gfx.CullMode.FRONT,
             color_count = 4,
             colors = {
-                { pixel_format = gfx.PixelFormat.RGBA32F },  -- position
-                { pixel_format = gfx.PixelFormat.RGBA16F },  -- normal
-                { pixel_format = gfx.PixelFormat.RGBA8 },    -- albedo
-                { pixel_format = gfx.PixelFormat.RGBA8 },    -- specular
+                { pixel_format = gfx.PixelFormat.RGBA32F }, -- position
+                { pixel_format = gfx.PixelFormat.RGBA16F }, -- normal
+                { pixel_format = gfx.PixelFormat.RGBA8 },   -- albedo
+                { pixel_format = gfx.PixelFormat.RGBA8 },   -- specular
             },
             index_type = gfx.IndexType.UINT32,
             label = "geom_pipeline",
@@ -151,7 +190,9 @@ render_pass.setup(M, {
 ---@param ctx rendering.Context
 ---@return any? desc Pass descriptor, nil to skip
 function M.get_pass_desc(ctx)
-    if not M.ensure_resources() then return nil end
+    if not M.ensure_resources() then
+        return nil
+    end
 
     return gfx.Pass({
         action = gfx.PassAction({

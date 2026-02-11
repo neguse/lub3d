@@ -420,6 +420,6 @@ public class MiniaudioModuleTests
         var mod = new MiniaudioModule();
         var code = mod.GenerateLua(reg, PrefixToModule);
         Assert.Contains("---@class miniaudio", code);
-        Assert.Contains("---@field EngineInit fun(): miniaudio.Engine", code);
+        Assert.Contains("---@field EngineInit fun(config?: miniaudio.EngineConfig): miniaudio.Engine", code);
     }
 }

@@ -146,7 +146,9 @@ local function compute_tangent(p1, p2, p3, uv1, uv2, uv3)
     local duv2 = { uv3[1] - uv1[1], uv3[2] - uv1[2] }
 
     local f = duv1[1] * duv2[2] - duv2[1] * duv1[2]
-    if math.abs(f) < 0.0001 then f = 1.0 end
+    if math.abs(f) < 0.0001 then
+        f = 1.0
+    end
     f = 1.0 / f
 
     local tx = f * (duv2[2] * edge1[1] - duv1[2] * edge2[1])
@@ -221,12 +223,7 @@ end
 
 -- Create a default 1x1 texture (returns view, sampler)
 local function create_default_texture(r, g, b)
-    local pixels = string.char(
-        math.floor(r * 255),
-        math.floor(g * 255),
-        math.floor(b * 255),
-        255
-    )
+    local pixels = string.char(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), 255)
     local img = gfx.MakeImage(gfx.ImageDesc({
         width = 1,
         height = 1,
@@ -277,15 +274,46 @@ function M:init()
             },
         },
         views = {
-            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 0 } },
-            { texture = { stage = gfx.ShaderStage.FRAGMENT, image_type = gfx.ImageType["2D"], sample_type = gfx.ImageSampleType.FLOAT, hlsl_register_t_n = 1 } },
+            {
+                texture = {
+                    stage = gfx.ShaderStage.FRAGMENT,
+                    image_type = gfx.ImageType["2D"],
+                    sample_type = gfx.ImageSampleType.FLOAT,
+                    hlsl_register_t_n = 0,
+                    wgsl_group1_binding_n = 0,
+                },
+            },
+            {
+                texture = {
+                    stage = gfx.ShaderStage.FRAGMENT,
+                    image_type = gfx.ImageType["2D"],
+                    sample_type = gfx.ImageSampleType.FLOAT,
+                    hlsl_register_t_n = 1,
+                    wgsl_group1_binding_n = 1,
+                },
+            },
         },
         samplers = {
-            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 0 },
-            { stage = gfx.ShaderStage.FRAGMENT, sampler_type = gfx.SamplerType.FILTERING, hlsl_register_s_n = 1 },
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                sampler_type = gfx.SamplerType.FILTERING,
+                hlsl_register_s_n = 0,
+                wgsl_group1_binding_n = 32,
+            },
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                sampler_type = gfx.SamplerType.FILTERING,
+                hlsl_register_s_n = 1,
+                wgsl_group1_binding_n = 33,
+            },
         },
         texture_sampler_pairs = {
-            { stage = gfx.ShaderStage.FRAGMENT, view_slot = 0, sampler_slot = 0, glsl_name = "diffuse_tex_diffuse_smp" },
+            {
+                stage = gfx.ShaderStage.FRAGMENT,
+                view_slot = 0,
+                sampler_slot = 0,
+                glsl_name = "diffuse_tex_diffuse_smp",
+            },
             { stage = gfx.ShaderStage.FRAGMENT, view_slot = 1, sampler_slot = 1, glsl_name = "normal_tex_normal_smp" },
         },
         attrs = {
@@ -410,12 +438,24 @@ function M:frame()
     )
     local right = glm.normalize(glm.cross(forward, camera_up))
 
-    if keys_down["W"] then camera_pos = camera_pos + forward * move_speed end
-    if keys_down["S"] then camera_pos = camera_pos - forward * move_speed end
-    if keys_down["A"] then camera_pos = camera_pos - right * move_speed end
-    if keys_down["D"] then camera_pos = camera_pos + right * move_speed end
-    if keys_down["E"] or keys_down["SPACE"] then camera_pos = camera_pos + camera_up * move_speed end
-    if keys_down["Q"] or keys_down["LEFT_SHIFT"] then camera_pos = camera_pos - camera_up * move_speed end
+    if keys_down["W"] then
+        camera_pos = camera_pos + forward * move_speed
+    end
+    if keys_down["S"] then
+        camera_pos = camera_pos - forward * move_speed
+    end
+    if keys_down["A"] then
+        camera_pos = camera_pos - right * move_speed
+    end
+    if keys_down["D"] then
+        camera_pos = camera_pos + right * move_speed
+    end
+    if keys_down["E"] or keys_down["SPACE"] then
+        camera_pos = camera_pos + camera_up * move_speed
+    end
+    if keys_down["Q"] or keys_down["LEFT_SHIFT"] then
+        camera_pos = camera_pos - camera_up * move_speed
+    end
 
     -- Matrices
     local w = app.Width()
@@ -431,13 +471,15 @@ function M:frame()
     -- Begin pass
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = { {
-                load_action = gfx.LoadAction.CLEAR,
-                clear_value = { r = 0.4, g = 0.6, b = 0.9, a = 1.0 } -- sky blue
-            } },
+            colors = {
+                {
+                    load_action = gfx.LoadAction.CLEAR,
+                    clear_value = { r = 0.4, g = 0.6, b = 0.9, a = 1.0 }, -- sky blue
+                },
+            },
             depth = {
                 load_action = gfx.LoadAction.CLEAR,
-                clear_value = 1.0
+                clear_value = 1.0,
             },
         }),
         swapchain = glue.Swapchain(),
@@ -456,13 +498,30 @@ function M:frame()
         }))
 
         local mat = mesh.material
-        local uniforms = mvp:pack() .. model:pack() .. util.pack_floats({
-            light_pos.x, light_pos.y, light_pos.z, 1,
-            light_color.x, light_color.y, light_color.z, 1,
-            ambient_color.x, ambient_color.y, ambient_color.z, 1,
-            camera_pos.x, camera_pos.y, camera_pos.z, 1,
-            mat.diffuse[1], mat.diffuse[2], mat.diffuse[3], mat.shininess or 32,
-        })
+        local uniforms = mvp:pack()
+            .. model:pack()
+            .. util.pack_floats({
+                light_pos.x,
+                light_pos.y,
+                light_pos.z,
+                1,
+                light_color.x,
+                light_color.y,
+                light_color.z,
+                1,
+                ambient_color.x,
+                ambient_color.y,
+                ambient_color.z,
+                1,
+                camera_pos.x,
+                camera_pos.y,
+                camera_pos.z,
+                1,
+                mat.diffuse[1],
+                mat.diffuse[2],
+                mat.diffuse[3],
+                mat.shininess or 32,
+            })
 
         gfx.ApplyUniforms(0, gfx.Range(uniforms))
         gfx.Draw(0, mesh.vertex_count, 1)

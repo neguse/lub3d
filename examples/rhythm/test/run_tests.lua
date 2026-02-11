@@ -38,5 +38,7 @@ end
 
 -- Required callbacks for mane3d-test
 function init() end
+
 function frame() end
+
 function cleanup() end

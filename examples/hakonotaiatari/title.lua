@@ -38,7 +38,7 @@ function M.init(camera, audio)
     end
 
     if audio then
-        audio.play(const.WAVE_TITLE_INDEX)  -- One-shot SE, not looping BGM
+        audio.play(const.WAVE_TITLE_INDEX) -- One-shot SE, not looping BGM
     end
 
     -- Set gakugaku (wobble) effect

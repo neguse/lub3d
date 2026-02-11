@@ -4,8 +4,6 @@
 #include "lub3d_lua.h"
 #include <lauxlib.h>
 #include <stdio.h>
-#include <sys/stat.h>
-#include <time.h>
 
 /* Declare luaopen functions from generated bindings */
 extern int luaopen_sokol_gfx(lua_State *L);
@@ -20,7 +18,7 @@ extern int luaopen_sokol_shape(lua_State *L);
 extern int luaopen_lub3d_licenses(lua_State *L);
 extern int luaopen_stb_image(lua_State *L);
 extern int luaopen_miniaudio(lua_State *L);
-extern int luaopen_lfs(lua_State *L);
+extern int luaopen_lub3d_fs(lua_State *L);
 extern int luaopen_mane3d_encoding(lua_State *L);
 
 #ifdef LUB3D_HAS_SHDC
@@ -57,30 +55,6 @@ extern int luaopen_bc7enc(lua_State *L);
 #ifdef LUB3D_HAS_BOX2D
 extern int luaopen_b2d(lua_State *L);
 #endif
-
-/* Get file modification time */
-static time_t get_file_mtime(const char *path)
-{
-    struct stat st;
-    if (stat(path, &st) == 0)
-    {
-        return st.st_mtime;
-    }
-    return 0;
-}
-
-/* Lua binding for get_file_mtime */
-static int l_get_mtime(lua_State *L)
-{
-    const char *path = luaL_checkstring(L, 1);
-    time_t mtime = get_file_mtime(path);
-    if (mtime == 0) {
-        lua_pushnil(L);
-    } else {
-        lua_pushinteger(L, (lua_Integer)mtime);
-    }
-    return 1;
-}
 
 /* Write float array to lightuserdata buffer (for audio stream_cb) */
 static int l_write_floats(lua_State *L)
@@ -130,14 +104,10 @@ void lub3d_lua_register_all(lua_State *L)
     lua_pop(L, 1);
     luaL_requiref(L, "miniaudio", luaopen_miniaudio, 0);
     lua_pop(L, 1);
-    luaL_requiref(L, "lfs", luaopen_lfs, 0);
+    luaL_requiref(L, "lub3d.fs", luaopen_lub3d_fs, 0);
     lua_pop(L, 1);
     luaL_requiref(L, "mane3d.encoding", luaopen_mane3d_encoding, 0);
     lua_pop(L, 1);
-
-    /* Export get_mtime to Lua for hot reload */
-    lua_pushcfunction(L, l_get_mtime);
-    lua_setglobal(L, "get_mtime");
 
     /* Export write_floats for audio stream_cb */
     lua_pushcfunction(L, l_write_floats);

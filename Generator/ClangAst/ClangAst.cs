@@ -440,17 +440,21 @@ public static class ClangRunner
         var root = doc.RootElement;
         var decls = new List<Decl>();
 
-        // 1パス目: 匿名 EnumDecl を ID でマップ (typedef enum { } name; パターン用)
+        // 1パス目: 匿名 EnumDecl / RecordDecl を ID でマップ (typedef enum/struct { } name; パターン用)
         var anonEnums = new Dictionary<string, JsonElement>();
+        var anonStructs = new Dictionary<string, JsonElement>();
         foreach (var node in root.GetProperty("inner").EnumerateArray())
         {
             var kind = node.GetProperty("kind").GetString() ?? "";
-            if (kind != "EnumDecl") continue;
             var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
             if (string.IsNullOrEmpty(name))
             {
                 var id = node.GetProperty("id").GetString() ?? "";
-                if (id != "") anonEnums[id] = node.Clone();
+                if (id == "") continue;
+                if (kind == "EnumDecl") anonEnums[id] = node.Clone();
+                else if (kind == "RecordDecl"
+                    && node.TryGetProperty("tagUsed", out var tag) && tag.GetString() == "struct")
+                    anonStructs[id] = node.Clone();
             }
         }
 
@@ -470,18 +474,47 @@ public static class ClangRunner
             switch (kind)
             {
                 case "TypedefDecl":
-                    // typedef enum { ... } name; パターン: ownedTagDecl で匿名 enum を解決
+                    // typedef enum/struct { ... } name; パターン: 匿名 decl を typedef 名で解決
                     if (node.TryGetProperty("inner", out var tdInner))
                     {
                         foreach (var child in tdInner.EnumerateArray())
                         {
                             if (child.TryGetProperty("ownedTagDecl", out var owned)
                                 && owned.TryGetProperty("kind", out var owKind)
-                                && owKind.GetString() == "EnumDecl"
-                                && owned.TryGetProperty("id", out var owId)
-                                && anonEnums.TryGetValue(owId.GetString() ?? "", out var enumNode))
+                                && owned.TryGetProperty("id", out var owId))
                             {
-                                decls.Add(ParseEnumWithName(enumNode, name, false, null, line));
+                                var owKindStr = owKind.GetString() ?? "";
+                                var owIdStr = owId.GetString() ?? "";
+                                if (owKindStr == "EnumDecl"
+                                    && anonEnums.TryGetValue(owIdStr, out var enumNode))
+                                {
+                                    decls.Add(ParseEnumWithName(enumNode, name, false, null, line));
+                                }
+                                else if (owKindStr == "RecordDecl"
+                                    && anonStructs.TryGetValue(owIdStr, out var structNode))
+                                {
+                                    decls.Add(ParseStructWithName(structNode, name, false, null, line));
+                                }
+                            }
+                            // isTagOwned パターン (ownedTagDecl がない場合)
+                            else if (child.TryGetProperty("isTagOwned", out var isOwned)
+                                && isOwned.GetBoolean()
+                                && child.TryGetProperty("decl", out var declRef)
+                                && declRef.TryGetProperty("id", out var declId)
+                                && declRef.TryGetProperty("kind", out var declKind))
+                            {
+                                var declKindStr = declKind.GetString() ?? "";
+                                var declIdStr = declId.GetString() ?? "";
+                                if (declKindStr == "RecordDecl"
+                                    && anonStructs.TryGetValue(declIdStr, out var structNode2))
+                                {
+                                    decls.Add(ParseStructWithName(structNode2, name, false, null, line));
+                                }
+                                else if (declKindStr == "EnumDecl"
+                                    && anonEnums.TryGetValue(declIdStr, out var enumNode2))
+                                {
+                                    decls.Add(ParseEnumWithName(enumNode2, name, false, null, line));
+                                }
                             }
                         }
                     }
@@ -533,6 +566,26 @@ public static class ClangRunner
     private static Structs ParseStruct(JsonElement node, bool isDep, string? depPrefix, int? line)
     {
         var name = node.TryGetProperty("name", out var n) ? n.GetString() ?? "" : "";
+        var fields = new List<Field>();
+
+        if (node.TryGetProperty("inner", out var inner))
+        {
+            foreach (var child in inner.EnumerateArray())
+            {
+                if (child.GetProperty("kind").GetString() != "FieldDecl") continue;
+                if (!child.TryGetProperty("name", out var fn)) continue;
+                var fName = fn.GetString() ?? "";
+                if (fName == "") continue;
+                var fType = child.GetProperty("type").GetProperty("qualType").GetString()!;
+                fields.Add(new Field(fName, fType));
+            }
+        }
+
+        return new Structs(name, fields, isDep, depPrefix, line);
+    }
+
+    private static Structs ParseStructWithName(JsonElement node, string name, bool isDep, string? depPrefix, int? line)
+    {
         var fields = new List<Field>();
 
         if (node.TryGetProperty("inner", out var inner))

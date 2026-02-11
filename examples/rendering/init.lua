@@ -11,6 +11,7 @@ local imgui = require("imgui")
 local gpu = require("lib.gpu")
 local pipeline = require("lib.render_pipeline")
 local notify = require("lib.notify")
+local fs = require("lub3d.fs")
 
 -- Pipeline modules
 local ctx = require("examples.rendering.ctx")
@@ -58,8 +59,10 @@ local function update_ui()
         imgui.Separator()
 
         -- Global ambient
-        local achanged, new_ambient = imgui.ColorEdit3("Global Ambient",
-            { light.light_model_ambient.x, light.light_model_ambient.y, light.light_model_ambient.z })
+        local achanged, new_ambient = imgui.ColorEdit3(
+            "Global Ambient",
+            { light.light_model_ambient.x, light.light_model_ambient.y, light.light_model_ambient.z }
+        )
         if achanged then
             light.light_model_ambient = glm.vec4(new_ambient[1], new_ambient[2], new_ambient[3], 1.0)
         end
@@ -68,19 +71,27 @@ local function update_ui()
 
         -- Blinn-Phong toggle
         local bp_changed, bp_new = imgui.Checkbox("Blinn-Phong", light.blinn_phong_enabled)
-        if bp_changed then light.blinn_phong_enabled = bp_new end
+        if bp_changed then
+            light.blinn_phong_enabled = bp_new
+        end
 
         local fr_changed, fr_new = imgui.Checkbox("Fresnel", light.fresnel_enabled)
-        if fr_changed then light.fresnel_enabled = fr_new end
+        if fr_changed then
+            light.fresnel_enabled = fr_new
+        end
 
         if light.fresnel_enabled then
             imgui.SameLine()
             local fp_changed, fp = imgui.SliderFloat("Max Power", light.max_fresnel_power, 0.1, 10.0)
-            if fp_changed then light.max_fresnel_power = fp end
+            if fp_changed then
+                light.max_fresnel_power = fp
+            end
         end
 
         local rl_changed, rl_new = imgui.Checkbox("Rim Light", light.rim_light_enabled)
-        if rl_changed then light.rim_light_enabled = rl_new end
+        if rl_changed then
+            light.rim_light_enabled = rl_new
+        end
 
         -- Debug mode
         if imgui.TreeNode_Str("Debug") then
@@ -96,7 +107,9 @@ local function update_ui()
         -- Animation controls
         if imgui.TreeNode_Str("Day/Night Cycle") then
             local anim_changed, anim_new = imgui.Checkbox("Animate", light.animate_enabled)
-            if anim_changed then light.animate_enabled = anim_new end
+            if anim_changed then
+                light.animate_enabled = anim_new
+            end
 
             local pitch_changed, pitch = imgui.SliderFloat("Sun Angle", light.sun_pitch, 0, 360)
             if pitch_changed then
@@ -109,9 +122,13 @@ local function update_ui()
                 light.animation_speed = speed
             end
 
-            if imgui.Button("Midday") then light.set_time("midday") end
+            if imgui.Button("Midday") then
+                light.set_time("midday")
+            end
             imgui.SameLine()
-            if imgui.Button("Midnight") then light.set_time("midnight") end
+            if imgui.Button("Midnight") then
+                light.set_time("midnight")
+            end
 
             imgui.TreePop()
         end
@@ -125,23 +142,25 @@ local function update_ui()
                 if is_directional then
                     imgui.TextUnformatted("Type: Directional")
                     -- Direction (stored negated in position.xyz)
-                    local dchanged, new_dir = imgui.InputFloat3("Direction",
-                        { -src.position.x, -src.position.y, -src.position.z })
+                    local dchanged, new_dir =
+                        imgui.InputFloat3("Direction", { -src.position.x, -src.position.y, -src.position.z })
                     if dchanged then
                         local dir = glm.vec3(new_dir[1], new_dir[2], new_dir[3]):normalize()
                         src.position = glm.vec4(-dir.x, -dir.y, -dir.z, 0)
                     end
                 else
                     imgui.TextUnformatted(is_spot and "Type: Spotlight" or "Type: Point")
-                    local pchanged, new_pos = imgui.InputFloat3("Position",
-                        { src.position.x, src.position.y, src.position.z })
+                    local pchanged, new_pos =
+                        imgui.InputFloat3("Position", { src.position.x, src.position.y, src.position.z })
                     if pchanged then
                         src.position = glm.vec4(new_pos[1], new_pos[2], new_pos[3], src.position.w)
                     end
 
                     if is_spot then
-                        local sdchanged, new_spot_dir = imgui.InputFloat3("Spot Dir",
-                            { src.spot_direction.x, src.spot_direction.y, src.spot_direction.z })
+                        local sdchanged, new_spot_dir = imgui.InputFloat3(
+                            "Spot Dir",
+                            { src.spot_direction.x, src.spot_direction.y, src.spot_direction.z }
+                        )
                         if sdchanged then
                             local dir = glm.vec3(new_spot_dir[1], new_spot_dir[2], new_spot_dir[3]):normalize()
                             src.spot_direction = glm.vec4(dir.x, dir.y, dir.z, src.spot_direction.w)
@@ -149,22 +168,21 @@ local function update_ui()
 
                         local expchanged, exp = imgui.SliderFloat("Exponent", src.spot_direction.w, 0, 20)
                         if expchanged then
-                            src.spot_direction = glm.vec4(src.spot_direction.x, src.spot_direction.y,
-                                src.spot_direction.z, exp)
+                            src.spot_direction =
+                                glm.vec4(src.spot_direction.x, src.spot_direction.y, src.spot_direction.z, exp)
                         end
                     end
 
                     -- Attenuation
-                    local atchanged, new_atten = imgui.InputFloat3("Atten (c,l,q)",
-                        { src.attenuation.x, src.attenuation.y, src.attenuation.z })
+                    local atchanged, new_atten =
+                        imgui.InputFloat3("Atten (c,l,q)", { src.attenuation.x, src.attenuation.y, src.attenuation.z })
                     if atchanged then
                         src.attenuation = glm.vec4(new_atten[1], new_atten[2], new_atten[3], 0)
                     end
                 end
 
                 -- Color (diffuse)
-                local cchanged, new_color = imgui.ColorEdit3("Color",
-                    { src.diffuse.x, src.diffuse.y, src.diffuse.z })
+                local cchanged, new_color = imgui.ColorEdit3("Color", { src.diffuse.x, src.diffuse.y, src.diffuse.z })
                 if cchanged then
                     src.color = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
                     src.diffuse = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
@@ -188,8 +206,8 @@ local function load_model()
     local lua_path = base_path .. ".lua"
     local luac_path = base_path .. ".luac"
     local texture_base = "assets/" .. model_name .. "/tex/"
-    local lua_mtime = get_mtime(lua_path)
-    local luac_mtime = get_mtime(luac_path)
+    local lua_mtime = fs.mtime(lua_path)
+    local luac_mtime = fs.mtime(luac_path)
 
     if luac_mtime and lua_mtime and luac_mtime >= lua_mtime then
         -- Load from cache
@@ -252,7 +270,9 @@ local function load_model()
             local duv1u, duv1v = uv2u - uv1u, uv2v - uv1v
             local duv2u, duv2v = uv3u - uv1u, uv3v - uv1v
             local f = duv1u * duv2v - duv2u * duv1v
-            if math.abs(f) < 0.0001 then f = 1 end
+            if math.abs(f) < 0.0001 then
+                f = 1
+            end
             f = 1.0 / f
             local tx = f * (duv2v * e1x - duv1v * e2x)
             local ty = f * (duv2v * e1y - duv1v * e2y)
@@ -278,11 +298,20 @@ local function load_model()
                 tx, ty, tz = 1, 0, 0
             end
             -- pos(3) + normal(3) + uv(2) + tangent(3) = 11 floats
-            vparts[i + 1] = string.pack("fffffffffff",
-                vertices[base + 1], vertices[base + 2], vertices[base + 3],
-                vertices[base + 4], vertices[base + 5], vertices[base + 6],
-                vertices[base + 7], vertices[base + 8],
-                tx, ty, tz)
+            vparts[i + 1] = string.pack(
+                "fffffffffff",
+                vertices[base + 1],
+                vertices[base + 2],
+                vertices[base + 3],
+                vertices[base + 4],
+                vertices[base + 5],
+                vertices[base + 6],
+                vertices[base + 7],
+                vertices[base + 8],
+                tx,
+                ty,
+                tz
+            )
         end
         local vdata = table.concat(vparts)
         local vbuf = gpu.buffer(gfx.BufferDesc({ data = gfx.Range(vdata) }))
@@ -303,10 +332,14 @@ local function load_model()
                 return nil, nil
             end
             local tex_name = mesh_data.textures[slot_index]
-            if not tex_name then return nil, nil end
+            if not tex_name then
+                return nil, nil
+            end
 
             local tex_info = model.textures[tex_name]
-            if not tex_info then return nil, nil end
+            if not tex_info then
+                return nil, nil
+            end
 
             local path = texture_base .. tex_info.path
             if not textures_cache[path] then
@@ -337,7 +370,8 @@ local function load_model()
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
-                min_filter = gfx.Filter.NEAREST, mag_filter = gfx.Filter.NEAREST,
+                min_filter = gfx.Filter.NEAREST,
+                mag_filter = gfx.Filter.NEAREST,
             }))
             default_diffuse = { img = img, view = view, smp = smp }
         end
@@ -352,7 +386,8 @@ local function load_model()
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
-                min_filter = gfx.Filter.NEAREST, mag_filter = gfx.Filter.NEAREST,
+                min_filter = gfx.Filter.NEAREST,
+                mag_filter = gfx.Filter.NEAREST,
             }))
             default_normal = { img = img, view = view, smp = smp }
         end
@@ -367,7 +402,8 @@ local function load_model()
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
-                min_filter = gfx.Filter.NEAREST, mag_filter = gfx.Filter.NEAREST,
+                min_filter = gfx.Filter.NEAREST,
+                mag_filter = gfx.Filter.NEAREST,
             }))
             default_specular = { img = img, view = view, smp = smp }
         end

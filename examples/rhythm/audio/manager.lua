@@ -66,18 +66,16 @@ function AudioManager:shutdown()
     self.engine_initialized = false
 end
 
-local lfs = require("lfs")
+local fs = require("lub3d.fs")
 
 -- Check if file exists
 local function file_exists(path)
-    local attr = lfs.attributes(path)
-    if attr and attr.mode == "file" then
+    if fs.exists(path) then
         return true
     end
     -- Try with backslashes
     local win_path = path:gsub("/", "\\")
-    attr = lfs.attributes(win_path)
-    return attr and attr.mode == "file"
+    return fs.exists(win_path)
 end
 
 -- Try loading with alternative extensions
@@ -93,7 +91,7 @@ local function try_load_sound(ma, engine, path)
     -- Try alternative extensions (BMS often uses .wav but actual file is .ogg)
     local base = path:match("(.+)%.[^.]+$")
     if base then
-        local alternatives = {".ogg", ".wav", ".mp3", ".flac"}
+        local alternatives = { ".ogg", ".wav", ".mp3", ".flac" }
         for _, ext in ipairs(alternatives) do
             local alt_path = base .. ext
             local exists = file_exists(alt_path)

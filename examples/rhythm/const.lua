@@ -43,40 +43,40 @@ M.LEAD_TIME_US = 3000000 -- 3 seconds lead time before chart starts
 -- Input (default key mapping for 7key + scratch)
 M.KEY_MAPPING = {
     -- Keycode -> lane
-    [83] = 1,   -- S -> scratch (lane 1)
-    [68] = 2,   -- D -> key 1 (lane 2)
-    [70] = 3,   -- F -> key 2 (lane 3)
-    [32] = 4,   -- Space -> key 3 (lane 4)
-    [74] = 5,   -- J -> key 4 (lane 5)
-    [75] = 6,   -- K -> key 5 (lane 6)
-    [76] = 7,   -- L -> key 6 (lane 7)
-    [59] = 8,   -- ; -> key 7 (lane 8)
+    [83] = 1, -- S -> scratch (lane 1)
+    [68] = 2, -- D -> key 1 (lane 2)
+    [70] = 3, -- F -> key 2 (lane 3)
+    [32] = 4, -- Space -> key 3 (lane 4)
+    [74] = 5, -- J -> key 4 (lane 5)
+    [75] = 6, -- K -> key 5 (lane 6)
+    [76] = 7, -- L -> key 6 (lane 7)
+    [59] = 8, -- ; -> key 7 (lane 8)
 }
 
 -- Judgment windows (μs)
 M.JUDGE_WINDOWS = {
-    pgreat = 18000,   -- ±18ms
-    great  = 40000,   -- ±40ms
-    good   = 100000,  -- ±100ms
-    bad    = 200000,  -- ±200ms
+    pgreat = 18000,  -- ±18ms
+    great  = 40000,  -- ±40ms
+    good   = 100000, -- ±100ms
+    bad    = 200000, -- ±200ms
 }
 
 -- #RANK window multipliers
 M.RANK_MULTIPLIER = {
-    [0] = 0.5,   -- VERY HARD
-    [1] = 0.75,  -- HARD
-    [2] = 1.0,   -- NORMAL
-    [3] = 1.25,  -- EASY
+    [0] = 0.5,  -- VERY HARD
+    [1] = 0.75, -- HARD
+    [2] = 1.0,  -- NORMAL
+    [3] = 1.25, -- EASY
 }
 
 -- Judgment display colors (RGBA)
 M.JUDGMENT_COLORS = {
     pgreat = { 1.0, 1.0, 0.2, 1.0 },     -- yellow
-    great = { 1.0, 0.8, 0.0, 1.0 },       -- orange
-    good = { 0.2, 1.0, 0.2, 1.0 },        -- green
-    bad = { 0.5, 0.5, 1.0, 1.0 },         -- blue
-    miss = { 1.0, 0.2, 0.2, 1.0 },        -- red
-    empty_poor = { 0.5, 0.2, 0.2, 1.0 },  -- dark red
+    great = { 1.0, 0.8, 0.0, 1.0 },      -- orange
+    good = { 0.2, 1.0, 0.2, 1.0 },       -- green
+    bad = { 0.5, 0.5, 1.0, 1.0 },        -- blue
+    miss = { 1.0, 0.2, 0.2, 1.0 },       -- red
+    empty_poor = { 0.5, 0.2, 0.2, 1.0 }, -- dark red
 }
 
 -- Judgment display text

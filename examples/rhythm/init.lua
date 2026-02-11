@@ -26,7 +26,7 @@ local SongScanner = require("examples.rhythm.song.scanner")
 local SelectScreen = require("examples.rhythm.ui.select")
 
 -- Application state
-local app_state = "select"  -- "select" | "playing" | "finished"
+local app_state = "select" -- "select" | "playing" | "finished"
 
 -- Song scanner and select screen
 local song_scanner
@@ -73,7 +73,7 @@ local function init_game(bms_path)
     -- Handle both / and \ path separators
     local base_dir = bms_path:match("(.*[/\\])")
     if base_dir then
-        base_dir = base_dir:sub(1, -2)  -- Remove trailing separator
+        base_dir = base_dir:sub(1, -2) -- Remove trailing separator
         audio_manager:preload_chart(chart.wavs, base_dir)
     end
 
@@ -256,7 +256,6 @@ local function frame()
         imgui.NewFrame()
         select_screen:draw()
         imgui.Render()
-
     elseif app_state == "playing" then
         -- Update conductor
         if conductor and state:is(GameState.PLAYING) then
@@ -363,7 +362,6 @@ local function frame()
         end
 
         imgui.Render()
-
     elseif app_state == "finished" then
         -- Draw result screen with ImGui
         imgui.NewFrame()
@@ -456,8 +454,11 @@ M.height = const.SCREEN_HEIGHT
 M.window_title = "lub3d-rhythm"
 
 function M:init() init() end
+
 function M:frame() frame() end
+
 function M:event(ev) event(ev) end
+
 function M:cleanup() cleanup() end
 
 return M

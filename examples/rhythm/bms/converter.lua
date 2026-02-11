@@ -43,7 +43,7 @@ local function extract_bpm_changes(bms)
                     changes[beat] = bpm
                 end
             end
-        -- Channel 08: Extended BPM (references #BPMxx)
+            -- Channel 08: Extended BPM (references #BPMxx)
         elseif ch.channel == 8 then
             local ids, positions = parser.parse_objects(ch.data)
             for j, id in ipairs(ids) do

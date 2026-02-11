@@ -17,8 +17,8 @@ local hud_flags = WindowFlags_NoTitleBar + WindowFlags_NoResize + WindowFlags_No
     + WindowFlags_NoScrollbar + WindowFlags_NoInputs + WindowFlags_NoBringToFrontOnFocus
     + WindowFlags_NoBackground
 
-local shadow_color = {0.0, 0.0, 0.0, 1.0}
-local shadow_offsets = {{1,0},{-1,0},{0,1},{0,-1}}
+local shadow_color = { 0.0, 0.0, 0.0, 1.0 }
+local shadow_offsets = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 
 --- Draw text with outline (shadow in 4 directions)
 ---@param text string
@@ -28,7 +28,7 @@ local function outlined_text(text, color)
     -- Shadow
     imgui.PushStyleColor_X_Vec4(Col_Text, shadow_color)
     for _, off in ipairs(shadow_offsets) do
-        imgui.SetCursorPos({pos[1] + off[1], pos[2] + off[2]})
+        imgui.SetCursorPos({ pos[1] + off[1], pos[2] + off[2] })
         imgui.TextUnformatted(text)
     end
     imgui.PopStyleColor(1)
@@ -57,9 +57,9 @@ function UIRenderer:draw_combo(combo)
         return
     end
 
-    imgui.SetNextWindowPos({const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4}, Cond_Always, {0.5, 0.5})
+    imgui.SetNextWindowPos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4 }, Cond_Always, { 0.5, 0.5 })
     imgui.Begin("##hud_combo", nil, hud_flags)
-    outlined_text(string.format("COMBO: %d", combo), {1.0, 1.0, 0.0, 1.0})
+    outlined_text(string.format("COMBO: %d", combo), { 1.0, 1.0, 0.0, 1.0 })
     imgui.End()
 end
 
@@ -68,26 +68,26 @@ end
 ---@param artist string
 ---@param bpm number
 function UIRenderer:draw_song_info(title, artist, bpm)
-    imgui.SetNextWindowPos({10, 10}, Cond_Always)
+    imgui.SetNextWindowPos({ 10, 10 }, Cond_Always)
     imgui.Begin("##hud_song", nil, hud_flags)
-    outlined_text(title, {0.78, 0.78, 0.78, 1.0})
-    outlined_text(artist, {0.59, 0.59, 0.59, 1.0})
-    outlined_text(string.format("BPM: %.1f", bpm), {0.39, 0.39, 0.39, 1.0})
+    outlined_text(title, { 0.78, 0.78, 0.78, 1.0 })
+    outlined_text(artist, { 0.59, 0.59, 0.59, 1.0 })
+    outlined_text(string.format("BPM: %.1f", bpm), { 0.39, 0.39, 0.39, 1.0 })
     imgui.End()
 end
 
 --- Draw state indicator
 ---@param state string
 function UIRenderer:draw_state(state)
-    imgui.SetNextWindowPos({10, const.SCREEN_HEIGHT - 40}, Cond_Always)
+    imgui.SetNextWindowPos({ 10, const.SCREEN_HEIGHT - 40 }, Cond_Always)
     imgui.Begin("##hud_state", nil, hud_flags)
 
     if state == "loading" then
-        outlined_text("LOADING...", {1.0, 1.0, 0.0, 1.0})
+        outlined_text("LOADING...", { 1.0, 1.0, 0.0, 1.0 })
     elseif state == "finished" then
-        outlined_text("COMPLETE!", {0.0, 1.0, 0.0, 1.0})
+        outlined_text("COMPLETE!", { 0.0, 1.0, 0.0, 1.0 })
     elseif state == "paused" then
-        outlined_text("PAUSED", {1.0, 0.5, 0.0, 1.0})
+        outlined_text("PAUSED", { 1.0, 0.5, 0.0, 1.0 })
     end
 
     imgui.End()
@@ -99,15 +99,15 @@ end
 ---@param bpm number
 ---@param hispeed number|nil
 function UIRenderer:draw_debug(current_beat, current_time_us, bpm, hispeed)
-    imgui.SetNextWindowPos({const.SCREEN_WIDTH - 200, 10}, Cond_Always)
+    imgui.SetNextWindowPos({ const.SCREEN_WIDTH - 200, 10 }, Cond_Always)
     imgui.Begin("##hud_debug", nil, hud_flags)
 
-    outlined_text(string.format("Beat: %.2f", current_beat), {0.39, 0.39, 0.39, 1.0})
-    outlined_text(string.format("Time: %.2fs", current_time_us / 1000000), {0.39, 0.39, 0.39, 1.0})
-    outlined_text(string.format("BPM: %.1f", bpm), {0.39, 0.39, 0.39, 1.0})
+    outlined_text(string.format("Beat: %.2f", current_beat), { 0.39, 0.39, 0.39, 1.0 })
+    outlined_text(string.format("Time: %.2fs", current_time_us / 1000000), { 0.39, 0.39, 0.39, 1.0 })
+    outlined_text(string.format("BPM: %.1f", bpm), { 0.39, 0.39, 0.39, 1.0 })
 
     if hispeed then
-        outlined_text(string.format("HS: %.2f (1/2)", hispeed), {0.0, 1.0, 1.0, 1.0})
+        outlined_text(string.format("HS: %.2f (1/2)", hispeed), { 0.0, 1.0, 1.0, 1.0 })
     end
 
     imgui.End()
@@ -187,30 +187,30 @@ end
 ---@param max_ex_score integer
 ---@param stats JudgeStats
 function UIRenderer:draw_score(ex_score, max_ex_score, stats)
-    imgui.SetNextWindowPos({10, 100}, Cond_Always)
+    imgui.SetNextWindowPos({ 10, 100 }, Cond_Always)
     imgui.Begin("##hud_score", nil, hud_flags)
 
     -- EX Score
-    outlined_text(string.format("EX: %d / %d", ex_score, max_ex_score), {1.0, 1.0, 1.0, 1.0})
+    outlined_text(string.format("EX: %d / %d", ex_score, max_ex_score), { 1.0, 1.0, 1.0, 1.0 })
 
     -- Score rate
     local rate = 0
     if max_ex_score > 0 then
         rate = (ex_score / max_ex_score) * 100
     end
-    outlined_text(string.format("%.2f%%", rate), {0.78, 0.78, 0.78, 1.0})
+    outlined_text(string.format("%.2f%%", rate), { 0.78, 0.78, 0.78, 1.0 })
 
     imgui.Spacing()
 
     -- Judgment counts
-    outlined_text(string.format("PG:%d G:%d", stats.pgreat, stats.great), {1.0, 1.0, 0.39, 1.0})
-    outlined_text(string.format("GD:%d BD:%d", stats.good, stats.bad), {0.39, 1.0, 0.39, 1.0})
-    outlined_text(string.format("PR:%d MS:%d", stats.empty_poor, stats.miss), {1.0, 0.39, 0.39, 1.0})
+    outlined_text(string.format("PG:%d G:%d", stats.pgreat, stats.great), { 1.0, 1.0, 0.39, 1.0 })
+    outlined_text(string.format("GD:%d BD:%d", stats.good, stats.bad), { 0.39, 1.0, 0.39, 1.0 })
+    outlined_text(string.format("PR:%d MS:%d", stats.empty_poor, stats.miss), { 1.0, 0.39, 0.39, 1.0 })
 
     imgui.Spacing()
 
     -- FAST/SLOW
-    outlined_text(string.format("FAST:%d  SLOW:%d", stats.fast, stats.slow), {0.39, 0.78, 1.0, 1.0})
+    outlined_text(string.format("FAST:%d  SLOW:%d", stats.fast, stats.slow), { 0.39, 0.78, 1.0, 1.0 })
 
     imgui.End()
 end

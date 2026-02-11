@@ -17,7 +17,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -110,67 +109,13 @@ static void extract_dir(const char *path, char *dir, size_t dir_size)
     }
 }
 
-static time_t get_file_mtime(const char *path)
-{
-    struct stat st;
-    if (stat(path, &st) == 0)
-    {
-        return st.st_mtime;
-    }
-    return 0;
-}
-
-/* Lua binding for get_file_mtime */
-static int l_get_mtime(lua_State *L)
-{
-    const char *path = luaL_checkstring(L, 1);
-    time_t mtime = get_file_mtime(path);
-    lua_pushinteger(L, (lua_Integer)mtime);
-    return 1;
-}
-
 #ifdef __EMSCRIPTEN__
-/* Fetch file synchronously using XHR */
-EM_JS(char *, js_fetch_file, (const char *url, int *out_len), {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", UTF8ToString(url), false);
-    xhr.overrideMimeType("text/plain; charset=x-user-defined");
-    try
-    {
-        xhr.send();
-        if (xhr.status === 200)
-        {
-            var text = xhr.responseText;
-            var len = text.length;
-            var ptr = _malloc(len);
-            for (var i = 0; i < len; i++)
-            {
-                HEAPU8[ptr + i] = text.charCodeAt(i) & 0xff;
-            }
-            HEAP32[out_len >> 2] = len;
-            return ptr;
-        }
-    }
-    catch(e)
-    {
-        console.error("Fetch error:", e);
-    }
-    HEAP32[out_len >> 2] = 0;
-    return 0;
-});
-
-static char *fetch_file(const char *url, size_t *out_len)
-{
-    int len = 0;
-    char *data = js_fetch_file(url, &len);
-    *out_len = len;
-    return data;
-}
+#include "lub3d_fs.h"
 
 static int fetch_and_dostring(lua_State *L, const char *url)
 {
     size_t len;
-    char *data = fetch_file(url, &len);
+    char *data = lub3d_fs_fetch_file(url, &len);
     if (data)
     {
         int result = luaL_loadbuffer(L, data, len, url);
@@ -207,18 +152,18 @@ static int fetch_searcher(lua_State *L)
     snprintf(url, sizeof(url), "%s/%s.lua", g_script_dir, modpath);
 
     size_t len;
-    char *data = fetch_file(url, &len);
+    char *data = lub3d_fs_fetch_file(url, &len);
     if (!data)
     {
         /* Try lib directory (sibling to script dir) */
         snprintf(url, sizeof(url), "%s/../lib/%s.lua", g_script_dir, modpath);
-        data = fetch_file(url, &len);
+        data = lub3d_fs_fetch_file(url, &len);
     }
     if (!data)
     {
         /* Fallback to root */
         snprintf(url, sizeof(url), "%s.lua", modpath);
-        data = fetch_file(url, &len);
+        data = lub3d_fs_fetch_file(url, &len);
     }
     if (data)
     {
@@ -233,22 +178,6 @@ static int fetch_searcher(lua_State *L)
         return 1;
     }
     lua_pushfstring(L, "cannot fetch '%s'", url);
-    return 1;
-}
-
-/* Lua wrapper for fetch_file */
-static int l_fetch_file(lua_State *L)
-{
-    const char *url = luaL_checkstring(L, 1);
-    size_t len;
-    char *data = fetch_file(url, &len);
-    if (data && len > 0)
-    {
-        lua_pushlstring(L, data, len);
-        free(data);
-        return 1;
-    }
-    lua_pushnil(L);
     return 1;
 }
 
@@ -323,10 +252,6 @@ static int lub3d_main(int argc, char *argv[])
 #ifdef __EMSCRIPTEN__
     setup_fetch_searcher(L);
 
-    /* Expose fetch_file to Lua for texture loading etc. */
-    lua_pushcfunction(L, (lua_CFunction)l_fetch_file);
-    lua_setglobal(L, "fetch_file");
-
     /* Expose display scale for CSS transform scaling */
     lua_pushcfunction(L, (lua_CFunction)l_get_display_scale);
     lua_setglobal(L, "get_display_scale");
@@ -349,10 +274,6 @@ static int lub3d_main(int argc, char *argv[])
     const char *script = (argc > 1) ? argv[1] : "examples.hello";
 #endif
     slog_func("lua", 3, 0, "Loading module", 0, script, 0);
-
-    /* Export get_mtime to Lua for hot reload */
-    lua_pushcfunction(L, l_get_mtime);
-    lua_setglobal(L, "get_mtime");
 
     /* Execute Lua script - script calls app.run() to start the application */
 #ifdef __EMSCRIPTEN__
