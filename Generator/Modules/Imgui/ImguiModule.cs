@@ -7,9 +7,10 @@ using ClangParam = Generator.ClangAst.Param;
 /// Dear ImGui モジュール — IModule 直接実装 (SokolModule 非継承)
 /// C++ namespace ベースの関数を ModuleSpec に変換
 /// </summary>
-public class ImguiModule
+public class ImguiModule : IModule
 {
     public string ModuleName => "imgui";
+    public string Prefix => "";
 
     private static readonly HashSet<string> SkipFunctions =
     [
@@ -40,13 +41,13 @@ public class ImguiModule
     private static readonly HashSet<string> FloatArrayParamNames =
         ["col", "v", "color", "values", "ref_col"];
 
-    public ModuleSpec BuildSpec(Module module)
+    public ModuleSpec BuildSpec(TypeRegistry reg)
     {
-        var funcs = module.Decls.OfType<Funcs>()
+        var funcs = reg.AllDecls.OfType<Funcs>()
             .Where(f => f.Namespace == "ImGui")
             .ToList();
 
-        var enums = module.Decls.OfType<Enums>()
+        var enums = reg.AllDecls.OfType<Enums>()
             .Where(e => e.Name.StartsWith("ImGui"))
             .GroupBy(e => e.Name)
             .Select(g => g.First())
@@ -102,15 +103,15 @@ public class ImguiModule
             EntryPoint: "luaopen_imgui_gen");
     }
 
-    public string GenerateC(Module module)
+    public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
     {
-        var spec = BuildSpec(module);
+        var spec = BuildSpec(reg);
         return CBinding.CBindingGen.Generate(spec);
     }
 
-    public string GenerateLua(Module module, SourceLink? sourceLink = null)
+    public string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
-        var spec = BuildSpec(module);
+        var spec = BuildSpec(reg);
         return LuaCats.LuaCatsGen.Generate(spec);
     }
 
