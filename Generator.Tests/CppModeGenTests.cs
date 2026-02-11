@@ -284,4 +284,18 @@ public class CppModeGenTests
         Assert.DoesNotContain("lua_newuserdatauv", code);
         Assert.DoesNotContain("memset", code);
     }
+
+    [Fact]
+    public void CppMode_CallbackParam_Throws()
+    {
+        var spec = new ModuleSpec(
+            "test", "", ["test.h"], null, [],
+            [new FuncBinding("Bad", "Bad",
+                [new ParamBinding("cb", new BindingType.Callback([], null))],
+                new BindingType.Void(), null, CppNamespace: "Test")],
+            [], [], IsCpp: true, EntryPoint: "luaopen_test");
+
+        var ex = Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+        Assert.Contains("Callback parameter", ex.Message);
+    }
 }

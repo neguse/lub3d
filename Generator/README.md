@@ -1,124 +1,46 @@
-# Generator 設計
+# Generator Architecture
 
-C/C++ ヘッダから Lua バインディング（C/C++）と型定義（LuaCATS）を自動生成する。
+Clang AST から Lua バインディング (C/C++ + LuaCATS) を自動生成するパイプライン。
 
-## アーキテクチャ
-
-```mermaid
-flowchart TD
-    Headers[/C/C++ Headers/] --> ClangRunner
-    ClangRunner --> TypeRegistry
-    TypeRegistry --> IModule
-    IModule --> ModuleSpec
-    ModuleSpec --> CBindingGen --> COutput[/C・C++/]
-    ModuleSpec --> LuaCatsGen --> LuaOutput[/LuaCATS/]
-    Pipeline -.->|default transform| IModule
-    BindingType -.->|unified types| ModuleSpec
-```
-
-| 層 | 責務 |
-|----|------|
-| `ClangAst/ClangAst.cs` | Clang JSON → `Types`, `Structs`, `Funcs`, `Enums` レコード |
-| `ClangAst/TypeRegistry.cs` | `Module` → struct/func/enum 辞書。`CTypeParser` で C 型文字列をパース |
-| `ClangAst/SourceLink.cs` | GitHub ソースリンク URL 生成 |
-| `BindingType.cs` | 統一型システム（`Int`, `Str`, `Struct`, `Callback`, `Vec2`, `Custom`, ...） |
-| `ModuleSpec.cs` | 中間データモデル（`StructBinding`, `FuncBinding`, `EnumBinding`, `OpaqueTypeBinding`） |
-| `Pipeline.cs` | ClangAst → `ModuleSpec` デフォルト変換 + 文字列ヘルパ（`ToPascalCase`, `StripPrefix`, ...） |
-| `IModule.cs` | `GenerateC(reg, prefixToModule)` / `GenerateLua(reg, prefixToModule, sourceLink?)` |
-| `CBinding/CBindingGen.cs` | `ModuleSpec` → C/C++ 文字列生成。`IsCpp` で C++ モード分岐 |
-| `LuaCats/LuaCatsGen.cs` | `ModuleSpec` → LuaCATS 文字列生成 |
-
-## モジュール
-
-### Sokol (10 modules) — `Modules/Sokol/`
-
-`SokolModule` 基底クラスが `TypeRegistry` → `ModuleSpec` 変換を自動化。サブクラスはフックのみオーバーライド。
-
-| Class | Prefix | Lua module |
-|---|---|---|
-| `App` | `sapp_` | `sokol.app` |
-| `Audio` | `saudio_` | `sokol.audio` |
-| `DebugText` | `sdtx_` | `sokol.debugtext` |
-| `Gfx` | `sg_` | `sokol.gfx` |
-| `Gl` | `sgl_` | `sokol.gl` |
-| `Glue` | `sglue_` | `sokol.glue` |
-| `Imgui` | `simgui_` | `sokol.imgui` |
-| `Log` | `slog_` | `sokol.log` |
-| `Shape` | `sshape_` | `sokol.shape` |
-| `Time` | `stm_` | `sokol.time` |
-
-### Dear ImGui — `Modules/Imgui/ImguiModule.cs`
-
-`IModule` 直接実装。clang++ (`-std=c++17`) で `ImGui::` 名前空間をパース。
-
-- `ImVec2`/`ImVec4` → `BindingType.Vec2`/`Vec4`（Lua テーブル）
-- オーバーロード → 型サフィックス（`_Str`, `_Int`, `_Float`, ...）
-- `CppFuncName` で `ImGui::Func` ディスパッチ
-- 出力: `imgui_gen.cpp` + `imgui.lua`
-
-### Miniaudio — `Modules/Miniaudio/MiniaudioModule.cs`
-
-`IModule` 直接実装。`OpaqueTypeBinding` でポインタ型を管理。
-
-## ファイル構成
+## 構造
 
 ```
-Generator/
-  Program.cs              CLI (System.CommandLine)
-  IModule.cs              モジュールインターフェース
-  ModuleSpec.cs           中間データモデル
-  BindingType.cs          統一型システム
-  Pipeline.cs             デフォルト変換 + 文字列ヘルパ
-  ClangAst/
-    ClangAst.cs           Clang JSON パーサ + ClangRunner
-    TypeRegistry.cs       型レジストリ
-    SourceLink.cs         GitHub リンク生成
-  CBinding/
-    CBinding.cs           C 出力モデル (Type, FieldInit, Param)
-    CBindingGen.cs        C/C++ コード生成
-  LuaCats/
-    LuaCats.cs            LuaCATS 出力モデル (Type.Primitive, Type.Fun, Type.Class)
-    LuaCatsGen.cs         LuaCATS コード生成
-  Modules/
-    Sokol/
-      SokolModule.cs      Sokol 基底クラス
-      App.cs ... Time.cs  各モジュール (10)
-    Imgui/
-      ImguiModule.cs      Dear ImGui (C++)
-    Miniaudio/
-      MiniaudioModule.cs  Miniaudio
+[入力層]           [中心]              [出力層]
+ClangAst.Types ──> BindingType <── CBindingGen (C コード文字列)
+TypeRegistry       ModuleSpec    <── LuaCatsGen (LuaCATS 文字列)
+                      ^
+                  各 Module の
+                  BuildSpec()
 ```
 
-## 使用方法
+## 設計原則
 
-```bash
-# CMake 経由（通常はこちら）
-scripts\build.bat
+1. **ModuleSpec / BindingType がアーキテクチャの中心。** 入力層 (ClangAst) と出力層 (CBinding, LuaCats) はこの中心にのみ依存する。互いに直接依存してはならない (クリーンアーキテクチャの依存性逆転)。
 
-# 直接実行
-dotnet run --project Generator -- <output-dir> --deps <deps-dir> --clang <clang-path>
+2. **BindingType が唯一の型表現。** ClangAst.Types は入力層の内部型、LuaCats.Type は出力層の内部型。Module 境界を越えるのは BindingType だけ。
+
+3. **Pipeline.cs は文字列ヘルパーに徹する。** `ToPascalCase`, `StripPrefix`, `StripTypeSuffix`, `EnumItemName` など。型変換は行わない。
+
+4. **CBindingGen の公開 API は `Generate(ModuleSpec)` のみ。** 内部メソッドは private。テストは ModuleSpec を組み立てて出力文字列を検証する。
+
+5. **各 Module は「ClangAst → ModuleSpec」の変換器。** TypeRegistry を受け取り ModuleSpec を返す。CBindingGen も LuaCatsGen も知らない。
+
+6. **特殊処理は ModuleSpec のフィールドで表現する。** CBindingGen が特定の型名をハードコードしてチェックするパターンは禁止。Module 側から ModuleSpec のフィールドで宣言する。
+
+## モジュール追加方法
+
+### Sokol 系 (C ヘッダ, prefix ベース)
+
+`SokolModule` を継承し `ModuleName` と `Prefix` をオーバーライドする。必要に応じて `Ignores`, `ShouldGenerateFunc`, `HasMetamethods`, `ExtraCCode` 等のフックを使う。
+
+```csharp
+public class Gfx : SokolModule
+{
+    public override string ModuleName => "sokol.gfx";
+    public override string Prefix => "sg_";
+}
 ```
 
-## テスト
+### 独立モジュール (C/C++ ヘッダ)
 
-```bash
-dotnet test Generator.Tests   # 338 tests
-```
-
-テストは JSON フィクスチャベース。clang 不要。`Assert.Contains` で出力順序に依存しない。
-
-## 新モジュール追加
-
-### Sokol モジュール
-
-1. `Modules/Sokol/` に新クラス作成、`SokolModule` 継承
-2. `ModuleName` と `Prefix` をオーバーライド
-3. 必要に応じてフック（`CustomizeType`, `ExtraRegs` 等）をオーバーライド
-4. `Program.cs` の `modules` 配列に追加、`sokolHeaders` にヘッダ追加
-
-### C++ モジュール
-
-1. `IModule` を直接実装
-2. `ClangRunner.ParseCppHeadersWithRawJson()` で C++ AST パース
-3. `ModuleSpec` を手動構築、`IsCpp = true`
-4. `Program.cs` に独立セクション追加
+`IModule` を直接実装する。`BuildSpec` で TypeRegistry から ModuleSpec を構築し、`GenerateC` / `GenerateLua` で生成する。

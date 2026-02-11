@@ -1,7 +1,7 @@
 namespace Generator;
 
 /// <summary>
-/// 統一型システム — CBinding.Type と LuaCats.Type を統合
+/// 統一型システム — C gen と LuaCATS gen の共通型表現
 /// C gen はキャスト区別、Lua gen は integer/number に潰す
 /// </summary>
 public abstract record BindingType

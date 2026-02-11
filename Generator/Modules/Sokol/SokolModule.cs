@@ -56,7 +56,8 @@ public abstract class SokolModule : IModule
             structs.Add(new StructBinding(
                 s.Name, pascalName, metatable,
                 HasMetamethods(s), fields,
-                GetLink(s, sourceLink)));
+                GetLink(s, sourceLink),
+                AllowStringInit: s.Name == "sg_range"));
         }
 
         var funcs = new List<FuncBinding>();

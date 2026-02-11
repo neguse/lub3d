@@ -192,13 +192,16 @@ rootCommand.SetAction(parseResult =>
         var imguiEnumCount = imguiParsed.Decls.OfType<Enums>().Count();
         Console.WriteLine($"  Found {imguiFuncCount} functions, {imguiEnumCount} enums");
 
+        var imguiReg = TypeRegistry.FromModule(imguiParsed);
+        var imguiPrefixToModule = new Dictionary<string, string>();
+
         var imguiCppPath = Path.Combine(outputDir, "imgui_gen.cpp");
-        File.WriteAllText(imguiCppPath, imguiModule.GenerateC(imguiParsed));
+        File.WriteAllText(imguiCppPath, imguiModule.GenerateC(imguiReg, imguiPrefixToModule));
         Console.WriteLine($"Generated: {imguiCppPath}");
 
         var imguiSourceLink = SourceLink.FromHeader(depsDir, "imgui/imgui.h");
         var imguiLuaPath = Path.Combine(outputDir, "imgui.lua");
-        File.WriteAllText(imguiLuaPath, imguiModule.GenerateLua(imguiParsed, imguiSourceLink));
+        File.WriteAllText(imguiLuaPath, imguiModule.GenerateLua(imguiReg, imguiPrefixToModule, imguiSourceLink));
         Console.WriteLine($"Generated: {imguiLuaPath}");
     }
     else
