@@ -1,42 +1,42 @@
 -- cut'n'align - match-3 puzzle game
 -- Ported from neguse/ld44 (Go/Ebiten) to lub3d
-local gfx = require("sokol.gfx")
-local app = require("sokol.app")
-local glue = require("sokol.glue")
-local texture = require("lib.texture")
-local sprite = require("lib.sprite")
-local log = require("lib.log")
-local ma = require("miniaudio")
+local gfx              = require("sokol.gfx")
+local app              = require("sokol.app")
+local glue             = require("sokol.glue")
+local texture          = require("lib.texture")
+local sprite           = require("lib.sprite")
+local log              = require("lib.log")
+local ma               = require("miniaudio")
 
 -- === Constants ===
 
-local SCREEN_W = 200
-local SCREEN_H = 300
-local BOARD_W = 8
-local BOARD_H = 16
-local STONE_W = 16
-local STONE_H = 16
-local PICK_MAX = 6
-local RESERVE_NUM = 6
-local JAMMER_TURN = 5
+local SCREEN_W         = 200
+local SCREEN_H         = 300
+local BOARD_W          = 8
+local BOARD_H          = 16
+local STONE_W          = 16
+local STONE_H          = 16
+local PICK_MAX         = 6
+local RESERVE_NUM      = 6
+local JAMMER_TURN      = 5
 local WAIT_ERASE_FRAME = 15
-local NUMBER_W = 16
-local NUMBER_H = 32
-local ALPHA_W = 16
-local ALPHA_H = 16
-local ORIGIN_X = 10
-local ORIGIN_Y = -10 + SCREEN_H - STONE_H * BOARD_H
+local NUMBER_W         = 16
+local NUMBER_H         = 32
+local ALPHA_W          = 16
+local ALPHA_H          = 16
+local ORIGIN_X         = 10
+local ORIGIN_Y         = -10 + SCREEN_H - STONE_H * BOARD_H
 
 -- Special number tile indices
-local NUM_CROSS  = 10
-local NUM_EQUAL  = 11
-local NUM_PERIOD = 12
-local NUM_E      = 13
-local NUM_N      = 14
-local NUM_D      = 15
+local NUM_CROSS        = 10
+local NUM_EQUAL        = 11
+local NUM_PERIOD       = 12
+local NUM_E            = 13
+local NUM_N            = 14
+local NUM_D            = 15
 
 -- Color enum
-local Color = {
+local Color            = {
     None = 0,
     Red = 1,
     Blue = 2,
@@ -401,15 +401,15 @@ function M:audio_init()
     self.audio.engine:Start()
     self.audio.engine:SetVolume(0.4)
 
-    self.audio.bgm = ma.SoundInitFromFile(self.audio.engine, "examples/cna/asset/bgm.ogg", 0)
+    self.audio.bgm = ma.SoundInitFromFile(self.audio.engine, "examples/cna/assets/bgm.ogg", 0)
     self.audio.bgm:SetLooping(true)
 
-    self.audio.bgm_off = ma.SoundInitFromFile(self.audio.engine, "examples/cna/asset/bgm_off.ogg", 0)
+    self.audio.bgm_off = ma.SoundInitFromFile(self.audio.engine, "examples/cna/assets/bgm_off.ogg", 0)
     self.audio.bgm_off:SetLooping(true)
 
     self.audio.sfx = {}
     for i = 1, 4 do
-        self.audio.sfx[i] = ma.SoundInitFromFile(self.audio.engine, "examples/cna/asset/S" .. i .. ".ogg", 0)
+        self.audio.sfx[i] = ma.SoundInitFromFile(self.audio.engine, "examples/cna/assets/S" .. i .. ".ogg", 0)
     end
 
     if self.audio.bgm_off then
@@ -669,7 +669,7 @@ function M:init()
         environment = glue.Environment(),
     }))
 
-    self.tex_result = texture.load("examples/cna/asset/texture.png", {
+    self.tex_result = texture.load("examples/cna/assets/texture.png", {
         filter_min = gfx.Filter.NEAREST,
         filter_mag = gfx.Filter.NEAREST,
         wrap_u = gfx.Wrap.CLAMP_TO_EDGE,
@@ -756,7 +756,9 @@ end
 
 function M:cleanup()
     self:audio_cleanup()
-    if self.batch then sprite.destroy_batch(self.batch); self.batch = nil end
+    if self.batch then
+        sprite.destroy_batch(self.batch); self.batch = nil
+    end
     sprite.shutdown()
     if self.tex_result then
         self.tex_result.img:destroy()
@@ -788,64 +790,92 @@ test.run("cna", {
         g:board_init()
         assert(g:board_height_at(2) == 0, "empty column should be 0")
         g:board_set(2, 2, { color = Color.Red, erased = false })
-        assert(g:board_height_at(2) == 14, "height with stone at y=2: expected 14, got " .. tostring(g:board_height_at(2)))
+        assert(g:board_height_at(2) == 14,
+            "height with stone at y=2: expected 14, got " .. tostring(g:board_height_at(2)))
     end,
 
     board_mark_erase = function()
         -- Go coords (0-based) → Lua coords (1-based): +1
         local cases = {
-            { name = "horizontal", cells = {
-                { 2, 2, Color.Red, true },
-                { 3, 2, Color.Red, true },
-                { 4, 2, Color.Red, true },
-                { 5, 2, Color.Green, false },
-            }},
-            { name = "horizontal not", cells = {
-                { 2, 2, Color.Red, false },
-                { 3, 2, Color.Red, false },
-                { 4, 2, Color.Green, false },
-                { 5, 2, Color.Red, false },
-            }},
-            { name = "vertical", cells = {
-                { 2, 2, Color.Red, true },
-                { 2, 3, Color.Red, true },
-                { 2, 4, Color.Red, true },
-                { 2, 5, Color.Green, false },
-            }},
-            { name = "vertical not", cells = {
-                { 2, 2, Color.Red, false },
-                { 2, 3, Color.Red, false },
-                { 2, 4, Color.Green, false },
-                { 2, 5, Color.Red, false },
-            }},
-            { name = "cross right down", cells = {
-                { 2, 2, Color.Red, true },
-                { 3, 3, Color.Red, true },
-                { 4, 4, Color.Red, true },
-                { 5, 5, Color.Green, false },
-            }},
-            { name = "cross right down 2", cells = {
-                { 4, 2, Color.Red, true },
-                { 5, 3, Color.Red, true },
-                { 6, 4, Color.Red, true },
-            }},
-            { name = "cross right up", cells = {
-                { 2, 5, Color.Red, true },
-                { 3, 4, Color.Red, true },
-                { 4, 3, Color.Red, true },
-                { 5, 2, Color.Green, false },
-            }},
-            { name = "cross right up 2", cells = {
-                { 4, 10, Color.Red, true },
-                { 5, 9, Color.Red, true },
-                { 6, 8, Color.Red, true },
-            }},
-            { name = "jammer", cells = {
-                { 2, 4, Color.Red, true },
-                { 3, 4, Color.Red, true },
-                { 4, 4, Color.Red, true },
-                { 5, 4, Color.Jammer, true },
-            }},
+            {
+                name = "horizontal",
+                cells = {
+                    { 2, 2, Color.Red,   true },
+                    { 3, 2, Color.Red,   true },
+                    { 4, 2, Color.Red,   true },
+                    { 5, 2, Color.Green, false },
+                }
+            },
+            {
+                name = "horizontal not",
+                cells = {
+                    { 2, 2, Color.Red,   false },
+                    { 3, 2, Color.Red,   false },
+                    { 4, 2, Color.Green, false },
+                    { 5, 2, Color.Red,   false },
+                }
+            },
+            {
+                name = "vertical",
+                cells = {
+                    { 2, 2, Color.Red,   true },
+                    { 2, 3, Color.Red,   true },
+                    { 2, 4, Color.Red,   true },
+                    { 2, 5, Color.Green, false },
+                }
+            },
+            {
+                name = "vertical not",
+                cells = {
+                    { 2, 2, Color.Red,   false },
+                    { 2, 3, Color.Red,   false },
+                    { 2, 4, Color.Green, false },
+                    { 2, 5, Color.Red,   false },
+                }
+            },
+            {
+                name = "cross right down",
+                cells = {
+                    { 2, 2, Color.Red,   true },
+                    { 3, 3, Color.Red,   true },
+                    { 4, 4, Color.Red,   true },
+                    { 5, 5, Color.Green, false },
+                }
+            },
+            {
+                name = "cross right down 2",
+                cells = {
+                    { 4, 2, Color.Red, true },
+                    { 5, 3, Color.Red, true },
+                    { 6, 4, Color.Red, true },
+                }
+            },
+            {
+                name = "cross right up",
+                cells = {
+                    { 2, 5, Color.Red,   true },
+                    { 3, 4, Color.Red,   true },
+                    { 4, 3, Color.Red,   true },
+                    { 5, 2, Color.Green, false },
+                }
+            },
+            {
+                name = "cross right up 2",
+                cells = {
+                    { 4, 10, Color.Red, true },
+                    { 5, 9,  Color.Red, true },
+                    { 6, 8,  Color.Red, true },
+                }
+            },
+            {
+                name = "jammer",
+                cells = {
+                    { 2, 4, Color.Red,    true },
+                    { 3, 4, Color.Red,    true },
+                    { 4, 4, Color.Red,    true },
+                    { 5, 4, Color.Jammer, true },
+                }
+            },
         }
         for _, cs in ipairs(cases) do
             local g = new_test_instance()
@@ -868,39 +898,54 @@ test.run("cna", {
         -- Go test cases with 1 cell, converted to Lua 1-based coords
         -- Go (x,y) → Lua (x+1, y+1); Go PickX/PickY → Lua pick_x/pick_y = Go+1
         local cases = {
-            { name = "just+1", cell = { 2, PICK_MAX + 2, Color.Red },
-              picks = {
-                { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX, pl = 0 },
-                { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX, pl = 1 },
-                { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX, pl = 2 },
-            }},
-            { name = "just", cell = { 2, PICK_MAX + 1, Color.Red },
-              picks = {
-                { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX - 1, pl = 0 },
-                { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 1, pl = 0 },
-                { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 1, pl = 1 },
-                { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 1, pl = 2 },
-            }},
-            { name = "just-1", cell = { 2, PICK_MAX, Color.Red },
-              picks = {
-                { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX - 2, pl = 0 },
-                { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 2, pl = 0 },
-                { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 2, pl = 0 },
-                { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 2, pl = 1 },
-                { cx = 2, cy = PICK_MAX - 3, px = 2, py = PICK_MAX - 2, pl = 2 },
-            }},
-            { name = "full+1", cell = { 2, 3, Color.Red },
-              picks = {
-                { cx = 2, cy = 3, px = 2, py = 1, pl = 0 },
-                { cx = 2, cy = 2, px = 2, py = 1, pl = 0 },
-                { cx = 2, cy = 1, px = 2, py = 1, pl = 1 },
-            }},
-            { name = "full", cell = { 2, 2, Color.Red },
-              picks = {
-                { cx = 2, cy = 2, px = 2, py = 0, pl = 0 },
-                { cx = 2, cy = 1, px = 2, py = 0, pl = 0 },
-                { cx = 2, cy = 0, px = 2, py = 0, pl = 0 },
-            }},
+            {
+                name = "just+1",
+                cell = { 2, PICK_MAX + 2, Color.Red },
+                picks = {
+                    { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX, pl = 0 },
+                    { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX, pl = 1 },
+                    { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX, pl = 2 },
+                }
+            },
+            {
+                name = "just",
+                cell = { 2, PICK_MAX + 1, Color.Red },
+                picks = {
+                    { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX - 1, pl = 0 },
+                    { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 1, pl = 0 },
+                    { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 1, pl = 1 },
+                    { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 1, pl = 2 },
+                }
+            },
+            {
+                name = "just-1",
+                cell = { 2, PICK_MAX, Color.Red },
+                picks = {
+                    { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX - 2, pl = 0 },
+                    { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 2, pl = 0 },
+                    { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 2, pl = 0 },
+                    { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 2, pl = 1 },
+                    { cx = 2, cy = PICK_MAX - 3, px = 2, py = PICK_MAX - 2, pl = 2 },
+                }
+            },
+            {
+                name = "full+1",
+                cell = { 2, 3, Color.Red },
+                picks = {
+                    { cx = 2, cy = 3, px = 2, py = 1, pl = 0 },
+                    { cx = 2, cy = 2, px = 2, py = 1, pl = 0 },
+                    { cx = 2, cy = 1, px = 2, py = 1, pl = 1 },
+                }
+            },
+            {
+                name = "full",
+                cell = { 2, 2, Color.Red },
+                picks = {
+                    { cx = 2, cy = 2, px = 2, py = 0, pl = 0 },
+                    { cx = 2, cy = 1, px = 2, py = 0, pl = 0 },
+                    { cx = 2, cy = 0, px = 2, py = 0, pl = 0 },
+                }
+            },
         }
         for _, cs in ipairs(cases) do
             for _, p in ipairs(cs.picks) do
