@@ -53,6 +53,7 @@ return M
 | `imgui`     | Dear ImGui API                                                |
 | `shdc`      | Runtime shader compilation                                    |
 | `miniaudio` | Audio engine                                                  |
+| `lub3d.fs`  | File system abstraction (Native + WASM)                       |
 | `stb.image` | Image loading                                                 |
 | `bc7enc`    | BC7 texture encoder                                           |
 
