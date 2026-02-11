@@ -3,10 +3,13 @@ local gfx = require("sokol.gfx")
 local gpu = require("lib.gpu")
 local log = require("lib.log")
 local stb = require("stb.image")
+local fs = require("lub3d.fs")
 
 -- Optional bc7enc module
 local bc7enc_ok, bc7enc = pcall(require, "bc7enc")
-if not bc7enc_ok then bc7enc = nil end
+if not bc7enc_ok then
+    bc7enc = nil
+end
 
 local M = {}
 
@@ -21,33 +24,6 @@ local function resolve_path(path)
     return path
 end
 
--- Read entire file as binary
----@param path string file path
----@return string|nil data
-local function read_file(path)
-    local f = io.open(path, "rb")
-    if not f then return nil end
-    local data = f:read("*a")
-    f:close()
-    return data
-end
-
--- Write binary data to file
----@param path string file path
----@param data string binary data
----@return boolean success
-local function write_file(path, data)
-    local f = io.open(path, "wb")
-    if not f then return false end
-    f:write(data)
-    f:close()
-    return true
-end
-
--- get_mtime is a global function registered by lub3d_lua.c (returns nil if not found)
----@type fun(path: string): number|nil
-local file_mtime = get_mtime
-
 ---@class texture.ImageData
 ---@field w integer
 ---@field h integer
@@ -59,29 +35,19 @@ local file_mtime = get_mtime
 ---@field view gpu.View
 ---@field smp gpu.Sampler
 
--- Load raw image data from file (handles WASM fetch)
+-- Load raw image data from file
 ---@param filename string path to image file
 ---@return texture.ImageData?
 ---@return string? err
 function M.load_image_data(filename)
     local resolved = resolve_path(filename)
-
-    -- Check if running in WASM (fetch_file is defined in main.c for Emscripten)
-    ---@type fun(filename: string): string?
-    local fetch_file = _G["fetch_file"]
-    local w, h, ch, pixels
-    if fetch_file then
-        local data = fetch_file(resolved)
-        if not data then
-            return nil, "Failed to fetch: " .. resolved
-        end
-        w, h, ch, pixels = stb.load_from_memory(data, 4)
-    else
-        -- Native: load directly from filesystem
-        w, h, ch, pixels = stb.load(resolved, 4)
+    local data = fs.read(resolved)
+    if not data then
+        return nil, "Failed to read: " .. resolved
     end
+    local w, h, ch, pixels = stb.load_from_memory(data, 4)
     if not w then
-        return nil, "Failed to load: " .. resolved
+        return nil, "Failed to load: " .. resolved .. " (stb error: " .. tostring(h) .. ")"
     end
     return { w = w, h = h, ch = ch, pixels = pixels }, nil
 end
@@ -151,13 +117,13 @@ function M.load_bc7(filename, opts)
     local w, h, compressed
 
     -- Check timestamps: use BC7 cache only if it's newer than source
-    local src_mtime = file_mtime(resolved)
-    local bc7_mtime = file_mtime(resolved_bc7)
+    local src_mtime = fs.mtime(resolved)
+    local bc7_mtime = fs.mtime(resolved_bc7)
     local use_cache = bc7_mtime and src_mtime and bc7_mtime >= src_mtime
 
     -- Try to load existing BC7 file if cache is valid
     if use_cache then
-        local cache_data = read_file(resolved_bc7)
+        local cache_data = fs.read(resolved_bc7)
         if cache_data and #cache_data >= 8 then
             -- BC7 file format: 4 bytes width, 4 bytes height, then compressed data
             w, h = string.unpack("<I4I4", cache_data)
@@ -186,7 +152,7 @@ function M.load_bc7(filename, opts)
 
         -- Save BC7 cache file
         local header = string.pack("<I4I4", w, h)
-        write_file(resolved_bc7, header .. compressed)
+        fs.write(resolved_bc7, header .. compressed)
         log.info("Saved BC7 cache: " .. bc7_path .. " (" .. w .. "x" .. h .. ")")
     end
 

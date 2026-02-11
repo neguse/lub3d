@@ -365,7 +365,7 @@ public static class CBindingGen
         {
             sb += OpaqueCheckHelper(ot);
             if (ot.InitFunc != null)
-                sb += OpaqueConstructor(ot);
+                sb += OpaqueConstructor(ot, structBindings);
             sb += OpaqueDestructor(ot);
             foreach (var m in ot.Methods)
                 sb += OpaqueMethod(ot, m);
@@ -782,11 +782,35 @@ public static class CBindingGen
 
         """;
 
-    private static string OpaqueConstructor(OpaqueTypeBinding ot)
+    private static string OpaqueConstructor(OpaqueTypeBinding ot, Dictionary<string, StructBinding> structBindings)
     {
-        var configInit = ot.ConfigInitFunc != null && ot.ConfigType != null
-            ? $"    {ot.ConfigType} config = {ot.ConfigInitFunc}();\n"
-            : "";
+        // Check if config struct has a binding (metatable) we can look up
+        var configMetatable = ot.ConfigType != null && structBindings.TryGetValue(ot.ConfigType, out var configStruct)
+            ? configStruct.Metatable : null;
+
+        string configInit;
+        if (ot.ConfigInitFunc != null && ot.ConfigType != null && configMetatable != null)
+        {
+            // Config struct has a binding: accept optional userdata argument
+            configInit = $$"""
+                    {{ot.ConfigType}} config;
+                    if (lua_isuserdata(L, 1)) {
+                        config = *({{ot.ConfigType}}*)luaL_checkudata(L, 1, "{{configMetatable}}");
+                    } else {
+                        config = {{ot.ConfigInitFunc}}();
+                    }
+
+                """;
+        }
+        else if (ot.ConfigInitFunc != null && ot.ConfigType != null)
+        {
+            configInit = $"    {ot.ConfigType} config = {ot.ConfigInitFunc}();\n";
+        }
+        else
+        {
+            configInit = "";
+        }
+
         var initArg = ot.ConfigType != null ? "&config" : "NULL";
         var initCall = ot.InitFunc != null
             ? $$"""
@@ -1142,6 +1166,14 @@ public static class CBindingGen
                 $"{getField}\n" +
                 $$"""
                         if (!lua_isnil(L, -1)) ud->{{cName}} = ({{enumName}})lua_tointeger(L, -1);
+                        lua_pop(L, 1);
+                """,
+
+            // Pointer types: lightuserdata
+            BindingType.VoidPtr or BindingType.Ptr(BindingType.Void) or BindingType.ConstPtr(BindingType.Void) =>
+                $"{getField}\n" +
+                $$"""
+                        if (!lua_isnil(L, -1)) ud->{{cName}} = lua_touserdata(L, -1);
                         lua_pop(L, 1);
                 """,
 

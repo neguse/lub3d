@@ -13,7 +13,13 @@
     "frame",
     "cleanup",
     "event",
-    "get_mtime",
     "_headless_frames"
-  ]
+  ],
+  "diagnostics.neededFileStatus": {
+    "param-type-mismatch": "Any",
+    "undefined-field": "Any",
+    "missing-parameter": "Any",
+    "redundant-parameter": "Any",
+    "codestyle-check": "Any"
+  }
 }

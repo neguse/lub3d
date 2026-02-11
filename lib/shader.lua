@@ -1,12 +1,15 @@
 -- Shader compilation utilities for lub3d
 local gfx = require("sokol.gfx")
 local log = require("lib.log")
+local fs = require("lub3d.fs")
 
 -- Optional shdc module (requires LUB3D_BUILD_SHDC=ON)
 ---@type shdc?
 local shdc
 local shdc_ok, shdc_mod = pcall(require, "shdc")
-if shdc_ok then shdc = shdc_mod end
+if shdc_ok then
+    shdc = shdc_mod
+end
 
 local M = {}
 
@@ -36,34 +39,11 @@ local function ensure_dir(path)
     return true
 end
 
--- Read entire file as binary
----@param path string file path
----@return string|nil data
-local function read_file(path)
-    local f = io.open(path, "rb")
-    if not f then return nil end
-    local data = f:read("*a")
-    f:close()
-    return data
-end
-
--- Write binary data to file
----@param path string file path
----@param data string binary data
----@return boolean success
-local function write_file(path, data)
-    local f = io.open(path, "wb")
-    if not f then return false end
-    f:write(data)
-    f:close()
-    return true
-end
-
 -- Shader cache configuration
 M.cache = {
     enabled = true,
     dir = "assets/shader_cache",
-    version = 1,  -- Bump to invalidate all caches
+    version = 1, -- Bump to invalidate all caches
 }
 
 -- Get shader cache file path
@@ -95,7 +75,8 @@ local function save_cache(cache_path, result)
     -- vs_source_len (u32) + vs_source
     -- fs_source_len (u32) + fs_source
     local has_bytecode = (result.vs_bytecode and result.fs_bytecode) and 1 or 0
-    local data = string.pack("<BB I4 I4 I4 I4",
+    local data = string.pack(
+        "<BB I4 I4 I4 I4",
         M.cache.version,
         has_bytecode,
         #(result.vs_bytecode or ""),
@@ -105,21 +86,22 @@ local function save_cache(cache_path, result)
     )
     data = data .. (result.vs_bytecode or "") .. (result.fs_bytecode or "") .. vs_src .. fs_src
 
-    return write_file(cache_path, data)
+    return fs.write(cache_path, data)
 end
 
 -- Load compiled shader from cache
 ---@param cache_path string cache file path
 ---@return table|nil result compile result or nil if invalid
 local function load_cache(cache_path)
-    local data = read_file(cache_path)
-    if not data or #data < 18 then return nil end
+    local data = fs.read(cache_path)
+    if not data or #data < 18 then
+        return nil
+    end
 
-    local version, has_bytecode, vs_bc_len, fs_bc_len, vs_src_len, fs_src_len =
-        string.unpack("<BB I4 I4 I4 I4", data)
+    local version, has_bytecode, vs_bc_len, fs_bc_len, vs_src_len, fs_src_len = string.unpack("<BB I4 I4 I4 I4", data)
 
     if version ~= M.cache.version then
-        return nil  -- Version mismatch, invalidate cache
+        return nil -- Version mismatch, invalidate cache
     end
 
     local offset = 18
@@ -158,7 +140,11 @@ function M.get_lang()
     local backend = gfx.QueryBackend()
     if backend == gfx.Backend.D3D11 then
         return "hlsl5"
-    elseif backend == gfx.Backend.METAL_MACOS or backend == gfx.Backend.METAL_IOS or backend == gfx.Backend.METAL_SIMULATOR then
+    elseif
+        backend == gfx.Backend.METAL_MACOS
+        or backend == gfx.Backend.METAL_IOS
+        or backend == gfx.Backend.METAL_SIMULATOR
+    then
         return "metal_macos"
     elseif backend == gfx.Backend.WGPU then
         return "wgsl"
@@ -214,7 +200,12 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
         end
     end
 
-    log.info("Shader compiled: vs=" .. tostring(result.vs_source and #result.vs_source or "nil") .. " fs=" .. tostring(result.fs_source and #result.fs_source or "nil"))
+    log.info(
+        "Shader compiled: vs="
+            .. tostring(result.vs_source and #result.vs_source or "nil")
+            .. " fs="
+            .. tostring(result.fs_source and #result.fs_source or "nil")
+    )
 
     -- Create shader using generated bindings
     local backend = gfx.QueryBackend()
@@ -252,10 +243,11 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
 
     -- D3D11 needs attribute semantics
     if backend == gfx.Backend.D3D11 then
-        desc_table.attrs = attrs or {
-            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
-            { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
-        }
+        desc_table.attrs = attrs
+            or {
+                { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 0 },
+                { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
+            }
     end
 
     local shd = gfx.MakeShader(gfx.ShaderDesc(desc_table))
@@ -308,7 +300,12 @@ function M.compile_full(source, program_name, shader_desc)
         end
     end
 
-    log.info("Shader compiled: vs=" .. tostring(result.vs_source and #result.vs_source or "nil") .. " fs=" .. tostring(result.fs_source and #result.fs_source or "nil"))
+    log.info(
+        "Shader compiled: vs="
+            .. tostring(result.vs_source and #result.vs_source or "nil")
+            .. " fs="
+            .. tostring(result.fs_source and #result.fs_source or "nil")
+    )
 
     local backend = gfx.QueryBackend()
     local is_source = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3 or backend == gfx.Backend.WGPU)
@@ -333,10 +330,18 @@ function M.compile_full(source, program_name, shader_desc)
     }
 
     -- Copy all fields from shader_desc
-    if shader_desc.uniform_blocks then desc_table.uniform_blocks = shader_desc.uniform_blocks end
-    if shader_desc.views then desc_table.views = shader_desc.views end
-    if shader_desc.samplers then desc_table.samplers = shader_desc.samplers end
-    if shader_desc.texture_sampler_pairs then desc_table.texture_sampler_pairs = shader_desc.texture_sampler_pairs end
+    if shader_desc.uniform_blocks then
+        desc_table.uniform_blocks = shader_desc.uniform_blocks
+    end
+    if shader_desc.views then
+        desc_table.views = shader_desc.views
+    end
+    if shader_desc.samplers then
+        desc_table.samplers = shader_desc.samplers
+    end
+    if shader_desc.texture_sampler_pairs then
+        desc_table.texture_sampler_pairs = shader_desc.texture_sampler_pairs
+    end
     if backend == gfx.Backend.D3D11 and shader_desc.attrs then
         desc_table.attrs = shader_desc.attrs
     end

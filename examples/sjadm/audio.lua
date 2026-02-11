@@ -3,23 +3,28 @@ local log = require("lib.log")
 local M = {}
 
 local ma --- @type miniaudio?
+local audio_lib --- @type table?
 do
     local ok, mod = pcall(require, "miniaudio")
     if ok then
         ma = mod
+        audio_lib = require("lib.audio")
     else
         log.warn("miniaudio not available, audio disabled")
     end
 end
 
 local engine = nil
+local vfs_ref = nil
 local sounds = {}
 
 local SOUND_PATH = "examples/sjadm/assets/sounds/"
 
 function M.init()
-    if not ma then return end
-    engine = ma.EngineInit()
+    if not ma or not audio_lib then
+        return
+    end
+    engine, vfs_ref = audio_lib.create_engine()
     if not engine then
         log.warn("Failed to init miniaudio engine")
         return
@@ -50,15 +55,23 @@ function M.init()
         end
     end
 
-    if sounds.bgm then sounds.bgm:SetLooping(true) end
-    if sounds.friction then sounds.friction:SetLooping(true) end
-    if sounds.walk then sounds.walk:SetLooping(true) end
+    if sounds.bgm then
+        sounds.bgm:SetLooping(true)
+    end
+    if sounds.friction then
+        sounds.friction:SetLooping(true)
+    end
+    if sounds.walk then
+        sounds.walk:SetLooping(true)
+    end
 end
 
 -- Play a one-shot SE (restarts from beginning)
 function M.play(name)
     local snd = sounds[name]
-    if not snd then return end
+    if not snd then
+        return
+    end
     snd:Stop()
     snd:SeekToPcmFrame(0)
     snd:Start()
@@ -67,7 +80,9 @@ end
 -- Start a looping sound (only if not already playing)
 function M.start_loop(name)
     local snd = sounds[name]
-    if not snd then return end
+    if not snd then
+        return
+    end
     if not snd:IsPlaying() then
         snd:Start()
     end
@@ -76,7 +91,9 @@ end
 -- Stop a sound
 function M.stop(name)
     local snd = sounds[name]
-    if not snd then return end
+    if not snd then
+        return
+    end
     if snd:IsPlaying() then
         snd:Stop()
     end
@@ -84,7 +101,9 @@ end
 
 function M.play_bgm()
     local snd = sounds.bgm
-    if not snd then return end
+    if not snd then
+        return
+    end
     snd:Stop()
     snd:SeekToPcmFrame(0)
     snd:Start()
@@ -92,7 +111,9 @@ end
 
 function M.stop_bgm()
     local snd = sounds.bgm
-    if not snd then return end
+    if not snd then
+        return
+    end
     snd:Stop()
 end
 

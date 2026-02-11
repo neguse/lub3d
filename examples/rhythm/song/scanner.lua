@@ -1,6 +1,6 @@
 --- BMS Song Scanner
 --- Scans directories for BMS files and extracts metadata
-local lfs = require("lfs")
+local fs = require("lub3d.fs")
 local parser = require("examples.rhythm.bms.parser")
 
 ---@class SongEntry
@@ -50,21 +50,22 @@ end
 ---@param path string
 ---@param callback fun(full_path: string)
 local function walk(path, callback)
-    local ok, iter, dir_obj = pcall(lfs.dir, path)
-    if not ok then
+    local iter = fs.dir(path)
+    if not iter then
         return
     end
 
-    for entry in iter, dir_obj do
+    for entry in iter do
         if entry ~= "." and entry ~= ".." then
             local full = path .. "/" .. entry
-            local attr = lfs.attributes(full)
-            if attr then
-                if attr.mode == "directory" then
-                    walk(full, callback)
-                elseif attr.mode == "file" then
-                    callback(full)
-                end
+            -- Try to descend as directory; if fs.dir returns nil, treat as file
+            local sub_iter = fs.dir(full)
+            if sub_iter then
+                -- It's a directory (fs.dir succeeded), but we don't need the iterator
+                -- Just recurse with walk which will call fs.dir again
+                walk(full, callback)
+            else
+                callback(full)
             end
         end
     end
@@ -186,7 +187,7 @@ end
 ---@param s string
 ---@return string
 local function escape_string(s)
-    return (s:gsub("\\", "\\\\"):gsub("\"", "\\\""):gsub("\n", "\\n"):gsub("\r", "\\r"))
+    return (s:gsub("\\", "\\\\"):gsub('"', '\\"'):gsub("\n", "\\n"):gsub("\r", "\\r"))
 end
 
 --- Save songs to cache file
@@ -204,10 +205,10 @@ function SongScanner:save_cache(cache_path)
 
     for _, song in ipairs(self.songs) do
         file:write("  {\n")
-        file:write(string.format("    path = \"%s\",\n", escape_string(song.path)))
-        file:write(string.format("    title = \"%s\",\n", escape_string(song.title)))
-        file:write(string.format("    artist = \"%s\",\n", escape_string(song.artist)))
-        file:write(string.format("    genre = \"%s\",\n", escape_string(song.genre)))
+        file:write(string.format('    path = "%s",\n', escape_string(song.path)))
+        file:write(string.format('    title = "%s",\n', escape_string(song.title)))
+        file:write(string.format('    artist = "%s",\n', escape_string(song.artist)))
+        file:write(string.format('    genre = "%s",\n', escape_string(song.genre)))
         file:write(string.format("    bpm = %s,\n", tostring(song.bpm)))
         file:write(string.format("    playlevel = %d,\n", song.playlevel))
         file:write(string.format("    difficulty = %d,\n", song.difficulty))
@@ -247,8 +248,7 @@ end
 ---@param cache_path string
 ---@return boolean
 function SongScanner.cache_exists(cache_path)
-    local attr = lfs.attributes(cache_path)
-    return attr ~= nil and attr.mode == "file"
+    return fs.exists(cache_path)
 end
 
 return SongScanner

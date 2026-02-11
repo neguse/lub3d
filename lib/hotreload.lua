@@ -5,13 +5,14 @@
 local M = {}
 
 local lume = require("deps.lume.lume")
+local fs = require("lub3d.fs")
 
 -- Configuration
 M.interval = 0.5 -- seconds between checks
 M.enabled = true
 
 -- Internal state
-local watched = {}     -- { [filepath] = mtime }
+local watched = {} -- { [filepath] = mtime }
 local mod_to_path = {} -- { [modname] = filepath }
 local last_check = 0
 
@@ -21,7 +22,7 @@ local function resolve_path(modname)
     local name = modname:gsub("%.", "/")
     for pattern in path:gmatch("[^;]+") do
         local filepath = pattern:gsub("%?", name)
-        local mtime = get_mtime(filepath)
+        local mtime = fs.mtime(filepath)
         if mtime then
             return filepath
         end
@@ -34,7 +35,7 @@ function M.watch(modname)
     local filepath = mod_to_path[modname] or resolve_path(modname)
     if filepath then
         mod_to_path[modname] = filepath
-        watched[filepath] = get_mtime(filepath)
+        watched[filepath] = fs.mtime(filepath)
     end
 end
 
@@ -51,18 +52,24 @@ end
 
 -- Optional notify module (may not be loaded)
 local notify = nil
-pcall(function() notify = require("lib.notify") end)
+pcall(function()
+    notify = require("lib.notify")
+end)
 
 -- Check for changes and reload
 function M.update()
-    if not M.enabled then return end
+    if not M.enabled then
+        return
+    end
 
     local now = os.clock()
-    if now - last_check < M.interval then return end
+    if now - last_check < M.interval then
+        return
+    end
     last_check = now
 
     for filepath, old_mtime in pairs(watched) do
-        local new_mtime = get_mtime(filepath)
+        local new_mtime = fs.mtime(filepath)
         if new_mtime and new_mtime ~= old_mtime then
             -- Find module name for this file
             for modname, path in pairs(mod_to_path) do
@@ -73,7 +80,9 @@ function M.update()
                     local mod, err = lume.hotswap(modname)
                     if err then
                         print(string.format("[hotreload] Error: %s", err))
-                        if notify then notify.error("[reload] " .. short .. " ERROR") end
+                        if notify then
+                            notify.error("[reload] " .. short .. " ERROR")
+                        end
                     else
                         -- Call reload hook if module defines one
                         local hook_ok = true
@@ -86,9 +95,13 @@ function M.update()
                         end
                         if hook_ok then
                             print(string.format("[hotreload] Reloaded: %s", modname))
-                            if notify then notify.ok("[reload] " .. short .. " OK") end
+                            if notify then
+                                notify.ok("[reload] " .. short .. " OK")
+                            end
                         else
-                            if notify then notify.warn("[reload] " .. short .. " hook failed") end
+                            if notify then
+                                notify.warn("[reload] " .. short .. " hook failed")
+                            end
                         end
                     end
                     break

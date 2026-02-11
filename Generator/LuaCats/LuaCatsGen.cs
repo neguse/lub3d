@@ -133,7 +133,20 @@ public static class LuaCatsGen
         foreach (var s in spec.Structs)
             moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName));
         foreach (var ot in spec.OpaqueTypes)
-            moduleFields.Add($"---@field {ot.PascalName}Init fun(): {ot.LuaClassName}");
+        {
+            if (ot.ConfigType != null)
+            {
+                var configStruct = spec.Structs.FirstOrDefault(s => s.CName == ot.ConfigType);
+                var configClass = configStruct != null
+                    ? $"{spec.ModuleName}.{configStruct.PascalName}"
+                    : "any";
+                moduleFields.Add($"---@field {ot.PascalName}Init fun(config?: {configClass}): {ot.LuaClassName}");
+            }
+            else
+            {
+                moduleFields.Add($"---@field {ot.PascalName}Init fun(): {ot.LuaClassName}");
+            }
+        }
         foreach (var f in spec.Funcs)
         {
             var parms = f.Params
