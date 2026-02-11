@@ -936,6 +936,8 @@ public static class CBindingGen
             $"    return 1;",
         BindingType.Custom(_, _, _, _, var pushCode, _) when pushCode != null =>
             $"    {pushCode.Replace("{value}", callExpr)}\n    return 1;",
+        BindingType.Custom(_, _, _, _, null, _) =>
+            $"    {callExpr};\n    return 0;",
         _ => throw new InvalidOperationException($"Unsupported return type: {ret}")
     };
 
@@ -969,6 +971,8 @@ public static class CBindingGen
         BindingType.ConstPtr(BindingType.Str) => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
         BindingType.Enum(var eName, _) => $"    {eName} {p.Name} = ({eName})luaL_checkinteger(L, {idx});",
         BindingType.VoidPtr => $"    void* {p.Name} = lua_touserdata(L, {idx});",
+        BindingType.Ptr(BindingType.Void) => $"    void* {p.Name} = lua_touserdata(L, {idx});",
+        BindingType.ConstPtr(BindingType.Void) => $"    const void* {p.Name} = lua_touserdata(L, {idx});",
         BindingType.Ptr(BindingType.Struct(var cName, var mt, _)) =>
             $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
         BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
