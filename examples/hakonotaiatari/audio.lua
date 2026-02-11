@@ -5,7 +5,7 @@ local log = require("lib.log")
 
 local M = {}
 
-local ma --- @type miniaudio?
+local ma        --- @type miniaudio?
 local audio_lib --- @type table?
 do
     local ok, mod = pcall(require, "miniaudio")
@@ -24,21 +24,21 @@ local bgm_index = nil
 
 -- Sound file mapping (matches original app.cc order)
 local SOUND_FILES = {
-    [0] = "hakotai.wav", -- Title SE
-    [1] = "ne4.wav", -- BGM1
-    [2] = "sakura.wav", -- BGM2
-    [3] = "tt.wav", -- BGM3
-    [4] = "hit1.wav", -- Hit1
-    [5] = "suberi.wav", -- Dash
-    [6] = "hit4.wav", -- Hit4
-    [7] = "fire.wav", -- Fire/death
-    [8] = "fall.wav", -- Fall
-    [9] = "powerfull.wav", -- Power charged
-    [10] = "result.wav", -- Result
+    [0] = "hakotai.wav",      -- Title SE
+    [1] = "ne4.wav",          -- BGM1
+    [2] = "sakura.wav",       -- BGM2
+    [3] = "tt.wav",           -- BGM3
+    [4] = "hit1.wav",         -- Hit1
+    [5] = "suberi.wav",       -- Dash
+    [6] = "hit4.wav",         -- Hit4
+    [7] = "fire.wav",         -- Fire/death
+    [8] = "fall.wav",         -- Fall
+    [9] = "powerfull.wav",    -- Power charged
+    [10] = "result.wav",      -- Result
     [11] = "result_high.wav", -- High score
-    [12] = "kaki.wav", -- Hit enemy
-    [13] = "revirth.wav", -- Enemy revive
-    [14] = "suberie.wav", -- Enemy dash
+    [12] = "kaki.wav",        -- Hit enemy
+    [13] = "revirth.wav",     -- Enemy revive
+    [14] = "suberie.wav",     -- Enemy dash
 }
 
 local initialized = false

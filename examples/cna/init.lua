@@ -838,45 +838,45 @@ test.run("cna", {
             {
                 name = "horizontal",
                 cells = {
-                    { 2, 2, Color.Red, true },
-                    { 3, 2, Color.Red, true },
-                    { 4, 2, Color.Red, true },
+                    { 2, 2, Color.Red,   true },
+                    { 3, 2, Color.Red,   true },
+                    { 4, 2, Color.Red,   true },
                     { 5, 2, Color.Green, false },
                 },
             },
             {
                 name = "horizontal not",
                 cells = {
-                    { 2, 2, Color.Red, false },
-                    { 3, 2, Color.Red, false },
+                    { 2, 2, Color.Red,   false },
+                    { 3, 2, Color.Red,   false },
                     { 4, 2, Color.Green, false },
-                    { 5, 2, Color.Red, false },
+                    { 5, 2, Color.Red,   false },
                 },
             },
             {
                 name = "vertical",
                 cells = {
-                    { 2, 2, Color.Red, true },
-                    { 2, 3, Color.Red, true },
-                    { 2, 4, Color.Red, true },
+                    { 2, 2, Color.Red,   true },
+                    { 2, 3, Color.Red,   true },
+                    { 2, 4, Color.Red,   true },
                     { 2, 5, Color.Green, false },
                 },
             },
             {
                 name = "vertical not",
                 cells = {
-                    { 2, 2, Color.Red, false },
-                    { 2, 3, Color.Red, false },
+                    { 2, 2, Color.Red,   false },
+                    { 2, 3, Color.Red,   false },
                     { 2, 4, Color.Green, false },
-                    { 2, 5, Color.Red, false },
+                    { 2, 5, Color.Red,   false },
                 },
             },
             {
                 name = "cross right down",
                 cells = {
-                    { 2, 2, Color.Red, true },
-                    { 3, 3, Color.Red, true },
-                    { 4, 4, Color.Red, true },
+                    { 2, 2, Color.Red,   true },
+                    { 3, 3, Color.Red,   true },
+                    { 4, 4, Color.Red,   true },
                     { 5, 5, Color.Green, false },
                 },
             },
@@ -891,9 +891,9 @@ test.run("cna", {
             {
                 name = "cross right up",
                 cells = {
-                    { 2, 5, Color.Red, true },
-                    { 3, 4, Color.Red, true },
-                    { 4, 3, Color.Red, true },
+                    { 2, 5, Color.Red,   true },
+                    { 3, 4, Color.Red,   true },
+                    { 4, 3, Color.Red,   true },
                     { 5, 2, Color.Green, false },
                 },
             },
@@ -901,16 +901,16 @@ test.run("cna", {
                 name = "cross right up 2",
                 cells = {
                     { 4, 10, Color.Red, true },
-                    { 5, 9, Color.Red, true },
-                    { 6, 8, Color.Red, true },
+                    { 5, 9,  Color.Red, true },
+                    { 6, 8,  Color.Red, true },
                 },
             },
             {
                 name = "jammer",
                 cells = {
-                    { 2, 4, Color.Red, true },
-                    { 3, 4, Color.Red, true },
-                    { 4, 4, Color.Red, true },
+                    { 2, 4, Color.Red,    true },
+                    { 3, 4, Color.Red,    true },
+                    { 4, 4, Color.Red,    true },
                     { 5, 4, Color.Jammer, true },
                 },
             },
@@ -928,14 +928,14 @@ test.run("cna", {
                 assert(
                     s.erased == c[4],
                     cs.name
-                        .. ": erased mismatch at "
-                        .. c[1]
-                        .. ","
-                        .. c[2]
-                        .. " expected "
-                        .. tostring(c[4])
-                        .. " got "
-                        .. tostring(s.erased)
+                    .. ": erased mismatch at "
+                    .. c[1]
+                    .. ","
+                    .. c[2]
+                    .. " expected "
+                    .. tostring(c[4])
+                    .. " got "
+                    .. tostring(s.erased)
                 )
             end
         end
@@ -950,7 +950,7 @@ test.run("cna", {
                 cell = { 2, PICK_MAX + 2, Color.Red },
                 picks = {
                     { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX, pl = 0 },
-                    { cx = 2, cy = PICK_MAX, px = 2, py = PICK_MAX, pl = 1 },
+                    { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX, pl = 1 },
                     { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX, pl = 2 },
                 },
             },
@@ -959,7 +959,7 @@ test.run("cna", {
                 cell = { 2, PICK_MAX + 1, Color.Red },
                 picks = {
                     { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX - 1, pl = 0 },
-                    { cx = 2, cy = PICK_MAX, px = 2, py = PICK_MAX - 1, pl = 0 },
+                    { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 1, pl = 0 },
                     { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 1, pl = 1 },
                     { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 1, pl = 2 },
                 },
@@ -969,7 +969,7 @@ test.run("cna", {
                 cell = { 2, PICK_MAX, Color.Red },
                 picks = {
                     { cx = 2, cy = PICK_MAX + 1, px = 2, py = PICK_MAX - 2, pl = 0 },
-                    { cx = 2, cy = PICK_MAX, px = 2, py = PICK_MAX - 2, pl = 0 },
+                    { cx = 2, cy = PICK_MAX,     px = 2, py = PICK_MAX - 2, pl = 0 },
                     { cx = 2, cy = PICK_MAX - 1, px = 2, py = PICK_MAX - 2, pl = 0 },
                     { cx = 2, cy = PICK_MAX - 2, px = 2, py = PICK_MAX - 2, pl = 1 },
                     { cx = 2, cy = PICK_MAX - 3, px = 2, py = PICK_MAX - 2, pl = 2 },

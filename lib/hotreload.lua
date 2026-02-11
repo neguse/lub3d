@@ -12,7 +12,7 @@ M.interval = 0.5 -- seconds between checks
 M.enabled = true
 
 -- Internal state
-local watched = {} -- { [filepath] = mtime }
+local watched = {}     -- { [filepath] = mtime }
 local mod_to_path = {} -- { [modname] = filepath }
 local last_check = 0
 

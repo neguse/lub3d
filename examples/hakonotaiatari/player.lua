@@ -89,7 +89,6 @@ function Player:update(dt, target_pos, camera, audio)
             self:add_power(-const.P_DASH_USE_POW)
             if audio then audio.play(const.WAVE_SUBERI_INDEX) end
         end
-
     elseif self.stat == const.P_ST_NORMAL then
         self.length = self.length + (const.P_LEN - self.length) * 0.01
         self.angle = dva
@@ -110,7 +109,6 @@ function Player:update(dt, target_pos, camera, audio)
             self:add_power(-const.P_DASH_USE_POW)
             if audio then audio.play(const.WAVE_SUBERI_INDEX) end
         end
-
     elseif self.stat == const.P_ST_DASH then
         self.length = self.length + (self.dash_len - self.length) * 0.1
         self.velo = const.P_DASH_V
@@ -124,7 +122,6 @@ function Player:update(dt, target_pos, camera, audio)
             end
         end
         -- TODO: emit dash particles
-
     elseif self.stat == const.P_ST_FUTTOBI or self.stat == const.P_ST_FUTTOBI_NOMUTEKI then
         self.velo = const.P_FUTTOBI_V
 
@@ -148,7 +145,6 @@ function Player:update(dt, target_pos, camera, audio)
                 self.coll_enable = false
             end
         end
-
     elseif self.stat == const.P_ST_FADEOUT or self.stat == const.P_ST_DEAD then
         self.length = self.length + (-self.length * 0.03)
         if self.tick > const.P_FADEOUT_F and self.stat == const.P_ST_FADEOUT then
@@ -241,7 +237,6 @@ function Player:on_collide(other_cube, audio)
             self.coll_enable = true
             self:add_power(const.P_POW_HIT_BONUS)
         end
-
     elseif my_coll_stat == const.C_COL_ST_DASH then
         if other_coll_stat == const.C_COL_ST_DASH then
             -- Mutual dash collision

@@ -2,7 +2,7 @@ local log = require("lib.log")
 
 local M = {}
 
-local ma --- @type miniaudio?
+local ma        --- @type miniaudio?
 local audio_lib --- @type table?
 do
     local ok, mod = pcall(require, "miniaudio")

@@ -58,13 +58,13 @@ M.light_model_ambient = glm.vec4(0.388, 0.356, 0.447, 1.0)
 M.sources = {}
 
 -- Animation state
-M.sun_pitch = 270  -- degrees, 270 = midday, 90 = midnight
-M.animation_speed = 10  -- degrees per second
+M.sun_pitch = 270      -- degrees, 270 = midday, 90 = midnight
+M.animation_speed = 10 -- degrees per second
 M.animate_enabled = true
 
 -- Color constants (from tutorial)
-local sunlight_color0 = glm.vec4(0.612, 0.365, 0.306, 1)  -- sunrise/sunset
-local sunlight_color1 = glm.vec4(0.765, 0.573, 0.400, 1)  -- midday
+local sunlight_color0 = glm.vec4(0.612, 0.365, 0.306, 1) -- sunrise/sunset
+local sunlight_color1 = glm.vec4(0.765, 0.573, 0.400, 1) -- midday
 local moonlight_color0 = glm.vec4(0.247, 0.384, 0.404, 1)
 local moonlight_color1 = glm.vec4(0.392, 0.537, 0.571, 1)
 local window_light_color = glm.vec4(0.765, 0.573, 0.400, 1)
@@ -98,10 +98,10 @@ local function default_params()
         ambient = glm.vec4(0, 0, 0, 1),
         diffuse = glm.vec4(0, 0, 0, 1),
         specular = glm.vec4(0, 0, 0, 1),
-        position = glm.vec4(0, 0, 1, 0),  -- default directional from +Z
-        spot_direction = glm.vec4(0, 0, -1, 0),  -- exponent=0
-        spot_params = glm.vec4(math.pi, -1, 0, 0),  -- cutoff=180deg (no spotlight), cosCutoff=-1
-        attenuation = glm.vec4(1, 0, 0, 0),  -- constant=1, linear=0, quadratic=0
+        position = glm.vec4(0, 0, 1, 0),           -- default directional from +Z
+        spot_direction = glm.vec4(0, 0, -1, 0),    -- exponent=0
+        spot_params = glm.vec4(math.pi, -1, 0, 0), -- cutoff=180deg (no spotlight), cosCutoff=-1
+        attenuation = glm.vec4(1, 0, 0, 0),        -- constant=1, linear=0, quadratic=0
     }
 end
 
@@ -243,7 +243,7 @@ M.blinn_phong_enabled = true
 
 -- Fresnel effect toggle and max power
 M.fresnel_enabled = true
-M.max_fresnel_power = 5.0  -- specular_map.b * this value
+M.max_fresnel_power = 5.0 -- specular_map.b * this value
 
 -- Rim light toggle
 M.rim_light_enabled = true
@@ -323,7 +323,7 @@ end
 ---Setup lights similar to generateLights() in tutorial
 function M.setup_default()
     M.sources = {}
-    M.sun_pitch = 270  -- midday
+    M.sun_pitch = 270 -- midday
 
     -- Global ambient (from tutorial)
     M.light_model_ambient = glm.vec4(0.388, 0.356, 0.447, 1.0)
@@ -336,14 +336,14 @@ function M.setup_default()
 
     -- Window spotlight (from generateWindowLight)
     -- set_exponent(5), set_attenuation(1, 0.008, 0), fov=140
-    local cutoff = math.rad(70)  -- fov/2 = 140/2 = 70
+    local cutoff = math.rad(70) -- fov/2 = 140/2 = 70
     table.insert(M.sources, M.spotlight(
         window_light_color,
-        glm.vec3(1.5, 2.49, 7.9),  -- position
-        glm.vec3(0, -1, 0),        -- direction (hpr=180,0,0 → -Y)
-        5,                          -- exponent
+        glm.vec3(1.5, 2.49, 7.9), -- position
+        glm.vec3(0, -1, 0),       -- direction (hpr=180,0,0 → -Y)
+        5,                        -- exponent
         cutoff,
-        glm.vec3(1, 0.008, 0)      -- attenuation
+        glm.vec3(1, 0.008, 0)     -- attenuation
     ))
 
     -- Run initial animation to set correct colors

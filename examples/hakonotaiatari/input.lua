@@ -12,7 +12,7 @@ local M = {}
 local mouse_x = 0
 local mouse_y = 0
 local mouse_button_down = false
-local mouse_button_pressed = false  -- True only on the frame the button was pressed
+local mouse_button_pressed = false -- True only on the frame the button was pressed
 local prev_mouse_button_down = false
 
 -- Initialize input

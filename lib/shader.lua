@@ -202,9 +202,9 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
 
     log.info(
         "Shader compiled: vs="
-            .. tostring(result.vs_source and #result.vs_source or "nil")
-            .. " fs="
-            .. tostring(result.fs_source and #result.fs_source or "nil")
+        .. tostring(result.vs_source and #result.vs_source or "nil")
+        .. " fs="
+        .. tostring(result.fs_source and #result.fs_source or "nil")
     )
 
     -- Create shader using generated bindings
@@ -302,9 +302,9 @@ function M.compile_full(source, program_name, shader_desc)
 
     log.info(
         "Shader compiled: vs="
-            .. tostring(result.vs_source and #result.vs_source or "nil")
-            .. " fs="
-            .. tostring(result.fs_source and #result.fs_source or "nil")
+        .. tostring(result.vs_source and #result.vs_source or "nil")
+        .. " fs="
+        .. tostring(result.fs_source and #result.fs_source or "nil")
     )
 
     local backend = gfx.QueryBackend()

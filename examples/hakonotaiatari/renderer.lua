@@ -141,17 +141,17 @@ local function make_cube_vertices()
     local v = {}
     local faces = {
         -- front (z+)
-        {{ -0.5, -0.5,  0.5}, { 0.5, -0.5,  0.5}, { 0.5,  0.5,  0.5}, {-0.5,  0.5,  0.5}, {0, 0, 1}},
+        { { -0.5, -0.5, 0.5 }, { 0.5, -0.5, 0.5 }, { 0.5, 0.5, 0.5 },  { -0.5, 0.5, 0.5 }, { 0, 0, 1 } },
         -- back (z-)
-        {{ 0.5, -0.5, -0.5}, {-0.5, -0.5, -0.5}, {-0.5,  0.5, -0.5}, { 0.5,  0.5, -0.5}, {0, 0, -1}},
+        { { 0.5, -0.5, -0.5 }, { -0.5, -0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0, 0, -1 } },
         -- top (y+)
-        {{-0.5,  0.5,  0.5}, { 0.5,  0.5,  0.5}, { 0.5,  0.5, -0.5}, {-0.5,  0.5, -0.5}, {0, 1, 0}},
+        { { -0.5, 0.5, 0.5 },  { 0.5, 0.5, 0.5 },  { 0.5, 0.5, -0.5 }, { -0.5, 0.5, -0.5 }, { 0, 1, 0 } },
         -- bottom (y-)
-        {{-0.5, -0.5, -0.5}, { 0.5, -0.5, -0.5}, { 0.5, -0.5,  0.5}, {-0.5, -0.5,  0.5}, {0, -1, 0}},
+        { { -0.5, -0.5, -0.5 }, { 0.5, -0.5, -0.5 }, { 0.5, -0.5, 0.5 }, { -0.5, -0.5, 0.5 }, { 0, -1, 0 } },
         -- right (x+)
-        {{ 0.5, -0.5,  0.5}, { 0.5, -0.5, -0.5}, { 0.5,  0.5, -0.5}, { 0.5,  0.5,  0.5}, {1, 0, 0}},
+        { { 0.5, -0.5, 0.5 },  { 0.5, -0.5, -0.5 }, { 0.5, 0.5, -0.5 }, { 0.5, 0.5, 0.5 }, { 1, 0, 0 } },
         -- left (x-)
-        {{-0.5, -0.5, -0.5}, {-0.5, -0.5,  0.5}, {-0.5,  0.5,  0.5}, {-0.5,  0.5, -0.5}, {-1, 0, 0}},
+        { { -0.5, -0.5, -0.5 }, { -0.5, -0.5, 0.5 }, { -0.5, 0.5, 0.5 }, { -0.5, 0.5, -0.5 }, { -1, 0, 0 } },
     }
 
     for _, face in ipairs(faces) do
@@ -216,19 +216,19 @@ end
 -- Cube wireframe edges (8 vertices, 12 edges = 24 line indices)
 local cube_vertices = {
     glm.vec3(-0.5, -0.5, -0.5),
-    glm.vec3( 0.5, -0.5, -0.5),
-    glm.vec3( 0.5,  0.5, -0.5),
-    glm.vec3(-0.5,  0.5, -0.5),
-    glm.vec3(-0.5, -0.5,  0.5),
-    glm.vec3( 0.5, -0.5,  0.5),
-    glm.vec3( 0.5,  0.5,  0.5),
-    glm.vec3(-0.5,  0.5,  0.5),
+    glm.vec3(0.5, -0.5, -0.5),
+    glm.vec3(0.5, 0.5, -0.5),
+    glm.vec3(-0.5, 0.5, -0.5),
+    glm.vec3(-0.5, -0.5, 0.5),
+    glm.vec3(0.5, -0.5, 0.5),
+    glm.vec3(0.5, 0.5, 0.5),
+    glm.vec3(-0.5, 0.5, 0.5),
 }
 
 local cube_edges = {
-    {1, 2}, {2, 3}, {3, 4}, {4, 1},  -- back face
-    {5, 6}, {6, 7}, {7, 8}, {8, 5},  -- front face
-    {1, 5}, {2, 6}, {3, 7}, {4, 8},  -- connecting edges
+    { 1, 2 }, { 2, 3 }, { 3, 4 }, { 4, 1 }, -- back face
+    { 5, 6 }, { 6, 7 }, { 7, 8 }, { 8, 5 }, -- front face
+    { 1, 5 }, { 2, 6 }, { 3, 7 }, { 4, 8 }, -- connecting edges
 }
 
 -- Initialize renderer
@@ -250,8 +250,8 @@ function M.init()
             stage = gfx.ShaderStage.VERTEX,
             size = 160,
             glsl_uniforms = {
-                { type = gfx.UniformType.MAT4, glsl_name = "mvp" },
-                { type = gfx.UniformType.MAT4, glsl_name = "model" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                { type = gfx.UniformType.MAT4,   glsl_name = "model" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "color" },
                 { type = gfx.UniformType.FLOAT4, glsl_name = "gakugaku_params" },
             }
@@ -271,8 +271,8 @@ function M.init()
         shader = shaded_shader,
         layout = {
             attrs = {
-                { format = gfx.VertexFormat.FLOAT3 },  -- pos
-                { format = gfx.VertexFormat.FLOAT3 },  -- normal
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
             }
         },
         index_type = gfx.IndexType.UINT16,
@@ -521,7 +521,7 @@ end
 
 -- Get 2D gakugaku offset (for font/UI) - like original RandomSwing
 function M.get_gakugaku_offset_2d()
-    return (math.random() - 0.5) * 2.0  -- Range -1 to 1
+    return (math.random() - 0.5) * 2.0 -- Range -1 to 1
 end
 
 return M

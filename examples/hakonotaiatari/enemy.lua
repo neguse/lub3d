@@ -117,20 +117,17 @@ function NormalEnemy:update(dt, player_pos, audio)
             self.stat = const.E_ST_NORMAL
             self.coll_enable = true
         end
-
     elseif self.stat == const.E_ST_MUTEKI then
         if self.tick > const.E_MUTEKI_F then
             self.velo = 0
             self.stat = const.E_ST_NORMAL
             self.coll_enable = true
         end
-
     elseif self.stat == const.E_ST_NORMAL then
         -- Turn towards player
         self.angle = self.angle + sub_rad(dva, self.angle) * 0.02
         -- Accelerate towards max velocity
         self.velo = self.velo + (self.velo_max - self.velo) * 0.03
-
     elseif self.stat == const.E_ST_FUTTOBI then
         self.velo = const.E_FUTTOBI_V
         -- Emit smog particles (original: amount=3, velo=50, tick=50, acc=(40,20,40))
@@ -154,7 +151,6 @@ function NormalEnemy:update(dt, player_pos, audio)
                 if audio then audio.play(const.WAVE_FIRE_INDEX) end
             end
         end
-
     elseif self.stat == const.E_ST_FADEOUT then
         self.length = self.length + (-self.length * 0.03)
         -- Emit fire particles (original: amount=2+t/20, velo=100, tick=50, acc=(0,-100,0)+(150,0,150))
@@ -224,7 +220,6 @@ function DashEnemy:update(dt, player_pos, audio)
             self.stat = const.E_ST_NORMAL
             self.coll_enable = true
         end
-
     elseif self.stat == const.E_ST_MUTEKI then
         self.length = self.length + (self.init_len - self.length) * 0.05
 
@@ -233,7 +228,6 @@ function DashEnemy:update(dt, player_pos, audio)
             self.stat = const.E_ST_NORMAL
             self.coll_enable = true
         end
-
     elseif self.stat == const.E_ST_NORMAL then
         self.length = self.length + (self.init_len - self.length) * 0.05
 
@@ -252,7 +246,6 @@ function DashEnemy:update(dt, player_pos, audio)
         else
             self.velo = self.velo + (const.E_NORMAL_V - self.velo) * 0.03
         end
-
     elseif self.stat == const.E_ST_DASH then
         self.length = self.length + (self.dash_len - self.length) * 0.1
 
@@ -268,7 +261,6 @@ function DashEnemy:update(dt, player_pos, audio)
         particle.emit_cone(1, pos3d, const.PI + self.angle, const.PI,
             const.PI * 0.25, const.PI, 300, 70, 50, 10,
             glm.vec3(0, -100, 0), glm.vec3(5, 0, 5), const.E_COL_DASH_PARTICLE)
-
     elseif self.stat == const.E_ST_FUTTOBI then
         self.velo = const.E_FUTTOBI_V
         -- Emit smog particles (original: amount=3, velo=50, tick=50, acc=(40,20,40))
@@ -292,7 +284,6 @@ function DashEnemy:update(dt, player_pos, audio)
                 if audio then audio.play(const.WAVE_FIRE_INDEX) end
             end
         end
-
     elseif self.stat == const.E_ST_FADEOUT then
         self.length = self.length + (-self.length * 0.05)
         -- Emit fire particles (original: amount=2+t/20, velo=100, tick=50, acc=(0,-100,0)+(150,0,150))
@@ -440,43 +431,59 @@ function EnemyGenerator:create_level(level)
     if phase == 1 then
         -- Pop level: enemies spawn at random positions
         if level <= 4 then
-            table.insert(self.commands, { type = "spawn_normal_near", distance = 200, count = 1, life = 1, velo_max = const.E_NORMAL_V, length = const.E_LEN })
+            table.insert(self.commands,
+                { type = "spawn_normal_near", distance = 200, count = 1, life = 1, velo_max = const.E_NORMAL_V, length =
+                const.E_LEN })
         else
-            table.insert(self.commands, { type = "spawn_normal_near", distance = 200, count = 1, life = 1, velo_max = const.E_NORMAL_V, length = const.E_LEN })
+            table.insert(self.commands,
+                { type = "spawn_normal_near", distance = 200, count = 1, life = 1, velo_max = const.E_NORMAL_V, length =
+                const.E_LEN })
             for i = 1, math.min(level // 4, 5) do
-                table.insert(self.commands, { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf), rand_range_mid(0, const.FIELD_Lf)), count = 5, life = 1, velo_max = const.E_NORMAL_V, length = const.E_LEN })
+                table.insert(self.commands,
+                    { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                        rand_range_mid(0, const.FIELD_Lf)), count = 5, life = 1, velo_max = const.E_NORMAL_V, length =
+                    const.E_LEN })
                 table.insert(self.commands, { type = "sleep", tick = 20 })
             end
-            table.insert(self.commands, { type = "spawn_normal_near", distance = 200, count = 3, life = 1, velo_max = const.E_NORMAL_V, length = const.E_LEN })
+            table.insert(self.commands,
+                { type = "spawn_normal_near", distance = 200, count = 3, life = 1, velo_max = const.E_NORMAL_V, length =
+                const.E_LEN })
         end
-
     elseif phase == 2 then
         -- Time level: enemies spawn over time
         local count = math.min(3 + level // 4, 8)
         for i = 1, count do
-            table.insert(self.commands, { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf), rand_range_mid(0, const.FIELD_Lf)), count = math.min(1 + level // 8, 3), life = 1, velo_max = const.E_NORMAL_V, length = const.E_LEN })
+            table.insert(self.commands,
+                { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                    rand_range_mid(0, const.FIELD_Lf)), count = math.min(1 + level // 8, 3), life = 1, velo_max = const
+                .E_NORMAL_V, length = const.E_LEN })
             table.insert(self.commands, { type = "sleep", tick = 100 })
         end
-
     elseif phase == 3 then
         -- Special level: big enemies or swarm
         if level <= 4 then
             -- Big enemy
-            table.insert(self.commands, { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf), rand_range_mid(0, const.FIELD_Lf)), count = 1, life = 2, velo_max = const.E_NORMAL_V * 0.8, length = const.E_LEN * 3 })
+            table.insert(self.commands,
+                { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                    rand_range_mid(0, const.FIELD_Lf)), count = 1, life = 2, velo_max = const.E_NORMAL_V * 0.8, length =
+                const.E_LEN * 3 })
         else
             -- Swarm
             for i = 1, 15 do
-                table.insert(self.commands, { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf * 2), rand_range_mid(0, const.FIELD_Lf * 2)), count = 3, life = 1, velo_max = const.E_NORMAL_V, length = const.E_LEN })
+                table.insert(self.commands,
+                    { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf * 2),
+                        rand_range_mid(0, const.FIELD_Lf * 2)), count = 3, life = 1, velo_max = const.E_NORMAL_V, length =
+                    const.E_LEN })
                 table.insert(self.commands, { type = "sleep", tick = 2 })
             end
         end
-
     elseif phase == 0 then
         -- Boss level: dash enemies
         local boss_count = math.min(1 + level // 8, 3)
         local boss_life = math.min(2 + level // 8, 4)
         for i = 1, boss_count do
-            table.insert(self.commands, { type = "spawn_dash", pos = glm.vec2(0, 0), count = 1, life = boss_life, length = const.E_LEN * 1.5 })
+            table.insert(self.commands,
+                { type = "spawn_dash", pos = glm.vec2(0, 0), count = 1, life = boss_life, length = const.E_LEN * 1.5 })
             if i < boss_count then
                 table.insert(self.commands, { type = "sleep", tick = 90 })
             end

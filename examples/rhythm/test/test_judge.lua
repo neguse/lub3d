@@ -108,7 +108,7 @@ local function test_skip_judged_notes()
         make_note(1, 1000000, "normal"),
         make_note(1, 1100000, "normal"), -- 100ms later, within BAD window
     }
-    notes[1].judged = true -- first note already judged
+    notes[1].judged = true               -- first note already judged
 
     local engine = JudgeEngine.new()
     engine:load_notes(notes)
@@ -195,10 +195,10 @@ end
 local function test_stats()
     -- Notes spaced far apart so each press only has one candidate within window
     local notes = {
-        make_note(1, 1000000, "normal"),  -- 1s
-        make_note(1, 2000000, "normal"),  -- 2s
-        make_note(1, 3000000, "normal"),  -- 3s
-        make_note(1, 4000000, "normal"),  -- 4s
+        make_note(1, 1000000, "normal"), -- 1s
+        make_note(1, 2000000, "normal"), -- 2s
+        make_note(1, 3000000, "normal"), -- 3s
+        make_note(1, 4000000, "normal"), -- 4s
     }
 
     local engine = JudgeEngine.new()

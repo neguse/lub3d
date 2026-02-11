@@ -177,8 +177,8 @@ render_pass.setup(M, {
             colors = {
                 { pixel_format = gfx.PixelFormat.RGBA32F }, -- position
                 { pixel_format = gfx.PixelFormat.RGBA16F }, -- normal
-                { pixel_format = gfx.PixelFormat.RGBA8 }, -- albedo
-                { pixel_format = gfx.PixelFormat.RGBA8 }, -- specular
+                { pixel_format = gfx.PixelFormat.RGBA8 },   -- albedo
+                { pixel_format = gfx.PixelFormat.RGBA8 },   -- specular
             },
             index_type = gfx.IndexType.UINT32,
             label = "geom_pipeline",

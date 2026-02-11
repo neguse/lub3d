@@ -56,10 +56,10 @@ function M:frame()
     -- Render
     gfx.BeginPass(gfx.Pass({
         action = gfx.PassAction({
-            colors = {{
+            colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = color[1], g = color[2], b = color[3], a = 1.0 }
-            }}
+            } }
         }),
         swapchain = glue.Swapchain()
     }))

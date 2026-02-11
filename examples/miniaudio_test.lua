@@ -31,13 +31,13 @@ local function generate_wav(path, freq, duration, sample_rate)
     f:write("WAVE")
     -- fmt chunk
     f:write("fmt ")
-    write_u32(16)       -- chunk size
-    write_u16(1)        -- PCM
-    write_u16(1)        -- mono
+    write_u32(16)              -- chunk size
+    write_u16(1)               -- PCM
+    write_u16(1)               -- mono
     write_u32(sample_rate)
     write_u32(sample_rate * 2) -- byte rate
-    write_u16(2)        -- block align
-    write_u16(16)       -- bits per sample
+    write_u16(2)               -- block align
+    write_u16(16)              -- bits per sample
     -- data chunk
     f:write("data")
     write_u32(data_size)

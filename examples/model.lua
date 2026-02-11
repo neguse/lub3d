@@ -263,8 +263,8 @@ function M:init()
                 stage = gfx.ShaderStage.VERTEX,
                 size = 208,
                 glsl_uniforms = {
-                    { type = gfx.UniformType.MAT4, glsl_name = "mvp" },
-                    { type = gfx.UniformType.MAT4, glsl_name = "model" },
+                    { type = gfx.UniformType.MAT4,   glsl_name = "mvp" },
+                    { type = gfx.UniformType.MAT4,   glsl_name = "model" },
                     { type = gfx.UniformType.FLOAT4, glsl_name = "light_pos" },
                     { type = gfx.UniformType.FLOAT4, glsl_name = "light_color" },
                     { type = gfx.UniformType.FLOAT4, glsl_name = "ambient_color" },

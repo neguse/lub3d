@@ -34,7 +34,7 @@ local GAUGE_CONFIG = {
         floor = 0,
         clear_threshold = 0, -- any value > 0 is clear
         increase = {
-            pgreat = 0.1,  -- minimal increase
+            pgreat = 0.1,    -- minimal increase
             great = 0.08,
             good = 0.04,
         },

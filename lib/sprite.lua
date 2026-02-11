@@ -92,10 +92,10 @@ end
 
 -- Shared resources (lazily created, shared across batches)
 -- Keep gpu-wrapped refs to prevent GC
-local shared_shader_ref = nil -- gpu.Shader (prevents GC)
+local shared_shader_ref = nil   -- gpu.Shader (prevents GC)
 local shared_pipeline_ref = nil -- gpu.Pipeline (prevents GC)
-local shared_shader = nil -- raw handle for pipeline creation
-local shared_pipeline = nil -- raw handle for draw calls
+local shared_shader = nil       -- raw handle for pipeline creation
+local shared_pipeline = nil     -- raw handle for draw calls
 
 local function ensure_shared_resources()
     if shared_pipeline then

@@ -13,8 +13,8 @@ local M = {}
 -- Profiling support: log slow operations immediately
 M.profile = {
     enabled = true,
-    threshold_ms = 10,  -- Log if exceeds this
-    pending = {},       -- { key = start_time }
+    threshold_ms = 10, -- Log if exceeds this
+    pending = {},      -- { key = start_time }
 }
 
 --- Start a profiling measurement
@@ -56,7 +56,7 @@ end
 
 -- Helper to pack vertex data as floats (handles large arrays)
 function M.pack_floats(floats)
-    local CHUNK_SIZE = 200  -- Lua unpack limit is around 200-1000
+    local CHUNK_SIZE = 200 -- Lua unpack limit is around 200-1000
     local result = {}
     for i = 1, #floats, CHUNK_SIZE do
         local chunk_end = math.min(i + CHUNK_SIZE - 1, #floats)

@@ -29,13 +29,13 @@ local COMBO_CONTINUE = {
 -- DJ LEVEL thresholds (percentage of max EX score)
 -- Based on IIDX DJ LEVEL system (9/9, 8/9, 7/9, 6/9, 5/9, 4/9, 3/9, 2/9)
 local DJ_LEVEL_THRESHOLDS = {
-    { threshold = 8/9,  level = "AAA" },  -- 88.89%
-    { threshold = 7/9,  level = "AA" },   -- 77.78%
-    { threshold = 6/9,  level = "A" },    -- 66.67%
-    { threshold = 5/9,  level = "B" },    -- 55.56%
-    { threshold = 4/9,  level = "C" },    -- 44.44%
-    { threshold = 3/9,  level = "D" },    -- 33.33%
-    { threshold = 2/9,  level = "E" },    -- 22.22%
+    { threshold = 8 / 9, level = "AAA" }, -- 88.89%
+    { threshold = 7 / 9, level = "AA" }, -- 77.78%
+    { threshold = 6 / 9, level = "A" },  -- 66.67%
+    { threshold = 5 / 9, level = "B" },  -- 55.56%
+    { threshold = 4 / 9, level = "C" },  -- 44.44%
+    { threshold = 3 / 9, level = "D" },  -- 33.33%
+    { threshold = 2 / 9, level = "E" },  -- 22.22%
 }
 
 --- Create a new ScoringEngine

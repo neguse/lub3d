@@ -46,11 +46,11 @@ function M.init()
     -- Create full-screen quad
     local quad_vertices = {
         -1, -1, 0, 0,
-         1, -1, 1, 0,
-         1,  1, 1, 1,
+        1, -1, 1, 0,
+        1, 1, 1, 1,
         -1, -1, 0, 0,
-         1,  1, 1, 1,
-        -1,  1, 0, 1,
+        1, 1, 1, 1,
+        -1, 1, 0, 1,
     }
     local quad_data = string.pack(string.rep("f", #quad_vertices), table.unpack(quad_vertices))
     M.quad_vbuf = gpu.buffer(gfx.BufferDesc({ data = gfx.Range(quad_data) }))

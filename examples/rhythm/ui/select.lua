@@ -77,15 +77,15 @@ function SelectScreen:draw()
     local window_flags = WindowFlags_NoResize + WindowFlags_NoMove + WindowFlags_NoCollapse
 
     -- Style: dark background with visible selection
-    imgui.PushStyleColor_X_Vec4(Col_Header, {0.2, 0.4, 0.8, 1.0})         -- Selected
-    imgui.PushStyleColor_X_Vec4(Col_HeaderHovered, {0.3, 0.3, 0.5, 1.0})  -- Hovered
-    imgui.PushStyleColor_X_Vec4(Col_HeaderActive, {0.2, 0.4, 0.8, 1.0})   -- Active
-    imgui.PushStyleColor_X_Vec4(Col_FrameBg, {0.0, 0.0, 0.0, 1.0})        -- Black background
-    imgui.PushStyleVar_X_Float(13, 1.0)  -- FrameBorderSize = 1
+    imgui.PushStyleColor_X_Vec4(Col_Header, { 0.2, 0.4, 0.8, 1.0 })      -- Selected
+    imgui.PushStyleColor_X_Vec4(Col_HeaderHovered, { 0.3, 0.3, 0.5, 1.0 }) -- Hovered
+    imgui.PushStyleColor_X_Vec4(Col_HeaderActive, { 0.2, 0.4, 0.8, 1.0 }) -- Active
+    imgui.PushStyleColor_X_Vec4(Col_FrameBg, { 0.0, 0.0, 0.0, 1.0 })     -- Black background
+    imgui.PushStyleVar_X_Float(13, 1.0)                                  -- FrameBorderSize = 1
 
     -- Full screen window
-    imgui.SetNextWindowPos({0, 0}, Cond_Always, {0, 0})
-    imgui.SetNextWindowSize({const.SCREEN_WIDTH, const.SCREEN_HEIGHT}, Cond_Always)
+    imgui.SetNextWindowPos({ 0, 0 }, Cond_Always, { 0, 0 })
+    imgui.SetNextWindowSize({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, Cond_Always)
 
     if imgui.Begin("Song Select", nil, window_flags) then
         -- Title
@@ -100,7 +100,7 @@ function SelectScreen:draw()
         local list_width = const.SCREEN_WIDTH * 0.55
         local list_height = const.SCREEN_HEIGHT - 180
 
-        imgui.BeginChild_Str_Vec2_X_X("SongList", {list_width, list_height}, ChildFlags_Borders, 0)
+        imgui.BeginChild_Str_Vec2_X_X("SongList", { list_width, list_height }, ChildFlags_Borders, 0)
 
         for i, song in ipairs(self.songs) do
             -- Use index in ID to avoid conflicts with duplicate titles
@@ -113,7 +113,7 @@ function SelectScreen:draw()
                 self.scroll_to_selected = false
             end
 
-            local clicked = imgui.Selectable_Str_Bool_X_Vec2(display_text, is_selected, 0, {0, 0})
+            local clicked = imgui.Selectable_Str_Bool_X_Vec2(display_text, is_selected, 0, { 0, 0 })
             if clicked then
                 self.selected_index = i
             end
@@ -131,7 +131,7 @@ function SelectScreen:draw()
         imgui.SameLine(0, 10)
 
         local detail_width = const.SCREEN_WIDTH - list_width - 30
-        imgui.BeginChild_Str_Vec2_X_X("SongDetail", {detail_width, list_height}, ChildFlags_Borders, 0)
+        imgui.BeginChild_Str_Vec2_X_X("SongDetail", { detail_width, list_height }, ChildFlags_Borders, 0)
 
         local song = self.songs[self.selected_index]
         if song then
@@ -155,7 +155,7 @@ function SelectScreen:draw()
             imgui.TextUnformatted(string.format("Level: %d", song.playlevel))
 
             if song.difficulty > 0 then
-                local diff_names = {"BEGINNER", "NORMAL", "HYPER", "ANOTHER", "INSANE"}
+                local diff_names = { "BEGINNER", "NORMAL", "HYPER", "ANOTHER", "INSANE" }
                 local diff_name = diff_names[song.difficulty] or string.format("DIFF %d", song.difficulty)
                 imgui.TextUnformatted(string.format("Difficulty: %s", diff_name))
             end
