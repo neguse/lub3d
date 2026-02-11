@@ -15,7 +15,7 @@ TypeRegistry       ModuleSpec    <── LuaCatsGen (LuaCATS 文字列)
 
 ## 設計原則
 
-1. **ModuleSpec / BindingType がアーキテクチャの中心。** 入力層 (ClangAst) と出力層 (CBinding, LuaCats) はこの中心にのみ依存する。互いに直接依存してはならない。
+1. **ModuleSpec / BindingType がアーキテクチャの中心。** 入力層 (ClangAst) と出力層 (CBinding, LuaCats) はこの中心にのみ依存する。互いに直接依存してはならない (クリーンアーキテクチャの依存性逆転)。
 
 2. **BindingType が唯一の型表現。** ClangAst.Types は入力層の内部型、LuaCats.Type は出力層の内部型。Module 境界を越えるのは BindingType だけ。
 
