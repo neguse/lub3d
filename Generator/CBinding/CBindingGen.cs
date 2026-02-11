@@ -76,9 +76,9 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の new 関数
     /// </summary>
-    private static string StructNew(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
+    private static string StructNew(string structName, string metatable, IEnumerable<FieldBinding> fields, Dictionary<string, StructBinding> structBindings)
     {
-        var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, ownStructs)));
+        var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, structBindings)));
         return $$"""
             static int l_{{structName}}_new(lua_State *L) {
                 {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 1);
@@ -204,11 +204,11 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __newindex メタメソッド生成
     /// </summary>
-    private static string StructNewindex(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
+    private static string StructNewindex(string structName, string metatable, IEnumerable<FieldBinding> fields, Dictionary<string, StructBinding> structBindings)
     {
         var branches = fields
             .Where(f => f.Type is not BindingType.Callback)
-            .Select(f => $"    if (strcmp(key, \"{f.LuaName}\") == 0) {{ {GenBindingSet(f, ownStructs)}; return 0; }}");
+            .Select(f => $"    if (strcmp(key, \"{f.LuaName}\") == 0) {{ {GenBindingSet(f, structBindings)}; return 0; }}");
         return $$"""
             static int l_{{structName}}__newindex(lua_State *L) {
                 {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
@@ -329,17 +329,17 @@ public static class CBindingGen
             sb += spec.ExtraCCode;
 
         // Struct new / metamethods
-        var ownStructNames = spec.Structs.Select(s => s.CName).ToHashSet();
+        var structBindings = spec.Structs.ToDictionary(s => s.CName);
         foreach (var s in spec.Structs)
         {
-            if (s.CName == "sg_range")
-                sb += SgRangeNew(s.CName, s.Metatable, s.Fields, ownStructNames);
+            if (s.AllowStringInit)
+                sb += SgRangeNew(s.CName, s.Metatable, s.Fields, structBindings);
             else
-                sb += StructNew(s.CName, s.Metatable, s.Fields, ownStructNames);
+                sb += StructNew(s.CName, s.Metatable, s.Fields, structBindings);
             if (s.HasMetamethods)
             {
                 sb += StructIndex(s.CName, s.Metatable, s.Fields);
-                sb += StructNewindex(s.CName, s.Metatable, s.Fields, ownStructNames);
+                sb += StructNewindex(s.CName, s.Metatable, s.Fields, structBindings);
                 sb += StructPairs(s.CName, s.Metatable, s.Fields);
             }
             if (s.ExtraMetamethods != null)
@@ -743,11 +743,11 @@ public static class CBindingGen
     };
 
     /// <summary>
-    /// sg_range 専用コンストラクタ (string / table 両対応)
+    /// AllowStringInit 構造体コンストラクタ (string / table 両対応)
     /// </summary>
-    private static string SgRangeNew(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
+    private static string SgRangeNew(string structName, string metatable, IEnumerable<FieldBinding> fields, Dictionary<string, StructBinding> structBindings)
     {
-        var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, ownStructs)));
+        var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, structBindings)));
         return $$"""
             static int l_{{structName}}_new(lua_State *L) {
                 {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 1);
@@ -914,6 +914,8 @@ public static class CBindingGen
         BindingType.UInt32 => $"    uint32_t {p.Name} = (uint32_t)luaL_checkinteger(L, {idx});",
         BindingType.UInt64 => $"    uint64_t {p.Name} = (uint64_t)luaL_checkinteger(L, {idx});",
         BindingType.Size => $"    size_t {p.Name} = (size_t)luaL_checkinteger(L, {idx});",
+        BindingType.UIntPtr => $"    uintptr_t {p.Name} = (uintptr_t)luaL_checkinteger(L, {idx});",
+        BindingType.IntPtr => $"    intptr_t {p.Name} = (intptr_t)luaL_checkinteger(L, {idx});",
         BindingType.Float => $"    float {p.Name} = (float)luaL_checknumber(L, {idx});",
         BindingType.Double => $"    double {p.Name} = (double)luaL_checknumber(L, {idx});",
         BindingType.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});",
@@ -933,7 +935,7 @@ public static class CBindingGen
             $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"\");",
         BindingType.Struct(var cName, var mt, _) =>
             $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
-        _ => $"    /* unsupported param type for {p.Name} */"
+        _ => throw new InvalidOperationException($"Unsupported parameter type: {p.Type} for '{p.Name}'")
     };
 
     private static string GenBindingReturnPush(BindingType ret, string callExpr) => ret switch
@@ -1036,13 +1038,13 @@ public static class CBindingGen
     /// <summary>
     /// フィールドの __newindex setter 式 (BindingType ベース)
     /// </summary>
-    private static string GenBindingSet(FieldBinding f, HashSet<string>? ownStructs = null)
+    private static string GenBindingSet(FieldBinding f, Dictionary<string, StructBinding>? structBindings = null)
     {
         return f.Type switch
         {
             BindingType.Custom(_, _, _, _, _, var setCode) when setCode != null =>
                 setCode.Replace("{fieldName}", f.CName),
-            BindingType.Struct(var cName, var mt, _) when ownStructs != null && ownStructs.Contains(cName) =>
+            BindingType.Struct(var cName, var mt, _) when structBindings != null && structBindings.ContainsKey(cName) =>
                 $"if (lua_istable(L, 3)) {{\n" +
                 $"            lua_pushcfunction(L, l_{cName}_new); lua_pushvalue(L, 3); lua_call(L, 1, 1);\n" +
                 $"            self->{f.CName} = *({cName}*)luaL_checkudata(L, -1, \"{mt}\"); lua_pop(L, 1);\n" +
@@ -1069,7 +1071,7 @@ public static class CBindingGen
     /// <summary>
     /// フィールド初期化コード生成 (BindingType ベース)
     /// </summary>
-    private static string GenBindingFieldInit(FieldBinding f, HashSet<string> ownStructs)
+    private static string GenBindingFieldInit(FieldBinding f, Dictionary<string, StructBinding> structBindings)
     {
         var luaName = f.LuaName;
         var cName = f.CName;
@@ -1078,18 +1080,9 @@ public static class CBindingGen
         return f.Type switch
         {
             // Own struct: auto-construct from table
-            BindingType.Struct(var sName, var mt, _) when ownStructs.Contains(sName) =>
-                $"{getField}\n" +
-                $"        if ({(sName == "sg_range" ? "lua_isstring(L, -1) || lua_istable(L, -1)" : "lua_istable(L, -1)")}) {{\n" +
-                $"            lua_pushcfunction(L, l_{sName}_new);\n" +
-                $"            lua_pushvalue(L, -2);\n" +
-                $"            lua_call(L, 1, 1);\n" +
-                $"            ud->{cName} = *({sName}*)luaL_checkudata(L, -1, \"{mt}\");\n" +
-                $"            lua_pop(L, 1);\n" +
-                $"        }} else if (lua_isuserdata(L, -1)) {{\n" +
-                $"            ud->{cName} = *({sName}*)luaL_checkudata(L, -1, \"{mt}\");\n" +
-                $"        }}\n" +
-                $"        lua_pop(L, 1);",
+            BindingType.Struct(var sName, var mt, _) when structBindings.ContainsKey(sName) =>
+                GenOwnStructFieldInit(getField, cName, sName, mt,
+                    structBindings[sName].AllowStringInit),
 
             // Non-own struct: only accept userdata
             BindingType.Struct(var sName, var mt, _) =>
@@ -1103,7 +1096,9 @@ public static class CBindingGen
             // FixedArray of struct
             BindingType.FixedArray(BindingType.Struct(var arrCName, var arrMt, _), var len) =>
                 $"{getField}\n" +
-                GenBindingArrayFieldInit(cName, arrCName, arrMt, len, ownStructs.Contains(arrCName)),
+                GenBindingArrayFieldInit(cName, arrCName, arrMt, len,
+                    structBindings.ContainsKey(arrCName),
+                    structBindings.TryGetValue(arrCName, out var asb) && asb.AllowStringInit),
 
             // FixedArray of non-struct: just pop
             BindingType.FixedArray(_, _) =>
@@ -1155,9 +1150,25 @@ public static class CBindingGen
         };
     }
 
-    private static string GenBindingArrayFieldInit(string fieldName, string cName, string mt, int size, bool autoConstruct)
+    private static string GenOwnStructFieldInit(string getField, string cName, string sName, string mt, bool allowStringInit)
     {
-        var elementCondition = cName == "sg_range" ? "lua_isstring(L, -1) || lua_istable(L, -1)" : "lua_istable(L, -1)";
+        var condition = allowStringInit ? "lua_isstring(L, -1) || lua_istable(L, -1)" : "lua_istable(L, -1)";
+        return $"{getField}\n" +
+            $"        if ({condition}) {{\n" +
+            $"            lua_pushcfunction(L, l_{sName}_new);\n" +
+            $"            lua_pushvalue(L, -2);\n" +
+            $"            lua_call(L, 1, 1);\n" +
+            $"            ud->{cName} = *({sName}*)luaL_checkudata(L, -1, \"{mt}\");\n" +
+            $"            lua_pop(L, 1);\n" +
+            $"        }} else if (lua_isuserdata(L, -1)) {{\n" +
+            $"            ud->{cName} = *({sName}*)luaL_checkudata(L, -1, \"{mt}\");\n" +
+            $"        }}\n" +
+            $"        lua_pop(L, 1);";
+    }
+
+    private static string GenBindingArrayFieldInit(string fieldName, string cName, string mt, int size, bool autoConstruct, bool allowStringInit)
+    {
+        var elementCondition = allowStringInit ? "lua_isstring(L, -1) || lua_istable(L, -1)" : "lua_istable(L, -1)";
         return autoConstruct
         ? $$"""
                 if (lua_istable(L, -1)) {

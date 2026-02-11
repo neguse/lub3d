@@ -425,6 +425,32 @@ public class CBindingGenSpecTests
     }
 
     [Fact]
+    public void Generate_UIntPtrParam_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_addr", "SetAddr",
+                [new ParamBinding("addr", new BindingType.UIntPtr())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(uintptr_t)luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_IntPtrParam_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_offset", "SetOffset",
+                [new ParamBinding("offset", new BindingType.IntPtr())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(intptr_t)luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
     public void Generate_SizeReturn_PushesInteger()
     {
         var spec = new ModuleSpec(
@@ -633,16 +659,16 @@ public class CBindingGenSpecTests
         Assert.Contains("(void*)stest_get_context()", code);
     }
 
-    // ===== sg_range string 対応 =====
+    // ===== AllowStringInit 対応 =====
 
     [Fact]
-    public void Generate_SgRange_ConstructorHandlesString()
+    public void Generate_AllowStringInit_ConstructorHandlesString()
     {
         var spec = new ModuleSpec(
             "sokol.gfx", "sg_", ["sokol_gfx.h"], null,
             [new StructBinding("sg_range", "Range", "sokol.gfx.Range", false,
                 [new FieldBinding("size", "size", new BindingType.Size())],
-                null)],
+                null, AllowStringInit: true)],
             [], [], []);
         var code = CBindingGen.Generate(spec);
         Assert.Contains("l_sg_range_new", code);
@@ -652,13 +678,13 @@ public class CBindingGenSpecTests
     }
 
     [Fact]
-    public void Generate_SgRangeField_ChecksIsString()
+    public void Generate_AllowStringInitField_ChecksIsString()
     {
         var spec = new ModuleSpec(
             "sokol.gfx", "sg_", ["sokol_gfx.h"], null,
             [new StructBinding("sg_range", "Range", "sokol.gfx.Range", false,
                 [new FieldBinding("size", "size", new BindingType.Size())],
-                null),
+                null, AllowStringInit: true),
              new StructBinding("sg_desc", "Desc", "sokol.gfx.Desc", false,
                 [new FieldBinding("bytecode", "bytecode",
                     new BindingType.Struct("sg_range", "sokol.gfx.Range", "sokol.gfx.Range"))],
@@ -669,13 +695,13 @@ public class CBindingGenSpecTests
     }
 
     [Fact]
-    public void Generate_SgRangeArrayField_ChecksIsString()
+    public void Generate_AllowStringInitArrayField_ChecksIsString()
     {
         var spec = new ModuleSpec(
             "sokol.gfx", "sg_", ["sokol_gfx.h"], null,
             [new StructBinding("sg_range", "Range", "sokol.gfx.Range", false,
                 [new FieldBinding("size", "size", new BindingType.Size())],
-                null),
+                null, AllowStringInit: true),
              new StructBinding("sg_desc", "Desc", "sokol.gfx.Desc", false,
                 [new FieldBinding("mip_levels", "mip_levels",
                     new BindingType.FixedArray(
@@ -684,6 +710,21 @@ public class CBindingGenSpecTests
             [], [], []);
         var code = CBindingGen.Generate(spec);
         Assert.Contains("lua_isstring(L, -1) || lua_istable(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_StructWithoutAllowStringInit_NoStringCondition()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null,
+            [new StructBinding("stest_range", "Range", "sokol.test.Range", false,
+                [new FieldBinding("size", "size", new BindingType.Size())],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("l_stest_range_new", code);
+        Assert.DoesNotContain("lua_isstring(L, 1)", code);
+        Assert.DoesNotContain("lua_tolstring", code);
     }
 
     // ===== Custom 型フィールド — PushCode / SetCode =====

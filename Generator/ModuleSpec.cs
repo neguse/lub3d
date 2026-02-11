@@ -35,7 +35,12 @@ public record StructBinding(
     List<FieldBinding> Fields,
     string? SourceLink,
     bool IsHandleType = false,
-    List<MetamethodSpec>? ExtraMetamethods = null
+    List<MetamethodSpec>? ExtraMetamethods = null,
+    /// <summary>
+    /// true にすると Lua 文字列を受け取り ptr/size に展開するコンストラクタを生成する。
+    /// ptr (const void*) + size (size_t) を持つ構造体にのみ適用可能 (例: sg_range)。
+    /// </summary>
+    bool AllowStringInit = false
 );
 
 public record FieldBinding(

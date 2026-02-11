@@ -126,6 +126,8 @@ Conditional:
 
 Pipeline: Clang AST → TypeRegistry → ModuleSpec → C/C++ bindings + LuaCATS annotations
 
+設計原則は [Generator/README.md](Generator/README.md) を参照。
+
 - Sokol modules: inherit `SokolModule`, override `ModuleName`/`Prefix` + hooks
 - Dear ImGui: `IModule` direct, C++ namespace-based, clang++ with `-std=c++17`
 - Miniaudio: `IModule` direct, opaque pointer support

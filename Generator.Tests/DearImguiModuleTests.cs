@@ -345,4 +345,24 @@ public class DearImguiModuleTests
         // Text has varargs "void (const char *, ...)" → should be skipped
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "Text");
     }
+
+    // ===== Smoke tests: GenerateC / GenerateLua produce non-trivial output =====
+
+    [Fact]
+    public void GenerateC_NonEmpty()
+    {
+        var mod = new ImguiModule();
+        var code = mod.GenerateC(MakeRegistry(), EmptyPrefixToModule);
+        Assert.NotEmpty(code);
+        Assert.True(code.Length > 100, $"Expected substantial C++ output, got {code.Length} chars");
+    }
+
+    [Fact]
+    public void GenerateLua_NonEmpty()
+    {
+        var mod = new ImguiModule();
+        var code = mod.GenerateLua(MakeRegistry(), EmptyPrefixToModule);
+        Assert.NotEmpty(code);
+        Assert.True(code.Length > 100, $"Expected substantial LuaCATS output, got {code.Length} chars");
+    }
 }
