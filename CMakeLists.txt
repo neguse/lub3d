@@ -32,7 +32,7 @@ option(LUB3D_BACKEND_D3D11 "Use Direct3D 11 backend" OFF)
 option(LUB3D_BACKEND_METAL "Use Metal backend" OFF)
 option(LUB3D_BACKEND_WGPU "Use WebGPU backend" OFF)
 option(LUB3D_BACKEND_DUMMY "Use Dummy backend for headless testing" OFF)
-option(LUB3D_BUILD_BOX2D "Build Box2D physics integration" OFF)
+option(LUB3D_BUILD_BOX2D "Build Box2D physics integration" ON)
 option(LUB3D_BUILD_TESTS "Build test runner" OFF)
 
 # Lua 5.5

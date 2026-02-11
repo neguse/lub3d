@@ -8,7 +8,7 @@ gen/
 
 # External assets (not licensed for redistribution)
 assets/
-!examples/hakonotaiatari/assets/
+!examples/*/assets/
 
 # .NET
 **/bin/
