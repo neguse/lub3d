@@ -432,31 +432,66 @@ function EnemyGenerator:create_level(level)
         -- Pop level: enemies spawn at random positions
         if level <= 4 then
             table.insert(self.commands,
-                { type = "spawn_normal_near", distance = 200, count = 1, life = 1, velo_max = const.E_NORMAL_V, length =
-                const.E_LEN })
+                {
+                    type = "spawn_normal_near",
+                    distance = 200,
+                    count = 1,
+                    life = 1,
+                    velo_max = const.E_NORMAL_V,
+                    length =
+                        const.E_LEN
+                })
         else
             table.insert(self.commands,
-                { type = "spawn_normal_near", distance = 200, count = 1, life = 1, velo_max = const.E_NORMAL_V, length =
-                const.E_LEN })
+                {
+                    type = "spawn_normal_near",
+                    distance = 200,
+                    count = 1,
+                    life = 1,
+                    velo_max = const.E_NORMAL_V,
+                    length =
+                        const.E_LEN
+                })
             for i = 1, math.min(level // 4, 5) do
                 table.insert(self.commands,
-                    { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
-                        rand_range_mid(0, const.FIELD_Lf)), count = 5, life = 1, velo_max = const.E_NORMAL_V, length =
-                    const.E_LEN })
+                    {
+                        type = "spawn_normal",
+                        pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                            rand_range_mid(0, const.FIELD_Lf)),
+                        count = 5,
+                        life = 1,
+                        velo_max = const.E_NORMAL_V,
+                        length =
+                            const.E_LEN
+                    })
                 table.insert(self.commands, { type = "sleep", tick = 20 })
             end
             table.insert(self.commands,
-                { type = "spawn_normal_near", distance = 200, count = 3, life = 1, velo_max = const.E_NORMAL_V, length =
-                const.E_LEN })
+                {
+                    type = "spawn_normal_near",
+                    distance = 200,
+                    count = 3,
+                    life = 1,
+                    velo_max = const.E_NORMAL_V,
+                    length =
+                        const.E_LEN
+                })
         end
     elseif phase == 2 then
         -- Time level: enemies spawn over time
         local count = math.min(3 + level // 4, 8)
         for i = 1, count do
             table.insert(self.commands,
-                { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
-                    rand_range_mid(0, const.FIELD_Lf)), count = math.min(1 + level // 8, 3), life = 1, velo_max = const
-                .E_NORMAL_V, length = const.E_LEN })
+                {
+                    type = "spawn_normal",
+                    pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                        rand_range_mid(0, const.FIELD_Lf)),
+                    count = math.min(1 + level // 8, 3),
+                    life = 1,
+                    velo_max = const
+                        .E_NORMAL_V,
+                    length = const.E_LEN
+                })
             table.insert(self.commands, { type = "sleep", tick = 100 })
         end
     elseif phase == 3 then
@@ -464,16 +499,30 @@ function EnemyGenerator:create_level(level)
         if level <= 4 then
             -- Big enemy
             table.insert(self.commands,
-                { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
-                    rand_range_mid(0, const.FIELD_Lf)), count = 1, life = 2, velo_max = const.E_NORMAL_V * 0.8, length =
-                const.E_LEN * 3 })
+                {
+                    type = "spawn_normal",
+                    pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                        rand_range_mid(0, const.FIELD_Lf)),
+                    count = 1,
+                    life = 2,
+                    velo_max = const.E_NORMAL_V * 0.8,
+                    length =
+                        const.E_LEN * 3
+                })
         else
             -- Swarm
             for i = 1, 15 do
                 table.insert(self.commands,
-                    { type = "spawn_normal", pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf * 2),
-                        rand_range_mid(0, const.FIELD_Lf * 2)), count = 3, life = 1, velo_max = const.E_NORMAL_V, length =
-                    const.E_LEN })
+                    {
+                        type = "spawn_normal",
+                        pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf * 2),
+                            rand_range_mid(0, const.FIELD_Lf * 2)),
+                        count = 3,
+                        life = 1,
+                        velo_max = const.E_NORMAL_V,
+                        length =
+                            const.E_LEN
+                    })
                 table.insert(self.commands, { type = "sleep", tick = 2 })
             end
         end

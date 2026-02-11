@@ -77,11 +77,11 @@ function SelectScreen:draw()
     local window_flags = WindowFlags_NoResize + WindowFlags_NoMove + WindowFlags_NoCollapse
 
     -- Style: dark background with visible selection
-    imgui.PushStyleColor_X_Vec4(Col_Header, { 0.2, 0.4, 0.8, 1.0 })      -- Selected
+    imgui.PushStyleColor_X_Vec4(Col_Header, { 0.2, 0.4, 0.8, 1.0 })        -- Selected
     imgui.PushStyleColor_X_Vec4(Col_HeaderHovered, { 0.3, 0.3, 0.5, 1.0 }) -- Hovered
-    imgui.PushStyleColor_X_Vec4(Col_HeaderActive, { 0.2, 0.4, 0.8, 1.0 }) -- Active
-    imgui.PushStyleColor_X_Vec4(Col_FrameBg, { 0.0, 0.0, 0.0, 1.0 })     -- Black background
-    imgui.PushStyleVar_X_Float(13, 1.0)                                  -- FrameBorderSize = 1
+    imgui.PushStyleColor_X_Vec4(Col_HeaderActive, { 0.2, 0.4, 0.8, 1.0 })  -- Active
+    imgui.PushStyleColor_X_Vec4(Col_FrameBg, { 0.0, 0.0, 0.0, 1.0 })       -- Black background
+    imgui.PushStyleVar_X_Float(13, 1.0)                                    -- FrameBorderSize = 1
 
     -- Full screen window
     imgui.SetNextWindowPos({ 0, 0 }, Cond_Always, { 0, 0 })

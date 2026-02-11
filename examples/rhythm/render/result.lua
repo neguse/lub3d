@@ -38,20 +38,20 @@ end
 ---@return number[]
 local function get_level_color(level)
     if level == "AAA" then
-        return { 1.0, 0.84, 0.0, 1.0 } -- Gold
+        return { 1.0, 0.84, 0.0, 1.0 }   -- Gold
     elseif level == "AA" then
-        return { 1.0, 1.0, 0.39, 1.0 } -- Yellow
+        return { 1.0, 1.0, 0.39, 1.0 }   -- Yellow
     elseif level == "A" then
-        return { 0.39, 1.0, 0.39, 1.0 } -- Green
+        return { 0.39, 1.0, 0.39, 1.0 }  -- Green
     elseif level == "B" then
-        return { 0.39, 0.78, 1.0, 1.0 } -- Light blue
+        return { 0.39, 0.78, 1.0, 1.0 }  -- Light blue
     elseif level == "C" then
-        return { 0.59, 0.59, 1.0, 1.0 } -- Blue
+        return { 0.59, 0.59, 1.0, 1.0 }  -- Blue
     elseif level == "D" then
-        return { 0.78, 0.59, 1.0, 1.0 } -- Purple
+        return { 0.78, 0.59, 1.0, 1.0 }  -- Purple
     elseif level == "E" then
         return { 0.78, 0.78, 0.78, 1.0 } -- Gray
-    else                               -- F
+    else                                 -- F
         return { 0.59, 0.39, 0.39, 1.0 } -- Dark gray
     end
 end
