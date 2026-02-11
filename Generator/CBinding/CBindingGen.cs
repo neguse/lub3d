@@ -285,6 +285,45 @@ public static class CBindingGen
             """;
     }
 
+    // ===== ExtraMetamethods 生成 =====
+
+    /// <summary>
+    /// memcmp ベースの __eq メタメソッド
+    /// </summary>
+    public static string StructEq(string structName, string metatable) => $$"""
+        static int l_{{structName}}__eq(lua_State *L) {
+            {{structName}}* a = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
+            {{structName}}* b = ({{structName}}*)luaL_checkudata(L, 2, "{{metatable}}");
+            lua_pushboolean(L, memcmp(a, b, sizeof({{structName}})) == 0);
+            return 1;
+        }
+
+        """;
+
+    /// <summary>
+    /// バイト列 hex 表現の __tostring メタメソッド
+    /// </summary>
+    public static string StructTostring(string structName, string metatable) => $$"""
+        static int l_{{structName}}__tostring(lua_State *L) {
+            {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
+            const unsigned char* bytes = (const unsigned char*)self;
+            size_t sz = sizeof({{structName}});
+            luaL_Buffer buf;
+            luaL_buffinit(L, &buf);
+            luaL_addstring(&buf, "{{metatable}}:");
+            for (size_t i = 0; i < sz; i++) {
+                char hex[3];
+                hex[0] = "0123456789abcdef"[bytes[i] >> 4];
+                hex[1] = "0123456789abcdef"[bytes[i] & 0x0f];
+                hex[2] = '\0';
+                luaL_addstring(&buf, hex);
+            }
+            luaL_pushresult(&buf);
+            return 1;
+        }
+
+        """;
+
     // ===== ModuleSpec ベース生成 =====
 
     /// <summary>
@@ -316,6 +355,18 @@ public static class CBindingGen
                 sb += StructIndex(s.CName, s.Metatable, fieldInits);
                 sb += StructNewindex(s.CName, s.Metatable, fieldInits);
                 sb += StructPairs(s.CName, s.Metatable, fieldInits);
+            }
+            if (s.ExtraMetamethods != null)
+            {
+                foreach (var mm in s.ExtraMetamethods)
+                {
+                    sb += mm.Kind switch
+                    {
+                        "memcmp_eq" => StructEq(s.CName, s.Metatable),
+                        "hex_tostring" => StructTostring(s.CName, s.Metatable),
+                        _ => ""
+                    };
+                }
             }
         }
 
@@ -386,11 +437,28 @@ public static class CBindingGen
         }
 
         // Metatables (structs + opaque types)
-        var metatables = spec.Structs.Select(s => s.HasMetamethods
-            ? (s.Metatable, (string?)$"l_{s.CName}__index", (string?)$"l_{s.CName}__newindex", (string?)$"l_{s.CName}__pairs")
-            : (s.Metatable, null, null, null)).ToList();
+        var metatables = spec.Structs.Select(s =>
+        {
+            var extra = new Dictionary<string, string>();
+            if (s.ExtraMetamethods != null)
+            {
+                foreach (var mm in s.ExtraMetamethods)
+                {
+                    var funcName = mm.Kind switch
+                    {
+                        "memcmp_eq" => $"l_{s.CName}__eq",
+                        "hex_tostring" => $"l_{s.CName}__tostring",
+                        _ => (string?)null
+                    };
+                    if (funcName != null) extra[mm.Name] = funcName;
+                }
+            }
+            return s.HasMetamethods
+                ? (s.Metatable, (string?)$"l_{s.CName}__index", (string?)$"l_{s.CName}__newindex", (string?)$"l_{s.CName}__pairs", extra)
+                : (s.Metatable, null, null, null, extra);
+        }).ToList();
         foreach (var ot in spec.OpaqueTypes)
-            metatables.Add((ot.Metatable, null, null, null));
+            metatables.Add((ot.Metatable, null, null, null, new Dictionary<string, string>()));
         sb += RegisterOpaqueMetatables(spec.OpaqueTypes, metatables);
 
         // LuaReg
@@ -866,7 +934,7 @@ public static class CBindingGen
 
     public static string RegisterOpaqueMetatables(
         List<OpaqueTypeBinding> opaqueTypes,
-        List<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc)> metatables)
+        List<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc, Dictionary<string, string> extraMetamethods)> metatables)
     {
         var opaqueSet = opaqueTypes.ToDictionary(ot => ot.Metatable);
         var lines = metatables.Select(m =>
@@ -887,6 +955,8 @@ public static class CBindingGen
                 if (m.pairsFunc != null)
                     sb += $"\n    lua_pushcfunction(L, {m.pairsFunc}); lua_setfield(L, -2, \"__pairs\");";
             }
+            foreach (var (name, func) in m.extraMetamethods)
+                sb += $"\n    lua_pushcfunction(L, {func}); lua_setfield(L, -2, \"{name}\");";
             sb += "\n    lua_pop(L, 1);";
             return sb;
         });

@@ -344,11 +344,13 @@ public class Box2dModule : IModule
             }
 
             var pascalName = Pipeline.ToPascalCase(Pipeline.StripPrefix(s.Name, Prefix));
+            var isHandle = HandleStructs.Contains(s.Name);
             structs.Add(new StructBinding(
                 s.Name, pascalName,
                 $"{ModuleName}.{pascalName}",
                 hasMeta, fields,
-                GetLink(s, sourceLink)));
+                GetLink(s, sourceLink),
+                IsHandleType: isHandle));
         }
 
         // ===== Functions =====
@@ -488,13 +490,13 @@ public class Box2dModule : IModule
 
     public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
     {
-        var spec = BuildSpec(reg, prefixToModule);
+        var spec = SpecTransform.ExpandHandleTypes(BuildSpec(reg, prefixToModule));
         return CBinding.CBindingGen.Generate(spec);
     }
 
     public string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
-        var spec = BuildSpec(reg, prefixToModule, sourceLink);
+        var spec = SpecTransform.ExpandHandleTypes(BuildSpec(reg, prefixToModule, sourceLink));
         return LuaCats.LuaCatsGen.Generate(spec);
     }
 

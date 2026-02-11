@@ -22,13 +22,20 @@ public record ModuleSpec(
     public List<FuncBinding> ExtraLuaFuncs { get; init; } = ExtraLuaFuncs ?? [];
 }
 
+/// <summary>
+/// メタメソッド生成指示 — 変換層が展開し、CBindingGen が消費する
+/// </summary>
+public record MetamethodSpec(string Name, string Kind);
+
 public record StructBinding(
     string CName,
     string PascalName,
     string Metatable,
     bool HasMetamethods,
     List<FieldBinding> Fields,
-    string? SourceLink
+    string? SourceLink,
+    bool IsHandleType = false,
+    List<MetamethodSpec>? ExtraMetamethods = null
 );
 
 public record FieldBinding(
