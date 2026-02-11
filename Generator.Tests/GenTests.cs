@@ -66,45 +66,6 @@ public class GenTests
     }
 
     [Fact]
-    public void StructNew_ContainsNewFunction()
-    {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var s = reg.GetStruct("sapp_desc");
-        var code = CBindingGen.StructNew("sapp_desc", "test.Desc", Pipeline.ToCFieldInits(s));
-        Assert.Contains("static int l_sapp_desc_new(lua_State *L)", code);
-        Assert.Contains("lua_getfield(L, 1, \"width\")", code);
-    }
-
-    [Fact]
-    public void StructNew_SkipsCallbackFields()
-    {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var s = reg.GetStruct("sapp_desc");
-        var code = CBindingGen.StructNew("sapp_desc", "test.Desc", Pipeline.ToCFieldInits(s));
-        // コールバックフィールドは StructNew では設定しない (pop のみ)
-        Assert.DoesNotContain("trampoline", code);
-        Assert.DoesNotContain("g_sapp_desc", code);
-    }
-
-    [Fact]
-    public void Func_ContainsBinding()
-    {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var f = reg.GetFunc("sapp_run");
-        var code = CBindingGen.Func("sapp_run", Pipeline.ToCParams(f), Pipeline.ToCReturnType(f), "test.Desc");
-        Assert.Contains("static int l_sapp_run(lua_State *L)", code);
-    }
-
-    [Fact]
-    public void Func_IntReturnPushesInteger()
-    {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var f = reg.GetFunc("sapp_width");
-        var code = CBindingGen.Func("sapp_width", Pipeline.ToCParams(f), Pipeline.ToCReturnType(f), "test.Desc");
-        Assert.Contains("lua_pushinteger(L, sapp_width())", code);
-    }
-
-    [Fact]
     public void Enum_ContainsValues()
     {
         var reg = TypeRegistry.FromJson(TestJson);

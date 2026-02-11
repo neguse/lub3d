@@ -398,6 +398,54 @@ public class CBindingGenSpecTests
         Assert.Contains("luaL_checknumber(L, 1)", code);
     }
 
+    [Fact]
+    public void Generate_Int64Param_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_id", "SetId",
+                [new ParamBinding("id", new BindingType.Int64())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(int64_t)luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_UInt32Param_ChecksInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_set_flags", "SetFlags",
+                [new ParamBinding("flags", new BindingType.UInt32())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("(uint32_t)luaL_checkinteger(L, 1)", code);
+    }
+
+    [Fact]
+    public void Generate_SizeReturn_PushesInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_count", "Count", [], new BindingType.Size(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushinteger(L, (lua_Integer)stest_count())", code);
+    }
+
+    [Fact]
+    public void Generate_Int64Return_PushesInteger()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_get_id", "GetId", [], new BindingType.Int64(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushinteger(L, (lua_Integer)stest_get_id())", code);
+    }
+
     // ===== Enum フィールド初期化 =====
 
     [Fact]
@@ -704,6 +752,17 @@ public class CBindingGenSpecTests
             [new FuncBinding("stest_get_cb", "GetCb", [],
                 new BindingType.Callback(
                     [("ctx", new BindingType.VoidPtr())], null), null)],
+            [], []);
+        Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
+    [Fact]
+    public void Generate_FixedArrayReturn_ThrowsInvalidOperation()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_get_data", "GetData", [],
+                new BindingType.FixedArray(new BindingType.Int(), 4), null)],
             [], []);
         Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
     }
