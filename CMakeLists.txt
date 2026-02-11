@@ -161,7 +161,6 @@ set(GENERATOR_DEPENDS
     ${GENERATOR_DIR}/Pipeline.cs
     ${GENERATOR_DIR}/ClangAst/ClangAst.cs
     ${GENERATOR_DIR}/ClangAst/TypeRegistry.cs
-    ${GENERATOR_DIR}/CBinding/CBinding.cs
     ${GENERATOR_DIR}/CBinding/CBindingGen.cs
     ${GENERATOR_DIR}/LuaCats/LuaCats.cs
     ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs

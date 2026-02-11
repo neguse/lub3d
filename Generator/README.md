@@ -74,7 +74,6 @@ Generator/
     TypeRegistry.cs       型レジストリ
     SourceLink.cs         GitHub リンク生成
   CBinding/
-    CBinding.cs           C 出力モデル (Type, FieldInit, Param)
     CBindingGen.cs        C/C++ コード生成
   LuaCats/
     LuaCats.cs            LuaCATS 出力モデル (Type.Primitive, Type.Fun, Type.Class)

@@ -8,7 +8,7 @@ public static class CBindingGen
     /// <summary>
     /// ファイルヘッダ (includes, マクロ定義)
     /// </summary>
-    public static string Header(IEnumerable<string> includes)
+    private static string Header(IEnumerable<string> includes)
     {
         var userIncludes = string.Join("\n", includes.Select(h => $"#include \"{h}\""));
         return $$"""
@@ -41,7 +41,7 @@ public static class CBindingGen
     /// <summary>
     /// C++ モード用ヘッダ — imgui.h は extern "C" の外、Lua ヘッダは中
     /// </summary>
-    public static string CppHeader(IEnumerable<string> includes)
+    private static string CppHeader(IEnumerable<string> includes)
     {
         var userIncludes = string.Join("\n", includes.Select(h => $"#include \"{h}\""));
         return $$"""
@@ -76,7 +76,7 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の new 関数
     /// </summary>
-    public static string StructNew(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
+    private static string StructNew(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
     {
         var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, ownStructs)));
         return $$"""
@@ -99,7 +99,7 @@ public static class CBindingGen
     /// <summary>
     /// Enum の Lua テーブル生成
     /// </summary>
-    public static string Enum(string cEnumName, string luaEnumName, IEnumerable<(string luaName, string cConstName)> items)
+    private static string Enum(string cEnumName, string luaEnumName, IEnumerable<(string luaName, string cConstName)> items)
     {
         var itemLines = string.Join("\n", items.Select(item =>
             $"        lua_pushinteger(L, {item.cConstName}); lua_setfield(L, -2, \"{item.luaName}\");"));
@@ -116,7 +116,7 @@ public static class CBindingGen
     /// <summary>
     /// luaL_Reg 配列
     /// </summary>
-    public static string LuaReg(string arrayName, IEnumerable<(string luaName, string cFunc)> entries)
+    private static string LuaReg(string arrayName, IEnumerable<(string luaName, string cFunc)> entries)
     {
         var lines = entries.Select(e => $"    {{\"{e.luaName}\", {e.cFunc}}},");
         return $$"""
@@ -131,7 +131,7 @@ public static class CBindingGen
     /// <summary>
     /// luaopen 関数
     /// </summary>
-    public static string LuaOpen(string funcName, string regArray) => $$"""
+    private static string LuaOpen(string funcName, string regArray) => $$"""
         LUB3D_API int luaopen_{{funcName}}(lua_State *L) {
             register_metatables(L);
             luaL_newlib(L, {{regArray}});
@@ -142,7 +142,7 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __index メタメソッド生成
     /// </summary>
-    public static string StructIndex(string structName, string metatable, IEnumerable<FieldBinding> fields)
+    private static string StructIndex(string structName, string metatable, IEnumerable<FieldBinding> fields)
     {
         var branches = fields
             .Where(f => f.Type is not BindingType.Callback)
@@ -161,7 +161,7 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __pairs メタメソッド生成 (next関数 + イテレータ)
     /// </summary>
-    public static string StructPairs(string structName, string metatable, IEnumerable<FieldBinding> fields)
+    private static string StructPairs(string structName, string metatable, IEnumerable<FieldBinding> fields)
     {
         var accessibleFields = fields.Where(f => f.Type is not BindingType.Callback).ToList();
         var fieldEntries = accessibleFields.Select(f =>
@@ -204,7 +204,7 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __newindex メタメソッド生成
     /// </summary>
-    public static string StructNewindex(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
+    private static string StructNewindex(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
     {
         var branches = fields
             .Where(f => f.Type is not BindingType.Callback)
@@ -226,7 +226,7 @@ public static class CBindingGen
     /// <param name="metatables">
     /// (metatable名, __index関数名 or null, __newindex関数名 or null, __pairs関数名 or null)
     /// </param>
-    public static string RegisterMetatables(IEnumerable<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc)> metatables)
+    private static string RegisterMetatables(IEnumerable<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc)> metatables)
     {
         var lines = metatables.Select(m =>
         {
@@ -253,7 +253,7 @@ public static class CBindingGen
     /// <summary>
     /// memcmp ベースの __eq メタメソッド
     /// </summary>
-    public static string StructEq(string structName, string metatable) => $$"""
+    private static string StructEq(string structName, string metatable) => $$"""
         static int l_{{structName}}__eq(lua_State *L) {
             {{structName}}* a = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
             {{structName}}* b = ({{structName}}*)luaL_checkudata(L, 2, "{{metatable}}");
@@ -266,7 +266,7 @@ public static class CBindingGen
     /// <summary>
     /// バイト列 hex 表現の __tostring メタメソッド
     /// </summary>
-    public static string StructTostring(string structName, string metatable) => $$"""
+    private static string StructTostring(string structName, string metatable) => $$"""
         static int l_{{structName}}__tostring(lua_State *L) {
             {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
             const unsigned char* bytes = (const unsigned char*)self;
@@ -744,7 +744,7 @@ public static class CBindingGen
     /// <summary>
     /// sg_range 専用コンストラクタ (string / table 両対応)
     /// </summary>
-    public static string SgRangeNew(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
+    private static string SgRangeNew(string structName, string metatable, IEnumerable<FieldBinding> fields, HashSet<string> ownStructs)
     {
         var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, ownStructs)));
         return $$"""
@@ -772,7 +772,7 @@ public static class CBindingGen
 
     // ===== Opaque 型生成 =====
 
-    public static string OpaqueCheckHelper(OpaqueTypeBinding ot) => $$"""
+    private static string OpaqueCheckHelper(OpaqueTypeBinding ot) => $$"""
         static {{ot.CName}}* check_{{ot.CName}}(lua_State *L, int idx) {
             {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, idx, "{{ot.Metatable}}");
             if (*pp == NULL) luaL_error(L, "{{ot.CName}} already freed");
@@ -781,7 +781,7 @@ public static class CBindingGen
 
         """;
 
-    public static string OpaqueConstructor(OpaqueTypeBinding ot)
+    private static string OpaqueConstructor(OpaqueTypeBinding ot)
     {
         var configInit = ot.ConfigInitFunc != null && ot.ConfigType != null
             ? $"    {ot.ConfigType} config = {ot.ConfigInitFunc}();\n"
@@ -810,7 +810,7 @@ public static class CBindingGen
             """;
     }
 
-    public static string OpaqueDestructor(OpaqueTypeBinding ot)
+    private static string OpaqueDestructor(OpaqueTypeBinding ot)
     {
         var uninitCall = ot.UninitFunc != null
             ? $"        {ot.UninitFunc}(*pp);\n"
@@ -828,7 +828,7 @@ public static class CBindingGen
             """;
     }
 
-    public static string OpaqueMethod(OpaqueTypeBinding ot, MethodBinding m)
+    private static string OpaqueMethod(OpaqueTypeBinding ot, MethodBinding m)
     {
         var paramDecls = new List<string>
         {
@@ -854,7 +854,7 @@ public static class CBindingGen
             """;
     }
 
-    public static string OpaqueMethodTable(OpaqueTypeBinding ot)
+    private static string OpaqueMethodTable(OpaqueTypeBinding ot)
     {
         var entries = ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},");
         return $$"""
@@ -866,7 +866,7 @@ public static class CBindingGen
             """;
     }
 
-    public static string RegisterOpaqueMetatables(
+    private static string RegisterOpaqueMetatables(
         List<OpaqueTypeBinding> opaqueTypes,
         List<(string metatable, string? indexFunc, string? newindexFunc, string? pairsFunc, Dictionary<string, string> extraMetamethods)> metatables)
     {

@@ -1,70 +1,59 @@
 using Generator;
-using Generator.ClangAst;
 using Generator.LuaCats;
 
 namespace Generator.Tests;
 
 public class GenLuaCATSTests
 {
-    private const string TestJson = """
-    {
-      "module": "app",
-      "prefix": "sapp_",
-      "dep_prefixes": ["slog_"],
-      "decls": [
-        {
-          "kind": "struct",
-          "name": "sapp_desc",
-          "fields": [
-            { "name": "width", "type": "int" },
-            { "name": "init_cb", "type": "void (*)(void)" }
-          ],
-          "is_dep": false,
-          "dep_prefix": null
-        },
-        {
-          "kind": "func",
-          "name": "sapp_run",
-          "type": "void (const sapp_desc *)",
-          "params": [
-            { "name": "desc", "type": "const sapp_desc *" }
-          ],
-          "is_dep": false,
-          "dep_prefix": null
-        },
-        {
-          "kind": "func",
-          "name": "sapp_width",
-          "type": "int (void)",
-          "params": [],
-          "is_dep": false,
-          "dep_prefix": null
-        },
-        {
-          "kind": "enum",
-          "name": "sapp_event_type",
-          "items": [
-            { "name": "SAPP_EVENTTYPE_INVALID" },
-            { "name": "SAPP_EVENTTYPE_KEY_DOWN" }
-          ],
-          "is_dep": false,
-          "dep_prefix": null
-        }
-      ]
-    }
-    """;
-
-    private const string ModuleName = "app";
-    private const string Prefix = "sapp_";
+    private static ModuleSpec MakeTestSpec() => new(
+        ModuleName: "app",
+        Prefix: "sapp_",
+        CIncludes: [],
+        ExtraCCode: null,
+        Structs: [
+            new StructBinding(
+                CName: "sapp_desc",
+                PascalName: "Desc",
+                Metatable: "app.Desc",
+                HasMetamethods: true,
+                Fields: [
+                    new FieldBinding("width", "width", new BindingType.Int()),
+                    new FieldBinding("init_cb", "init_cb", new BindingType.Callback([], null))
+                ],
+                SourceLink: null)
+        ],
+        Funcs: [
+            new FuncBinding(
+                CName: "sapp_run",
+                LuaName: "Run",
+                Params: [new ParamBinding("desc", new BindingType.Struct("sapp_desc", "app.Desc", "app.Desc"))],
+                ReturnType: new BindingType.Void(),
+                SourceLink: null),
+            new FuncBinding(
+                CName: "sapp_width",
+                LuaName: "Width",
+                Params: [],
+                ReturnType: new BindingType.Int(),
+                SourceLink: null)
+        ],
+        Enums: [
+            new EnumBinding(
+                CName: "sapp_event_type",
+                LuaName: "app.EventType",
+                FieldName: "EventType",
+                Items: [
+                    new EnumItemBinding("INVALID", "SAPP_EVENTTYPE_INVALID", 0),
+                    new EnumItemBinding("KEY_DOWN", "SAPP_EVENTTYPE_KEY_DOWN", 1)
+                ],
+                SourceLink: null)
+        ],
+        ExtraLuaRegs: []
+    );
 
     [Fact]
     public void StructClass_ContainsFields()
     {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var s = reg.GetStruct("sapp_desc");
-        var code = LuaCatsGen.StructClass(
-            Pipeline.ToLuaCatsClassName(s, ModuleName, Prefix),
-            Pipeline.ToLuaCatsFields(s, ModuleName, Prefix));
+        var code = LuaCatsGen.Generate(MakeTestSpec());
         Assert.Contains("---@class app.Desc", code);
         Assert.Contains("---@field width? integer", code);
         Assert.Contains("---@field init_cb? fun()", code);
@@ -73,36 +62,21 @@ public class GenLuaCATSTests
     [Fact]
     public void FuncField_VoidReturn()
     {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var f = reg.GetFunc("sapp_run");
-        var code = LuaCatsGen.FuncField(
-            Pipeline.ToLuaCatsFuncName(f, Prefix),
-            Pipeline.ToLuaCatsParams(f, ModuleName, Prefix),
-            Pipeline.ToLuaCatsReturnType(f, ModuleName, Prefix));
+        var code = LuaCatsGen.Generate(MakeTestSpec());
         Assert.Contains("---@field Run fun(desc: app.Desc)", code);
     }
 
     [Fact]
     public void FuncField_IntReturn()
     {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var f = reg.GetFunc("sapp_width");
-        var code = LuaCatsGen.FuncField(
-            Pipeline.ToLuaCatsFuncName(f, Prefix),
-            Pipeline.ToLuaCatsParams(f, ModuleName, Prefix),
-            Pipeline.ToLuaCatsReturnType(f, ModuleName, Prefix));
+        var code = LuaCatsGen.Generate(MakeTestSpec());
         Assert.Contains("---@field Width fun(): integer", code);
     }
 
     [Fact]
     public void EnumDef_ContainsValues()
     {
-        var reg = TypeRegistry.FromJson(TestJson);
-        var e = reg.GetEnum("sapp_event_type");
-        var code = LuaCatsGen.EnumDef(
-            Pipeline.ToLuaCatsEnumName(e, ModuleName, Prefix),
-            Pipeline.ToPascalCase(Pipeline.StripPrefix(e.Name, Prefix)),
-            Pipeline.ToEnumItems(e, Prefix));
+        var code = LuaCatsGen.Generate(MakeTestSpec());
         Assert.Contains("---@enum app.EventType", code);
         Assert.Contains("INVALID = 0", code);
         Assert.Contains("KEY_DOWN = 1", code);
