@@ -294,6 +294,30 @@ public static class CBindingGen
     /// </summary>
     public static string Generate(ModuleSpec spec)
     {
+        // Validation (共通: C/C++ 両モード)
+        foreach (var f in spec.Funcs)
+        {
+            foreach (var p in f.Params)
+            {
+                if (p.Type is BindingType.Callback)
+                    throw new InvalidOperationException(
+                        $"Function '{f.CName}' has Callback parameter '{p.Name}'. " +
+                        "Callback parameters must be excluded from spec.Funcs (use ExtraLuaFuncs + ExtraCCode instead).");
+                if (p.Type is BindingType.FixedArray)
+                    throw new InvalidOperationException(
+                        $"Function '{f.CName}' has FixedArray parameter '{p.Name}'. " +
+                        "FixedArray is field-only (C array parameters decay to pointers).");
+            }
+            if (f.ReturnType is BindingType.Callback)
+                throw new InvalidOperationException(
+                    $"Function '{f.CName}' has Callback return type. " +
+                    "Callback return types must be excluded from spec.Funcs.");
+            if (f.ReturnType is BindingType.FixedArray)
+                throw new InvalidOperationException(
+                    $"Function '{f.CName}' has FixedArray return type. " +
+                    "FixedArray is field-only (C functions do not return arrays).");
+        }
+
         if (spec.IsCpp)
             return GenerateCpp(spec);
 
@@ -334,30 +358,7 @@ public static class CBindingGen
 
         // Functions
         foreach (var f in spec.Funcs)
-        {
-            // Validation: Callback/FixedArray in params or return → hard error
-            foreach (var p in f.Params)
-            {
-                if (p.Type is BindingType.Callback)
-                    throw new InvalidOperationException(
-                        $"Function '{f.CName}' has Callback parameter '{p.Name}'. " +
-                        "Callback parameters must be excluded from spec.Funcs (use ExtraLuaFuncs + ExtraCCode instead).");
-                if (p.Type is BindingType.FixedArray)
-                    throw new InvalidOperationException(
-                        $"Function '{f.CName}' has FixedArray parameter '{p.Name}'. " +
-                        "FixedArray is field-only (C array parameters decay to pointers).");
-            }
-            if (f.ReturnType is BindingType.Callback)
-                throw new InvalidOperationException(
-                    $"Function '{f.CName}' has Callback return type. " +
-                    "Callback return types must be excluded from spec.Funcs.");
-            if (f.ReturnType is BindingType.FixedArray)
-                throw new InvalidOperationException(
-                    $"Function '{f.CName}' has FixedArray return type. " +
-                    "FixedArray is field-only (C functions do not return arrays).");
-
             sb += GenBindingFunc(f);
-        }
 
         // Opaque types
         foreach (var ot in spec.OpaqueTypes)
@@ -908,7 +909,31 @@ public static class CBindingGen
     {
         BindingType.Custom(_, _, _, var cc, _, _) when cc != null =>
             cc.Replace("{idx}", idx.ToString()).Replace("{name}", p.Name),
-        _ => GenOpaqueParamDecl(p, idx)
+        BindingType.Int => $"    int {p.Name} = (int)luaL_checkinteger(L, {idx});",
+        BindingType.Int64 => $"    int64_t {p.Name} = (int64_t)luaL_checkinteger(L, {idx});",
+        BindingType.UInt32 => $"    uint32_t {p.Name} = (uint32_t)luaL_checkinteger(L, {idx});",
+        BindingType.UInt64 => $"    uint64_t {p.Name} = (uint64_t)luaL_checkinteger(L, {idx});",
+        BindingType.Size => $"    size_t {p.Name} = (size_t)luaL_checkinteger(L, {idx});",
+        BindingType.Float => $"    float {p.Name} = (float)luaL_checknumber(L, {idx});",
+        BindingType.Double => $"    double {p.Name} = (double)luaL_checknumber(L, {idx});",
+        BindingType.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});",
+        BindingType.Str => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
+        BindingType.ConstPtr(BindingType.Str) => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
+        BindingType.Enum(var eName, _) => $"    {eName} {p.Name} = ({eName})luaL_checkinteger(L, {idx});",
+        BindingType.VoidPtr => $"    void* {p.Name} = lua_touserdata(L, {idx});",
+        BindingType.Ptr(BindingType.Void) => $"    void* {p.Name} = lua_touserdata(L, {idx});",
+        BindingType.ConstPtr(BindingType.Void) => $"    const void* {p.Name} = lua_touserdata(L, {idx});",
+        BindingType.Ptr(BindingType.Struct(var cName, var mt, _)) =>
+            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
+            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        BindingType.Ptr(BindingType.Custom(var cName, _, _, _, _, _)) =>
+            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"\");",
+        BindingType.ConstPtr(BindingType.Custom(var cName, _, _, _, _, _)) =>
+            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"\");",
+        BindingType.Struct(var cName, var mt, _) =>
+            $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        _ => $"    /* unsupported param type for {p.Name} */"
     };
 
     private static string GenBindingReturnPush(BindingType ret, string callExpr) => ret switch
@@ -956,35 +981,6 @@ public static class CBindingGen
 
             """;
     }
-
-    private static string GenOpaqueParamDecl(ParamBinding p, int idx) => p.Type switch
-    {
-        BindingType.Int => $"    int {p.Name} = (int)luaL_checkinteger(L, {idx});",
-        BindingType.Int64 => $"    int64_t {p.Name} = (int64_t)luaL_checkinteger(L, {idx});",
-        BindingType.UInt32 => $"    uint32_t {p.Name} = (uint32_t)luaL_checkinteger(L, {idx});",
-        BindingType.UInt64 => $"    uint64_t {p.Name} = (uint64_t)luaL_checkinteger(L, {idx});",
-        BindingType.Size => $"    size_t {p.Name} = (size_t)luaL_checkinteger(L, {idx});",
-        BindingType.Float => $"    float {p.Name} = (float)luaL_checknumber(L, {idx});",
-        BindingType.Double => $"    double {p.Name} = (double)luaL_checknumber(L, {idx});",
-        BindingType.Bool => $"    bool {p.Name} = lua_toboolean(L, {idx});",
-        BindingType.Str => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
-        BindingType.ConstPtr(BindingType.Str) => $"    const char* {p.Name} = luaL_checkstring(L, {idx});",
-        BindingType.Enum(var eName, _) => $"    {eName} {p.Name} = ({eName})luaL_checkinteger(L, {idx});",
-        BindingType.VoidPtr => $"    void* {p.Name} = lua_touserdata(L, {idx});",
-        BindingType.Ptr(BindingType.Void) => $"    void* {p.Name} = lua_touserdata(L, {idx});",
-        BindingType.ConstPtr(BindingType.Void) => $"    const void* {p.Name} = lua_touserdata(L, {idx});",
-        BindingType.Ptr(BindingType.Struct(var cName, var mt, _)) =>
-            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
-        BindingType.ConstPtr(BindingType.Struct(var cName, var mt, _)) =>
-            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
-        BindingType.Ptr(BindingType.Custom(var cName, _, _, _, _, _)) =>
-            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"\");",
-        BindingType.ConstPtr(BindingType.Custom(var cName, _, _, _, _, _)) =>
-            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"\");",
-        BindingType.Struct(var cName, var mt, _) =>
-            $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
-        _ => $"    /* unsupported param type for {p.Name} */"
-    };
 
     // ===== BindingType ベース フィールド処理 =====
 
