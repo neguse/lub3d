@@ -155,7 +155,7 @@ public class DearImguiModuleTests
     {
         var mod = new ImguiModule();
         var spec = mod.BuildSpec(MakeRegistry());
-        var pushIds = spec.Funcs.Where(f => f.LuaName.StartsWith("PushID")).ToList();
+        var pushIds = spec.Funcs.Where(f => f.LuaName.StartsWith("push_id")).ToList();
         Assert.Equal(2, pushIds.Count);
         Assert.True(pushIds[0].LuaName != pushIds[1].LuaName,
             "Overloaded PushID should have different Lua names");
@@ -325,8 +325,8 @@ public class DearImguiModuleTests
     {
         var mod = new ImguiModule();
         var code = mod.GenerateLua(MakeRegistry(), EmptyPrefixToModule);
-        Assert.Contains("Begin", code);
-        Assert.Contains("End", code);
+        Assert.Contains("begin_window", code);
+        Assert.Contains("end_window", code);
     }
 
     [Fact]

@@ -26,6 +26,24 @@ public class PipelineTests
         Assert.Equal(expected, Pipeline.StripPrefix(input, prefix));
     }
 
+    // ===== ToSnakeCase =====
+
+    [Theory]
+    [InlineData("ShowDemoWindow", "show_demo_window")]
+    [InlineData("GetID", "get_id")]
+    [InlineData("Begin", "begin")]
+    [InlineData("End", "end")]
+    [InlineData("BeginChild", "begin_child")]
+    [InlineData("SetCursorPos", "set_cursor_pos")]
+    [InlineData("World_Step", "world_step")]
+    [InlineData("Body_GetPosition", "body_get_position")]
+    [InlineData("CreateWorld", "create_world")]
+    [InlineData("", "")]
+    public void ToSnakeCase_ConvertsCorrectly(string input, string expected)
+    {
+        Assert.Equal(expected, Pipeline.ToSnakeCase(input));
+    }
+
     // ===== EnumItemName =====
 
     [Theory]

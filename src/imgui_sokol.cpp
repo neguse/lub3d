@@ -87,11 +87,11 @@ static int l_imgui_handle_event(lua_State* L) {
 
 // Module registration
 static const luaL_Reg imgui_sokol_funcs[] = {
-    {"Setup", l_imgui_setup},
-    {"Shutdown", l_imgui_shutdown},
-    {"NewFrame", l_imgui_new_frame},
-    {"Render", l_imgui_render},
-    {"HandleEvent", l_imgui_handle_event},
+    {"setup", l_imgui_setup},
+    {"shutdown", l_imgui_shutdown},
+    {"new_frame", l_imgui_new_frame},
+    {"render", l_imgui_render},
+    {"handle_event", l_imgui_handle_event},
     {NULL, NULL}
 };
 

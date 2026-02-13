@@ -12,6 +12,16 @@ public class ImguiModule : IModule
     public string ModuleName => "imgui";
     public string Prefix => "";
 
+    /// <summary>
+    /// Lua 予約語回避のためのリネームマップ
+    /// "End" → "end_window" (end は Lua 予約語)、対称性のため "Begin" も "begin_window"
+    /// </summary>
+    private static readonly Dictionary<string, string> FunctionRenames = new()
+    {
+        ["Begin"] = "begin_window",
+        ["End"] = "end_window",
+    };
+
     private static readonly HashSet<string> SkipFunctions =
     [
         "GetIO", "GetPlatformIO", "GetStyle", "GetDrawData",
@@ -65,7 +75,7 @@ public class ImguiModule : IModule
             if (IsVararg(f)) continue;
             if (HasUnsupportedParam(f)) continue;
 
-            var luaName = f.Name;
+            var luaName = FunctionRenames.GetValueOrDefault(f.Name, Pipeline.ToSnakeCase(f.Name));
             if (nameCounts[f.Name] > 1)
             {
                 luaName = MakeOverloadName(f);
@@ -261,8 +271,9 @@ public class ImguiModule : IModule
 
     private static string MakeOverloadName(Funcs f)
     {
-        var suffixes = f.Params.Select(p => TypeToSuffix(p.TypeStr.Trim()));
-        return $"{f.Name}_{string.Join("_", suffixes)}";
+        var baseName = FunctionRenames.GetValueOrDefault(f.Name, Pipeline.ToSnakeCase(f.Name));
+        var suffixes = f.Params.Select(p => TypeToSuffix(p.TypeStr.Trim()).ToLower());
+        return $"{baseName}_{string.Join("_", suffixes)}";
     }
 
     private static string TypeToSuffix(string typeStr) => typeStr switch

@@ -15,6 +15,26 @@ public static class Pipeline
         name.EndsWith("_t") ? name[..^2] : name;
 
     /// <summary>
+    /// PascalCase / CamelCase を snake_case に変換
+    /// 例: "ShowDemoWindow" → "show_demo_window", "GetID" → "get_id"
+    /// </summary>
+    public static string ToSnakeCase(string s)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < s.Length; i++)
+        {
+            var c = s[i];
+            if (c == '_') { sb.Append('_'); continue; }
+            if (i > 0 && char.IsUpper(c) && s[i - 1] != '_' &&
+                (char.IsLower(s[i - 1]) ||
+                 (i + 1 < s.Length && char.IsLower(s[i + 1]))))
+                sb.Append('_');
+            sb.Append(char.ToLower(c));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// CamelCase / PascalCase を UPPER_SNAKE_CASE に変換
     /// 例: "NoTitleBar" → "NO_TITLE_BAR"
     /// </summary>
