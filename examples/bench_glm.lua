@@ -55,7 +55,7 @@ function M:init()
 
     -- Load both implementations
     -- Force-reload lib.glm as pure Lua by clearing the C module from package.loaded
-    local glm_c = require("lib.glm")  -- This is the C module (registered by lub3d_lua.c)
+    local glm_c = require("lib.glm") -- This is the C module (registered by lub3d_lua.c)
     package.loaded["lib.glm"] = nil
     -- Load pure Lua implementation by running the file directly
     local glm_lua = dofile("lib/glm.lua")
@@ -72,8 +72,16 @@ function M:init()
         local view = g.lookat(g.vec3(0, 500, 500), g.vec3(0, 0, 0), g.vec3(0, 1, 0))
         local model = g.translate(pos) * g.rotate(angle, axis) * g.scale(size)
         local mvp = proj * view * model
-        return { pos = pos, size = size, angle = angle, axis = axis,
-                 proj = proj, view = view, model = model, mvp = mvp }
+        return {
+            pos = pos,
+            size = size,
+            angle = angle,
+            axis = axis,
+            proj = proj,
+            view = view,
+            model = model,
+            mvp = mvp,
+        }
     end
 
     local dl = setup(glm_lua)
