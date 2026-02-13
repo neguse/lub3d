@@ -13,9 +13,9 @@ local MAX_PARTICLES = 2000
 -- Particle structure
 local function new_particle()
     return {
-        pos = glm.vec3(0, 0, 0),
-        velo = glm.vec3(0, 0, 0),
-        acc = glm.vec3(0, 0, 0),
+        pos = glm.Vec3(0, 0, 0),
+        velo = glm.Vec3(0, 0, 0),
+        acc = glm.Vec3(0, 0, 0),
         color = 0xffffffff,
         tick = 0,
         max_tick = 60,
@@ -67,13 +67,13 @@ function M.emit_cone(amount, center, y_angle_center, y_angle_range,
         local velo_xz = math.cos(xz_angle) * velo_len
         local velo_y = math.sin(xz_angle) * velo_len
 
-        p.pos = glm.vec3(center.x, center.y, center.z)
-        p.velo = glm.vec3(
+        p.pos = glm.Vec3(center.x, center.y, center.z)
+        p.velo = glm.Vec3(
             math.cos(y_angle) * velo_xz,
             velo_y,
             math.sin(y_angle) * velo_xz
         )
-        p.acc = acc_center + glm.vec3(
+        p.acc = acc_center + glm.Vec3(
             (math.random() * 2 - 1) * acc_range.x,
             (math.random() * 2 - 1) * acc_range.y,
             (math.random() * 2 - 1) * acc_range.z

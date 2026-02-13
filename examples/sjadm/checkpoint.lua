@@ -8,15 +8,15 @@ local RADIUS = 150
 local SEGMENTS = 24
 
 function checkpoint.new(world_id, x, y, registry)
-    local body_def = b2d.default_body_def()
+    local body_def = b2d.DefaultBodyDef()
     body_def.position = { x, y }
-    local body_id = b2d.create_body(world_id, body_def)
+    local body_id = b2d.CreateBody(world_id, body_def)
 
-    local shape_def = b2d.default_shape_def()
+    local shape_def = b2d.DefaultShapeDef()
     shape_def.isSensor = true
     shape_def.enableSensorEvents = true
     local circle = b2d.Circle({ center = { 0, 0 }, radius = RADIUS })
-    local shape_id = b2d.create_circle_shape(body_id, shape_def, circle)
+    local shape_id = b2d.CreateCircleShape(body_id, shape_def, circle)
 
     local cp = setmetatable({
         body_id = body_id,

@@ -6,7 +6,7 @@ local M = {}
 --- VFS 付き ma_engine を生成して返す (WASM 対応)
 --- @return miniaudio.Engine engine
 --- @return lightuserdata? vfs vfs は GC 防止のため呼び出し元で保持すること
-function M.create_engine()
+function M.CreateEngine()
     local vfs = ma.VfsNew({
         onOpen = function(path)
             local data = fs.read(path)

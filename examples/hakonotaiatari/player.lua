@@ -16,7 +16,7 @@ Player.__index = Player
 
 -- Helper: polar to cartesian
 local function pcs(radius, angle)
-    return glm.vec2(math.cos(angle) * radius, math.sin(angle) * radius)
+    return glm.Vec2(math.cos(angle) * radius, math.sin(angle) * radius)
 end
 
 -- Create new player
@@ -31,7 +31,7 @@ end
 
 -- Initialize player
 function Player:init()
-    Cube.init(self, const.C_TYPE_PLAYER, glm.vec2(0, 0), 0, 0, const.P_COL_NORMAL, const.P_LEN, 0)
+    Cube.init(self, const.C_TYPE_PLAYER, glm.Vec2(0, 0), 0, 0, const.P_COL_NORMAL, const.P_LEN, 0)
     self.stat = const.P_ST_MUTEKI
     self.tick = 0
     self.power = 0
@@ -50,7 +50,7 @@ end
 
 -- Add power (clamped to 0..P_POW_MAX)
 function Player:add_power(d)
-    self.power = glm.clamp(self.power + d, 0, const.P_POW_MAX)
+    self.power = glm.Clamp(self.power + d, 0, const.P_POW_MAX)
 end
 
 -- Update player
@@ -61,7 +61,7 @@ function Player:update(dt, target_pos, camera, audio)
     self.tick = self.tick + 1
     local dv = target_pos - self.pos
     local dva = math.atan(dv.y, dv.x)
-    local dvl = glm.length(dv)
+    local dvl = glm.Length(dv)
     local prev_stat = self.stat
 
     if self.stat == const.P_ST_MUTEKI then
@@ -175,13 +175,13 @@ function Player:update(dt, target_pos, camera, audio)
     if camera then
         if self.stat ~= const.P_ST_DEAD then
             local la = self.pos + pcs(dvl * 0.05, dva)
-            camera:set_lookat(glm.vec3(
-                glm.clamp(la.x, -const.FIELD_Lf, const.FIELD_Lf),
+            camera:set_lookat(glm.Vec3(
+                glm.Clamp(la.x, -const.FIELD_Lf, const.FIELD_Lf),
                 0,
-                glm.clamp(la.y, -const.FIELD_Lf, const.FIELD_Lf)
+                glm.Clamp(la.y, -const.FIELD_Lf, const.FIELD_Lf)
             ))
         else
-            camera:set_lookat(glm.vec3(self.pos.x, 0, self.pos.y))
+            camera:set_lookat(glm.Vec3(self.pos.x, 0, self.pos.y))
         end
     end
 end
@@ -207,9 +207,9 @@ function Player:render(proj, view)
         end
         local guide_length = frame * const.P_DASH_V * const.DELTA_T
 
-        local p1 = glm.vec3(self.pos.x, 1, self.pos.y)
+        local p1 = glm.Vec3(self.pos.x, 1, self.pos.y)
         local ps = pcs(guide_length, self.angle)
-        local p2 = p1 + glm.vec3(ps.x, 0, ps.y)
+        local p2 = p1 + glm.Vec3(ps.x, 0, ps.y)
 
         local r, g, b = const.argb_to_rgb(color)
         local renderer = require("examples.hakonotaiatari.renderer")

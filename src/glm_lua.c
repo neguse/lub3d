@@ -1007,8 +1007,8 @@ static void register_mat_type(lua_State *L, const char *tname,
 int luaopen_lib_glm(lua_State *L) {
     /* vec2 methods / metamethods */
     static const luaL_Reg vec2_methods[] = {
-        {"length", l_vec2_length}, {"length2", l_vec2_length2},
-        {"normalize", l_vec2_normalize}, {"dot", l_vec2_dot},
+        {"Length", l_vec2_length}, {"Length2", l_vec2_length2},
+        {"Normalize", l_vec2_normalize}, {"Dot", l_vec2_dot},
         {NULL, NULL}
     };
     static const luaL_Reg vec2_meta[] = {
@@ -1022,9 +1022,9 @@ int luaopen_lib_glm(lua_State *L) {
 
     /* vec3 methods / metamethods */
     static const luaL_Reg vec3_methods[] = {
-        {"length", l_vec3_length}, {"length2", l_vec3_length2},
-        {"normalize", l_vec3_normalize}, {"dot", l_vec3_dot},
-        {"cross", l_vec3_cross},
+        {"Length", l_vec3_length}, {"Length2", l_vec3_length2},
+        {"Normalize", l_vec3_normalize}, {"Dot", l_vec3_dot},
+        {"Cross", l_vec3_cross},
         {NULL, NULL}
     };
     static const luaL_Reg vec3_meta[] = {
@@ -1038,8 +1038,8 @@ int luaopen_lib_glm(lua_State *L) {
 
     /* vec4 methods / metamethods */
     static const luaL_Reg vec4_methods[] = {
-        {"length", l_vec4_length}, {"length2", l_vec4_length2},
-        {"normalize", l_vec4_normalize}, {"dot", l_vec4_dot},
+        {"Length", l_vec4_length}, {"Length2", l_vec4_length2},
+        {"Normalize", l_vec4_normalize}, {"Dot", l_vec4_dot},
         {NULL, NULL}
     };
     static const luaL_Reg vec4_meta[] = {
@@ -1053,8 +1053,8 @@ int luaopen_lib_glm(lua_State *L) {
 
     /* mat3 methods / metamethods */
     static const luaL_Reg mat3_methods[] = {
-        {"pack", l_mat3_pack}, {"transpose", l_mat3_transpose},
-        {"inverse", l_mat3_inverse},
+        {"Pack", l_mat3_pack}, {"Transpose", l_mat3_transpose},
+        {"Inverse", l_mat3_inverse},
         {NULL, NULL}
     };
     static const luaL_Reg mat3_meta[] = {
@@ -1066,9 +1066,9 @@ int luaopen_lib_glm(lua_State *L) {
 
     /* mat4 methods / metamethods */
     static const luaL_Reg mat4_methods[] = {
-        {"pack", l_mat4_pack}, {"unpack", l_mat4_unpack},
-        {"inverse", l_mat4_inverse}, {"transpose", l_mat4_transpose},
-        {"toMat3", l_mat4_toMat3}, {"normalMatrix", l_mat4_normalMatrix},
+        {"Pack", l_mat4_pack}, {"Unpack", l_mat4_unpack},
+        {"Inverse", l_mat4_inverse}, {"Transpose", l_mat4_transpose},
+        {"ToMat3", l_mat4_toMat3}, {"NormalMatrix", l_mat4_normalMatrix},
         {NULL, NULL}
     };
     static const luaL_Reg mat4_meta[] = {
@@ -1080,9 +1080,9 @@ int luaopen_lib_glm(lua_State *L) {
 
     /* quat methods / metamethods */
     static const luaL_Reg quat_methods[] = {
-        {"length", l_quat_length}, {"normalize", l_quat_normalize},
-        {"conjugate", l_quat_conjugate}, {"inverse", l_quat_inverse},
-        {"toMat4", l_quat_toMat4},
+        {"Length", l_quat_length}, {"Normalize", l_quat_normalize},
+        {"Conjugate", l_quat_conjugate}, {"Inverse", l_quat_inverse},
+        {"ToMat4", l_quat_toMat4},
         {NULL, NULL}
     };
     static const luaL_Reg quat_meta[] = {
@@ -1095,22 +1095,22 @@ int luaopen_lib_glm(lua_State *L) {
 
     /* Module table */
     static const luaL_Reg funcs[] = {
-        {"vec2", l_vec2_new}, {"vec3", l_vec3_new},
-        {"vec4", l_vec4_new}, {"mat3", l_mat3_new}, {"mat4", l_mat4_new},
-        {"quat", l_quat_new},
-        {"quatAxisAngle", l_glm_quatAxisAngle},
-        {"quatEuler", l_glm_quatEuler},
-        {"slerp", l_glm_slerp},
-        {"identity", l_glm_identity},
-        {"translate", l_glm_translate}, {"rotate", l_glm_rotate},
-        {"rotateX", l_glm_rotateX}, {"rotateY", l_glm_rotateY},
-        {"rotateZ", l_glm_rotateZ}, {"scale", l_glm_scale},
-        {"perspective", l_glm_perspective}, {"ortho", l_glm_ortho},
-        {"lookat", l_glm_lookat},
-        {"radians", l_glm_radians}, {"degrees", l_glm_degrees},
-        {"clamp", l_glm_clamp}, {"mix", l_glm_mix},
-        {"length", l_glm_length}, {"normalize", l_glm_normalize},
-        {"dot", l_glm_dot}, {"cross", l_glm_cross},
+        {"Vec2", l_vec2_new}, {"Vec3", l_vec3_new},
+        {"Vec4", l_vec4_new}, {"Mat3", l_mat3_new}, {"Mat4", l_mat4_new},
+        {"Quat", l_quat_new},
+        {"QuatAxisAngle", l_glm_quatAxisAngle},
+        {"QuatEuler", l_glm_quatEuler},
+        {"Slerp", l_glm_slerp},
+        {"Identity", l_glm_identity},
+        {"Translate", l_glm_translate}, {"Rotate", l_glm_rotate},
+        {"RotateX", l_glm_rotateX}, {"RotateY", l_glm_rotateY},
+        {"RotateZ", l_glm_rotateZ}, {"Scale", l_glm_scale},
+        {"Perspective", l_glm_perspective}, {"Ortho", l_glm_ortho},
+        {"Lookat", l_glm_lookat},
+        {"Radians", l_glm_radians}, {"Degrees", l_glm_degrees},
+        {"Clamp", l_glm_clamp}, {"Mix", l_glm_mix},
+        {"Length", l_glm_length}, {"Normalize", l_glm_normalize},
+        {"Dot", l_glm_dot}, {"Cross", l_glm_cross},
         {NULL, NULL}
     };
     luaL_newlib(L, funcs);

@@ -64,7 +64,7 @@ local function update_ui()
             { light.light_model_ambient.x, light.light_model_ambient.y, light.light_model_ambient.z }
         )
         if achanged then
-            light.light_model_ambient = glm.vec4(new_ambient[1], new_ambient[2], new_ambient[3], 1.0)
+            light.light_model_ambient = glm.Vec4(new_ambient[1], new_ambient[2], new_ambient[3], 1.0)
         end
 
         imgui.TextUnformatted(string.format("Active Lights: %d / %d", #light.sources, light.NUMBER_OF_LIGHTS))
@@ -145,15 +145,15 @@ local function update_ui()
                     local dchanged, new_dir =
                         imgui.InputFloat3("Direction", { -src.position.x, -src.position.y, -src.position.z })
                     if dchanged then
-                        local dir = glm.vec3(new_dir[1], new_dir[2], new_dir[3]):normalize()
-                        src.position = glm.vec4(-dir.x, -dir.y, -dir.z, 0)
+                        local dir = glm.Vec3(new_dir[1], new_dir[2], new_dir[3]):Normalize()
+                        src.position = glm.Vec4(-dir.x, -dir.y, -dir.z, 0)
                     end
                 else
                     imgui.TextUnformatted(is_spot and "Type: Spotlight" or "Type: Point")
                     local pchanged, new_pos =
                         imgui.InputFloat3("Position", { src.position.x, src.position.y, src.position.z })
                     if pchanged then
-                        src.position = glm.vec4(new_pos[1], new_pos[2], new_pos[3], src.position.w)
+                        src.position = glm.Vec4(new_pos[1], new_pos[2], new_pos[3], src.position.w)
                     end
 
                     if is_spot then
@@ -162,14 +162,14 @@ local function update_ui()
                             { src.spot_direction.x, src.spot_direction.y, src.spot_direction.z }
                         )
                         if sdchanged then
-                            local dir = glm.vec3(new_spot_dir[1], new_spot_dir[2], new_spot_dir[3]):normalize()
-                            src.spot_direction = glm.vec4(dir.x, dir.y, dir.z, src.spot_direction.w)
+                            local dir = glm.Vec3(new_spot_dir[1], new_spot_dir[2], new_spot_dir[3]):Normalize()
+                            src.spot_direction = glm.Vec4(dir.x, dir.y, dir.z, src.spot_direction.w)
                         end
 
                         local expchanged, exp = imgui.SliderFloat("Exponent", src.spot_direction.w, 0, 20)
                         if expchanged then
                             src.spot_direction =
-                                glm.vec4(src.spot_direction.x, src.spot_direction.y, src.spot_direction.z, exp)
+                                glm.Vec4(src.spot_direction.x, src.spot_direction.y, src.spot_direction.z, exp)
                         end
                     end
 
@@ -177,16 +177,16 @@ local function update_ui()
                     local atchanged, new_atten =
                         imgui.InputFloat3("Atten (c,l,q)", { src.attenuation.x, src.attenuation.y, src.attenuation.z })
                     if atchanged then
-                        src.attenuation = glm.vec4(new_atten[1], new_atten[2], new_atten[3], 0)
+                        src.attenuation = glm.Vec4(new_atten[1], new_atten[2], new_atten[3], 0)
                     end
                 end
 
                 -- Color (diffuse)
                 local cchanged, new_color = imgui.ColorEdit3("Color", { src.diffuse.x, src.diffuse.y, src.diffuse.z })
                 if cchanged then
-                    src.color = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
-                    src.diffuse = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
-                    src.specular = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
+                    src.color = glm.Vec4(new_color[1], new_color[2], new_color[3], 1.0)
+                    src.diffuse = glm.Vec4(new_color[1], new_color[2], new_color[3], 1.0)
+                    src.specular = glm.Vec4(new_color[1], new_color[2], new_color[3], 1.0)
                 end
 
                 imgui.TreePop()
@@ -314,10 +314,10 @@ local function load_model()
             )
         end
         local vdata = table.concat(vparts)
-        local vbuf = gpu.buffer(gfx.BufferDesc({ data = gfx.Range(vdata) }))
+        local vbuf = gpu.Buffer(gfx.BufferDesc({ data = gfx.Range(vdata) }))
 
-        local idata = util.pack_u32(indices)
-        local ibuf = gpu.buffer(gfx.BufferDesc({
+        local idata = util.PackU32(indices)
+        local ibuf = gpu.Buffer(gfx.BufferDesc({
             usage = { index_buffer = true },
             data = gfx.Range(idata),
         }))
@@ -343,7 +343,7 @@ local function load_model()
 
             local path = texture_base .. tex_info.path
             if not textures_cache[path] then
-                local tex = texture.load_bc7(path)
+                local tex = texture.LoadBc7(path)
                 if tex then
                     textures_cache[path] = tex
                 end
@@ -362,14 +362,14 @@ local function load_model()
         -- Create default textures if needed
         if not default_diffuse then
             local white = string.pack("BBBB", 255, 255, 255, 255)
-            local img = gpu.image(gfx.ImageDesc({
+            local img = gpu.Image(gfx.ImageDesc({
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { white } },
             }))
-            local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
-            local smp = gpu.sampler(gfx.SamplerDesc({
+            local view = gpu.View(gfx.ViewDesc({ texture = { image = img.handle } }))
+            local smp = gpu.Sampler(gfx.SamplerDesc({
                 min_filter = gfx.Filter.NEAREST,
                 mag_filter = gfx.Filter.NEAREST,
             }))
@@ -378,14 +378,14 @@ local function load_model()
         if not default_normal then
             -- Flat normal: (0.5, 0.5, 1.0) = pointing up in tangent space
             local flat = string.pack("BBBB", 128, 128, 255, 255)
-            local img = gpu.image(gfx.ImageDesc({
+            local img = gpu.Image(gfx.ImageDesc({
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { flat } },
             }))
-            local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
-            local smp = gpu.sampler(gfx.SamplerDesc({
+            local view = gpu.View(gfx.ViewDesc({ texture = { image = img.handle } }))
+            local smp = gpu.Sampler(gfx.SamplerDesc({
                 min_filter = gfx.Filter.NEAREST,
                 mag_filter = gfx.Filter.NEAREST,
             }))
@@ -394,14 +394,14 @@ local function load_model()
         if not default_specular then
             -- Default specular: R=0.5 (intensity), G=0.25 (shininess=32), B=0.5 (fresnel)
             local spec = string.pack("BBBB", 128, 64, 128, 255)
-            local img = gpu.image(gfx.ImageDesc({
+            local img = gpu.Image(gfx.ImageDesc({
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { spec } },
             }))
-            local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
-            local smp = gpu.sampler(gfx.SamplerDesc({
+            local view = gpu.View(gfx.ViewDesc({ texture = { image = img.handle } }))
+            local smp = gpu.Sampler(gfx.SamplerDesc({
                 min_filter = gfx.Filter.NEAREST,
                 mag_filter = gfx.Filter.NEAREST,
             }))
@@ -458,9 +458,9 @@ function M:init()
     ctx.ensure_size(width, height)
 
     -- Register passes
-    pipeline.register(geometry_pass)
-    pipeline.register(lighting_pass)
-    pipeline.register(imgui_pass)
+    pipeline.Register(geometry_pass)
+    pipeline.Register(lighting_pass)
+    pipeline.Register(imgui_pass)
 
     load_model()
 end
@@ -473,7 +473,7 @@ function M:frame()
     camera.update()
     local view = camera.view_matrix()
     local proj = camera.projection_matrix(width, height)
-    local model_mat = glm.mat4()
+    local model_mat = glm.Mat4()
 
     -- Animate lights (uses app.FrameDuration for delta time)
     local dt = app.FrameDuration()
@@ -495,7 +495,7 @@ function M:frame()
     }
 
     -- Execute all passes
-    pipeline.execute(ctx, frame_data)
+    pipeline.Execute(ctx, frame_data)
 end
 
 function M:cleanup()
@@ -503,7 +503,7 @@ function M:cleanup()
     notify.shutdown()
 
     -- Destroy pipeline and passes
-    pipeline.destroy()
+    pipeline.Destroy()
     ctx.destroy()
 
     -- Destroy mesh resources

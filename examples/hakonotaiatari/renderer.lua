@@ -210,19 +210,19 @@ local function pack_uniforms(mvp, model, r, g, b, a)
     data[38] = gakugaku_time
     data[39] = screen_w
     data[40] = screen_h
-    return util.pack_floats(data)
+    return util.PackFloats(data)
 end
 
 -- Cube wireframe edges (8 vertices, 12 edges = 24 line indices)
 local cube_vertices = {
-    glm.vec3(-0.5, -0.5, -0.5),
-    glm.vec3(0.5, -0.5, -0.5),
-    glm.vec3(0.5, 0.5, -0.5),
-    glm.vec3(-0.5, 0.5, -0.5),
-    glm.vec3(-0.5, -0.5, 0.5),
-    glm.vec3(0.5, -0.5, 0.5),
-    glm.vec3(0.5, 0.5, 0.5),
-    glm.vec3(-0.5, 0.5, 0.5),
+    glm.Vec3(-0.5, -0.5, -0.5),
+    glm.Vec3(0.5, -0.5, -0.5),
+    glm.Vec3(0.5, 0.5, -0.5),
+    glm.Vec3(-0.5, 0.5, -0.5),
+    glm.Vec3(-0.5, -0.5, 0.5),
+    glm.Vec3(0.5, -0.5, 0.5),
+    glm.Vec3(0.5, 0.5, 0.5),
+    glm.Vec3(-0.5, 0.5, 0.5),
 }
 
 local cube_edges = {
@@ -245,7 +245,7 @@ function M.init()
     }))
 
     -- Compile shaded shader
-    shaded_shader = shaderMod.compile(shaded_shader_source, "hakotai_shaded", {
+    shaded_shader = shaderMod.Compile(shaded_shader_source, "hakotai_shaded", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 160,
@@ -292,7 +292,7 @@ function M.init()
     -- Create vertex buffer
     local vertices = make_cube_vertices()
     shaded_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.pack_floats(vertices))
+        data = gfx.Range(util.PackFloats(vertices))
     }))
 
     -- Create index buffer
@@ -460,7 +460,7 @@ end
 
 -- Draw cube in shaded mode using sokol.gfx
 function M.draw_cube_shaded(pos, size, angle, r, g, b, proj, view)
-    local model = glm.translate(pos) * glm.rotate(angle, glm.vec3(0, 1, 0)) * glm.scale(size)
+    local model = glm.Translate(pos) * glm.Rotate(angle, glm.Vec3(0, 1, 0)) * glm.Scale(size)
     local mvp = proj * view * model
 
     gfx.ApplyUniforms(0, gfx.Range(pack_uniforms(mvp, model, r, g, b, 1.0)))
@@ -488,7 +488,7 @@ function M.draw_point(pos, size, r, g, b)
     else
         -- Draw as small cube
         local s = size * 0.5
-        M.draw_cube_shaded(pos, glm.vec3(s, s, s), 0, r, g, b, M._proj, M._view)
+        M.draw_cube_shaded(pos, glm.Vec3(s, s, s), 0, r, g, b, M._proj, M._view)
     end
 end
 

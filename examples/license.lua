@@ -56,7 +56,7 @@ function M:frame()
 
     imgui.SetNextWindowPos({ w * 0.1, h * 0.05 })
     imgui.SetNextWindowSize({ w * 0.8, h * 0.9 })
-    local flags = imgui.WindowFlags.NoResize + imgui.WindowFlags.NoMove + imgui.WindowFlags.NoCollapse
+    local flags = imgui.WindowFlags.NO_RESIZE + imgui.WindowFlags.NO_MOVE + imgui.WindowFlags.NO_COLLAPSE
     if imgui.Begin("Lub3d Licenses", nil, flags) then
         imgui.TextUnformatted(license_text)
     end

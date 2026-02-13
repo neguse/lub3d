@@ -103,7 +103,7 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
         },
     }
-    shader = shaderMod.compile_full(shader_source, "simple", shader_desc)
+    shader = shaderMod.CompileFull(shader_source, "simple", shader_desc)
     if not shader then
         log.error("Failed to compile shader")
         return

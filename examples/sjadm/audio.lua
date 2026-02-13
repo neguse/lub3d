@@ -24,7 +24,7 @@ function M.init()
     if not ma or not audio_lib then
         return
     end
-    engine, vfs_ref = audio_lib.create_engine()
+    engine, vfs_ref = audio_lib.CreateEngine()
     if not engine then
         log.warn("Failed to init miniaudio engine")
         return

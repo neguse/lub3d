@@ -8,16 +8,16 @@ local RADIUS = 50
 local SEGMENTS = 16
 
 function item.new(world_id, x, y, type, registry)
-    local body_def = b2d.default_body_def()
-    body_def.type = b2d.BodyType.DYNAMICBODY
+    local body_def = b2d.DefaultBodyDef()
+    body_def.type = b2d.BodyType.DYNAMIC_BODY
     body_def.position = { x, y }
-    local body_id = b2d.create_body(world_id, body_def)
+    local body_id = b2d.CreateBody(world_id, body_def)
 
-    local shape_def = b2d.default_shape_def()
+    local shape_def = b2d.DefaultShapeDef()
     shape_def.enableContactEvents = true
     shape_def.density = 1.0
     local circle = b2d.Circle({ center = { 0, 0 }, radius = RADIUS })
-    local shape_id = b2d.create_circle_shape(body_id, shape_def, circle)
+    local shape_id = b2d.CreateCircleShape(body_id, shape_def, circle)
 
     local it = setmetatable({
         type = type, -- "J" or "D"
@@ -51,12 +51,12 @@ function item:destroy(registry)
     if registry then
         registry[tostring(self.shape_id)] = nil
     end
-    b2d.destroy_body(self.body_id)
+    b2d.DestroyBody(self.body_id)
 end
 
 function item:render()
     if self.consumed then return end
-    local pos = b2d.body_get_position(self.body_id)
+    local pos = b2d.BodyGetPosition(self.body_id)
     local x, y = pos[1], pos[2]
     gl.BeginLines()
     gl.C3f(1, 1, 1)

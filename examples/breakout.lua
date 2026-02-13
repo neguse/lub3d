@@ -153,11 +153,11 @@ end
 local function init_blocks()
     blocks = {}
     local colors = {
-        glm.vec3(1.0, 0.3, 0.3), -- red
-        glm.vec3(1.0, 0.6, 0.2), -- orange
-        glm.vec3(1.0, 1.0, 0.3), -- yellow
-        glm.vec3(0.3, 1.0, 0.3), -- green
-        glm.vec3(0.3, 0.6, 1.0), -- blue
+        glm.Vec3(1.0, 0.3, 0.3), -- red
+        glm.Vec3(1.0, 0.6, 0.2), -- orange
+        glm.Vec3(1.0, 1.0, 0.3), -- yellow
+        glm.Vec3(0.3, 1.0, 0.3), -- green
+        glm.Vec3(0.3, 0.6, 1.0), -- blue
     }
     for row = 1, BLOCK_ROWS do
         for col = 1, BLOCK_COLS do
@@ -216,7 +216,7 @@ local function update_game_logic(dt)
         local hit_pos = (ball_x - paddle_x) / (PADDLE_WIDTH / 2)
         ball_vx = ball_vx + hit_pos * 2
         -- Clamp velocity
-        ball_vx = glm.clamp(ball_vx, -6, 6)
+        ball_vx = glm.Clamp(ball_vx, -6, 6)
     end
 
     -- Block collision
@@ -269,11 +269,11 @@ local function pack_uniforms(mvp, model, color)
     data[34] = color.y
     data[35] = color.z
     data[36] = 1.0
-    return util.pack_floats(data)
+    return util.PackFloats(data)
 end
 
 local function draw_cube(proj, view, pos, scale, color)
-    local model = glm.translate(pos) * glm.scale(scale)
+    local model = glm.Translate(pos) * glm.Scale(scale)
     local mvp = proj * view * model
 
     gfx.ApplyUniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
@@ -294,7 +294,7 @@ function M:init()
     }))
 
     -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
-    shader = shaderMod.compile(shader_source, "breakout", {
+    shader = shaderMod.Compile(shader_source, "breakout", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 144,
@@ -339,7 +339,7 @@ function M:init()
     -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
     local vertices = make_cube_vertices()
     vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.pack_floats(vertices))
+        data = gfx.Range(util.PackFloats(vertices))
     }))
 
     local indices = make_cube_indices()
@@ -368,17 +368,17 @@ function M:frame()
     end
     -- Clamp paddle
     local max_x = FIELD_WIDTH / 2 - PADDLE_WIDTH / 2
-    paddle_x = glm.clamp(paddle_x, -max_x, max_x)
+    paddle_x = glm.Clamp(paddle_x, -max_x, max_x)
 
     update_game_logic(dt)
 
     -- Camera setup
     local aspect = app.Widthf() / app.Heightf()
-    local proj = glm.perspective(glm.radians(45), aspect, 0.1, 100.0)
-    local view = glm.lookat(
-        glm.vec3(0, -5, 18),
-        glm.vec3(0, 0, 0),
-        glm.vec3(0, 1, 0)
+    local proj = glm.Perspective(glm.Radians(45), aspect, 0.1, 100.0)
+    local view = glm.Lookat(
+        glm.Vec3(0, -5, 18),
+        glm.Vec3(0, 0, 0),
+        glm.Vec3(0, 1, 0)
     )
 
     -- Begin render pass
@@ -403,25 +403,25 @@ function M:frame()
     }))
 
     -- Draw walls (faint)
-    local wall_color = glm.vec3(0.2, 0.2, 0.3)
-    draw_cube(proj, view, glm.vec3(-FIELD_WIDTH / 2 - 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
-    draw_cube(proj, view, glm.vec3(FIELD_WIDTH / 2 + 0.25, 0, 0), glm.vec3(0.5, FIELD_HEIGHT, 1), wall_color)
-    draw_cube(proj, view, glm.vec3(0, FIELD_HEIGHT / 2 + 0.25, 0), glm.vec3(FIELD_WIDTH + 1, 0.5, 1), wall_color)
+    local wall_color = glm.Vec3(0.2, 0.2, 0.3)
+    draw_cube(proj, view, glm.Vec3(-FIELD_WIDTH / 2 - 0.25, 0, 0), glm.Vec3(0.5, FIELD_HEIGHT, 1), wall_color)
+    draw_cube(proj, view, glm.Vec3(FIELD_WIDTH / 2 + 0.25, 0, 0), glm.Vec3(0.5, FIELD_HEIGHT, 1), wall_color)
+    draw_cube(proj, view, glm.Vec3(0, FIELD_HEIGHT / 2 + 0.25, 0), glm.Vec3(FIELD_WIDTH + 1, 0.5, 1), wall_color)
 
     -- Draw paddle
     local paddle_y = -FIELD_HEIGHT / 2 + 1
-    draw_cube(proj, view, glm.vec3(paddle_x, paddle_y, 0), glm.vec3(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_DEPTH),
-        glm.vec3(0.8, 0.8, 0.9))
+    draw_cube(proj, view, glm.Vec3(paddle_x, paddle_y, 0), glm.Vec3(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_DEPTH),
+        glm.Vec3(0.8, 0.8, 0.9))
 
     -- Draw ball
     local pulse = math.sin(t * 10) * 0.1 + 0.9
-    draw_cube(proj, view, glm.vec3(ball_x, ball_y, 0), glm.vec3(BALL_SIZE, BALL_SIZE, BALL_SIZE),
-        glm.vec3(pulse, pulse, 1.0))
+    draw_cube(proj, view, glm.Vec3(ball_x, ball_y, 0), glm.Vec3(BALL_SIZE, BALL_SIZE, BALL_SIZE),
+        glm.Vec3(pulse, pulse, 1.0))
 
     -- Draw blocks
     for _, block in ipairs(blocks) do
         if block.alive then
-            draw_cube(proj, view, glm.vec3(block.x, block.y, 0), glm.vec3(BLOCK_WIDTH, BLOCK_HEIGHT, BLOCK_DEPTH),
+            draw_cube(proj, view, glm.Vec3(block.x, block.y, 0), glm.Vec3(BLOCK_WIDTH, BLOCK_HEIGHT, BLOCK_DEPTH),
                 block.color)
         end
     end

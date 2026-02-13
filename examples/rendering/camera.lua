@@ -12,7 +12,7 @@ local app = require("sokol.app")
 ---@field mouse_captured boolean Whether mouse is captured
 local M = {}
 
-M.pos = glm.vec3(0, -20, 10)
+M.pos = glm.Vec3(0, -20, 10)
 M.yaw = 0
 M.pitch = 0.3
 M.move_speed = 0.5
@@ -25,7 +25,7 @@ local keys_down = {}
 ---Get forward direction vector
 ---@return vec3
 function M.forward()
-    return glm.vec3(
+    return glm.Vec3(
         math.sin(M.yaw) * math.cos(M.pitch),
         math.cos(M.yaw) * math.cos(M.pitch),
         math.sin(M.pitch)
@@ -35,13 +35,13 @@ end
 ---Get right direction vector
 ---@return vec3
 function M.right()
-    return M.forward():cross(glm.vec3(0, 0, 1)):normalize()
+    return M.forward():cross(glm.Vec3(0, 0, 1)):Normalize()
 end
 
 ---Get up direction vector
 ---@return vec3
 function M.up()
-    return glm.vec3(0, 0, 1)
+    return glm.Vec3(0, 0, 1)
 end
 
 ---Update camera position based on input
@@ -63,7 +63,7 @@ end
 ---@return mat4
 function M.view_matrix()
     local target = M.pos + M.forward()
-    return glm.lookat(M.pos, target, M.up())
+    return glm.Lookat(M.pos, target, M.up())
 end
 
 ---Get projection matrix
@@ -77,7 +77,7 @@ function M.projection_matrix(width, height, fov, near, far)
     fov = fov or 60
     near = near or 0.1
     far = far or 1000.0
-    return glm.perspective(glm.radians(fov), width / height, near, far)
+    return glm.Perspective(glm.Radians(fov), width / height, near, far)
 end
 
 ---Handle input event

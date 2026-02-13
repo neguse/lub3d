@@ -15,6 +15,24 @@ public static class Pipeline
         name.EndsWith("_t") ? name[..^2] : name;
 
     /// <summary>
+    /// CamelCase / PascalCase を UPPER_SNAKE_CASE に変換
+    /// 例: "NoTitleBar" → "NO_TITLE_BAR"
+    /// </summary>
+    public static string ToUpperSnakeCase(string s)
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 0; i < s.Length; i++)
+        {
+            var c = s[i];
+            if (i > 0 && char.IsUpper(c) && (char.IsLower(s[i - 1]) ||
+                (i + 1 < s.Length && char.IsLower(s[i + 1]))))
+                sb.Append('_');
+            sb.Append(char.ToUpper(c));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// Enum アイテム名からプレフィックスを除去
     /// </summary>
     public static string EnumItemName(string itemName, string enumName, string prefix)

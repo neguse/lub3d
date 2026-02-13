@@ -11,24 +11,24 @@ local KILL_Y = -3000
 local DEAD_TIMER_MAX = 1.5
 
 function player.new(world_id, input, camera, map, registry)
-    local body_def = b2d.default_body_def()
-    body_def.type = b2d.BodyType.DYNAMICBODY
+    local body_def = b2d.DefaultBodyDef()
+    body_def.type = b2d.BodyType.DYNAMIC_BODY
     body_def.position = { 0, 10 }
     body_def.fixedRotation = true
-    local body_id = b2d.create_body(world_id, body_def)
+    local body_id = b2d.CreateBody(world_id, body_def)
 
-    local shape_def = b2d.default_shape_def()
+    local shape_def = b2d.DefaultShapeDef()
     shape_def.density = 1.0
     shape_def.enableContactEvents = true
     shape_def.enableSensorEvents = true
-    local box = b2d.make_box(WIDTH / 2, HEIGHT / 2)
-    local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
-    b2d.shape_enable_contact_events(shape_id, true)
+    local box = b2d.MakeBox(WIDTH / 2, HEIGHT / 2)
+    local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
+    b2d.ShapeEnableContactEvents(shape_id, true)
 
     -- Set mass to match original (~2.77)
-    local mass_data = b2d.body_get_mass_data(body_id)
+    local mass_data = b2d.BodyGetMassData(body_id)
     mass_data.mass = 2.77
-    b2d.body_set_mass_data(body_id, mass_data)
+    b2d.BodySetMassData(body_id, mass_data)
 
     local pl = setmetatable({
         world_id = world_id,
@@ -78,18 +78,18 @@ end
 
 function player:respawn()
     local point = self.respawnPoint
-    b2d.body_set_transform(self.body_id, { point.x, point.y }, { 1, 0 })
+    b2d.BodySetTransform(self.body_id, { point.x, point.y }, { 1, 0 })
     self.camera:set(point.x, point.y)
     self.dead = false
     self.deadTimer = DEAD_TIMER_MAX
     self.touchingWalls = 0
-    b2d.body_enable(self.body_id)
-    b2d.body_set_linear_velocity(self.body_id, { 0, 0 })
-    b2d.body_set_awake(self.body_id, true)
+    b2d.BodyEnable(self.body_id)
+    b2d.BodySetLinearVelocity(self.body_id, { 0, 0 })
+    b2d.BodySetAwake(self.body_id, true)
 end
 
 function player:getPosition()
-    local pos = b2d.body_get_position(self.body_id)
+    local pos = b2d.BodyGetPosition(self.body_id)
     return pos[1], pos[2]
 end
 
@@ -98,7 +98,7 @@ function player:dashing()
 end
 
 function player:getVelocity()
-    local vel = b2d.body_get_linear_velocity(self.body_id)
+    local vel = b2d.BodyGetLinearVelocity(self.body_id)
     return vel[1], vel[2]
 end
 
@@ -241,16 +241,16 @@ function player:update(dt)
     if self:dashing() then velocity = 700 end
     local vx, vy = self:getVelocity()
     local force = 10
-    b2d.body_apply_force_to_center(self.body_id, { force * (ix * velocity - vx), 0 }, true)
+    b2d.BodyApplyForceToCenter(self.body_id, { force * (ix * velocity - vx), 0 }, true)
 
     -- dash
     if self.input.getDash() and self:dashable() then
         local dash_force = 10
         local dash_velocity = 300
-        local mass = b2d.body_get_mass(self.body_id)
+        local mass = b2d.BodyGetMass(self.body_id)
         local fx = ix * dash_force * math.max(dash_velocity - math.abs(vx), 0)
         local fy = math.max(-vy * mass, 0)
-        b2d.body_apply_linear_impulse_to_center(self.body_id, { fx, fy }, true)
+        b2d.BodyApplyLinearImpulseToCenter(self.body_id, { fx, fy }, true)
         self.dashTime = 0.5
         self.dashNum = self.dashNum - 1
         audio.play("dash")
@@ -265,8 +265,8 @@ function player:update(dt)
         local nvx = math.cos(a) * jumpNormalVelo
         local nvy = jumpUpVelo + math.sin(a) * jumpNormalVelo
         local dvx, dvy = nvx - vx, nvy - vy
-        local mass = b2d.body_get_mass(self.body_id)
-        b2d.body_apply_linear_impulse_to_center(self.body_id, { dvx * mass, dvy * mass }, true)
+        local mass = b2d.BodyGetMass(self.body_id)
+        b2d.BodyApplyLinearImpulseToCenter(self.body_id, { dvx * mass, dvy * mass }, true)
         self.jumpNum = self.jumpNum - 1
         audio.play("jump")
     end
@@ -279,7 +279,7 @@ function player:update(dt)
 
     -- dead state
     if self.dead then
-        b2d.body_disable(self.body_id)
+        b2d.BodyDisable(self.body_id)
         self.deadTimer = self.deadTimer - dt
         if self.deadTimer < 0 then
             self:respawn()

@@ -9,16 +9,16 @@ local util = require("lib.util")
 local glm = require("lib.glm")
 
 -- Camera
-local camera_pos = glm.vec3(0, -15, 8)
-local camera_target = glm.vec3(0, 0, 3)
-local camera_up = glm.vec3(0, 0, 1) -- Z-up coordinate system
+local camera_pos = glm.Vec3(0, -15, 8)
+local camera_target = glm.Vec3(0, 0, 3)
+local camera_up = glm.Vec3(0, 0, 1) -- Z-up coordinate system
 local camera_yaw = 0
 local camera_pitch = 0.3
 
 -- Light
-local light_pos = glm.vec3(5, -5, 10)
-local light_color = glm.vec3(2, 1.9, 1.8)     -- brighter
-local ambient_color = glm.vec3(0.5, 0.5, 0.5) -- brighter
+local light_pos = glm.Vec3(5, -5, 10)
+local light_color = glm.Vec3(2, 1.9, 1.8)     -- brighter
+local ambient_color = glm.Vec3(0.5, 0.5, 0.5) -- brighter
 
 -- Graphics resources
 local shader = nil
@@ -263,7 +263,7 @@ function M:init()
 
     -- Compile shader
     -- Single uniform block: 2 mat4 + 6 vec4 = 128 + 96 = 224 bytes
-    shader = shaderMod.compile(shader_source, "lighting", {
+    shader = shaderMod.Compile(shader_source, "lighting", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 224,
@@ -312,7 +312,7 @@ function M:init()
     local cube_indices = make_cube_indices()
 
     cube_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.pack_floats(cube_verts)),
+        data = gfx.Range(util.PackFloats(cube_verts)),
     }))
 
     cube_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
@@ -329,7 +329,7 @@ function M:init()
     local sphere_indices = make_sphere_indices(segs, rings)
 
     sphere_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.pack_floats(sphere_verts)),
+        data = gfx.Range(util.PackFloats(sphere_verts)),
     }))
 
     sphere_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
@@ -349,12 +349,12 @@ function M:frame()
 
     -- Update camera based on input
     local move_speed = 0.2
-    local forward = glm.vec3(
+    local forward = glm.Vec3(
         math.sin(camera_yaw) * math.cos(camera_pitch),
         math.cos(camera_yaw) * math.cos(camera_pitch),
         math.sin(camera_pitch)
     )
-    local right = glm.normalize(glm.cross(forward, camera_up))
+    local right = glm.Normalize(glm.Cross(forward, camera_up))
 
     if keys_down["W"] then camera_pos = camera_pos + forward * move_speed end
     if keys_down["S"] then camera_pos = camera_pos - forward * move_speed end
@@ -364,7 +364,7 @@ function M:frame()
     if keys_down["LEFT_SHIFT"] then camera_pos = camera_pos - camera_up * move_speed end
 
     -- Animate light
-    light_pos = glm.vec3(
+    light_pos = glm.Vec3(
         math.sin(t * 0.5) * 8,
         math.cos(t * 0.5) * 8,
         6 + math.sin(t * 0.3) * 2
@@ -375,12 +375,12 @@ function M:frame()
     local h = app.Height()
     local aspect = w / h
 
-    local proj = glm.perspective(math.rad(60), aspect, 0.1, 100)
+    local proj = glm.Perspective(math.rad(60), aspect, 0.1, 100)
     -- Simple fixed camera looking at origin
-    local eye = glm.vec3(0, -10, 5)
-    local center = glm.vec3(0, 0, 0)
-    local up = glm.vec3(0, 0, 1)
-    local view = glm.lookat(eye, center, up)
+    local eye = glm.Vec3(0, -10, 5)
+    local center = glm.Vec3(0, 0, 0)
+    local up = glm.Vec3(0, 0, 1)
+    local view = glm.Lookat(eye, center, up)
     camera_pos = eye -- for lighting calculation
 
     -- Begin pass
@@ -423,12 +423,12 @@ function M:frame()
     }
 
     for i, pos in ipairs(sphere_positions) do
-        local model = glm.translate(glm.vec3(pos[1], pos[2], pos[3])) * glm.scale(glm.vec3(1.5, 1.5, 1.5))
+        local model = glm.Translate(glm.Vec3(pos[1], pos[2], pos[3])) * glm.Scale(glm.Vec3(1.5, 1.5, 1.5))
         local mvp = proj * view * model
 
         local color = sphere_colors[i]
 
-        local uniforms = mvp:pack() .. model:pack() .. util.pack_floats({
+        local uniforms = mvp:Pack() .. model:Pack() .. util.PackFloats({
             light_pos.x, light_pos.y, light_pos.z, 1,
             light_color.x, light_color.y, light_color.z, 1,
             ambient_color.x, ambient_color.y, ambient_color.z, 1,
@@ -442,10 +442,10 @@ function M:frame()
     end
 
     -- Draw light indicator (small bright sphere)
-    local light_model = glm.translate(light_pos) * glm.scale(glm.vec3(0.3, 0.3, 0.3))
+    local light_model = glm.Translate(light_pos) * glm.Scale(glm.Vec3(0.3, 0.3, 0.3))
     local light_mvp = proj * view * light_model
 
-    local uniforms = light_mvp:pack() .. light_model:pack() .. util.pack_floats({
+    local uniforms = light_mvp:Pack() .. light_model:Pack() .. util.PackFloats({
         light_pos.x, light_pos.y, light_pos.z, 1,
         1, 1, 1, 1,
         5, 5, 5, 1, -- high ambient = emissive

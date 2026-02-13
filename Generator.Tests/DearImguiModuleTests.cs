@@ -268,8 +268,8 @@ public class DearImguiModuleTests
         var spec = mod.BuildSpec(MakeRegistry());
         var winFlags = spec.Enums.First(e => e.CName == "ImGuiWindowFlags_");
         Assert.Equal("WindowFlags", winFlags.FieldName);
-        Assert.Contains(winFlags.Items, i => i.LuaName == "None");
-        Assert.Contains(winFlags.Items, i => i.LuaName == "NoTitleBar");
+        Assert.Contains(winFlags.Items, i => i.LuaName == "NONE");
+        Assert.Contains(winFlags.Items, i => i.LuaName == "NO_TITLE_BAR");
     }
 
     [Fact]

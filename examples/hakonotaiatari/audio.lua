@@ -53,7 +53,7 @@ function M.init()
         return false
     end
 
-    engine, vfs_ref = audio_lib.create_engine()
+    engine, vfs_ref = audio_lib.CreateEngine()
     if not engine then
         log.warn("Failed to init miniaudio engine")
         initialized = false

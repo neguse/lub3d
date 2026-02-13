@@ -86,7 +86,7 @@ local function get_ibuf_data()
         indices[#indices + 1] = base + 2
         indices[#indices + 1] = base + 3
     end
-    shared_ibuf_data = util.pack_u32(indices)
+    shared_ibuf_data = util.PackU32(indices)
     return shared_ibuf_data
 end
 
@@ -102,7 +102,7 @@ local function ensure_shared_resources()
         return
     end
 
-    local shd = shaderMod.compile_full(shader_source, "sprite", {
+    local shd = shaderMod.CompileFull(shader_source, "sprite", {
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.VERTEX,
@@ -181,7 +181,7 @@ local function ensure_shared_resources()
 end
 
 --- Create a new sprite batch for a given texture atlas
----@param tex_result texture.LoadResult from lib.texture.load()
+---@param tex_result texture.LoadResult from lib.texture.Load()
 ---@param tex_w number atlas width in pixels
 ---@param tex_h number atlas height in pixels
 ---@param screen_w number logical screen width (for orthographic projection)
@@ -190,12 +190,12 @@ end
 function M.new_batch(tex_result, tex_w, tex_h, screen_w, screen_h)
     ensure_shared_resources()
 
-    local vbuf = gpu.buffer(gfx.BufferDesc({
+    local vbuf = gpu.Buffer(gfx.BufferDesc({
         usage = { vertex_buffer = true, dynamic_update = true },
         size = MAX_QUADS * VERTS_PER_QUAD * FLOATS_PER_VERT * 4,
     }))
 
-    local ibuf = gpu.buffer(gfx.BufferDesc({
+    local ibuf = gpu.Buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(get_ibuf_data()),
     }))
@@ -325,7 +325,7 @@ function M.flush(batch)
     end
 
     -- Upload vertex data
-    local packed = util.pack_floats(batch.verts)
+    local packed = util.PackFloats(batch.verts)
     gfx.UpdateBuffer(batch.vbuf.handle, gfx.Range(packed))
 
     -- Apply pipeline and bindings
@@ -338,7 +338,7 @@ function M.flush(batch)
     }))
 
     -- Set screen size uniform
-    local params = util.pack_floats({ batch.screen_w, batch.screen_h, 0, 0 })
+    local params = util.PackFloats({ batch.screen_w, batch.screen_h, 0, 0 })
     gfx.ApplyUniforms(0, gfx.Range(params))
 
     -- Draw

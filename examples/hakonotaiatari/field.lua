@@ -25,20 +25,20 @@ function M.render()
     -- Draw grid lines on XZ plane (y = 0)
     for i = 0, GRID_DIVISIONS do
         local x = -L + (2 * L * i / GRID_DIVISIONS)
-        renderer.draw_line(glm.vec3(x, 0, -L), glm.vec3(x, 0, L), r, g, b)
+        renderer.draw_line(glm.Vec3(x, 0, -L), glm.Vec3(x, 0, L), r, g, b)
     end
 
     for i = 0, GRID_DIVISIONS do
         local z = -L + (2 * L * i / GRID_DIVISIONS)
-        renderer.draw_line(glm.vec3(-L, 0, z), glm.vec3(L, 0, z), r, g, b)
+        renderer.draw_line(glm.Vec3(-L, 0, z), glm.Vec3(L, 0, z), r, g, b)
     end
 
     -- Draw boundary box (slightly raised for visibility)
     local y = 1
-    renderer.draw_line(glm.vec3(-L, y, -L), glm.vec3(L, y, -L), r, g, b)
-    renderer.draw_line(glm.vec3(L, y, -L), glm.vec3(L, y, L), r, g, b)
-    renderer.draw_line(glm.vec3(L, y, L), glm.vec3(-L, y, L), r, g, b)
-    renderer.draw_line(glm.vec3(-L, y, L), glm.vec3(-L, y, -L), r, g, b)
+    renderer.draw_line(glm.Vec3(-L, y, -L), glm.Vec3(L, y, -L), r, g, b)
+    renderer.draw_line(glm.Vec3(L, y, -L), glm.Vec3(L, y, L), r, g, b)
+    renderer.draw_line(glm.Vec3(L, y, L), glm.Vec3(-L, y, L), r, g, b)
+    renderer.draw_line(glm.Vec3(-L, y, L), glm.Vec3(-L, y, -L), r, g, b)
 end
 
 -- Render field for title screen (with rotation)
@@ -50,12 +50,12 @@ function M.render_title(angle)
     local divisions = 5
     for i = 0, divisions do
         local x = -L + (2 * L * i / divisions)
-        renderer.draw_line(glm.vec3(x, 0, -L), glm.vec3(x, 0, L), r, g, b)
+        renderer.draw_line(glm.Vec3(x, 0, -L), glm.Vec3(x, 0, L), r, g, b)
     end
 
     for i = 0, divisions do
         local z = -L + (2 * L * i / divisions)
-        renderer.draw_line(glm.vec3(-L, 0, z), glm.vec3(L, 0, z), r, g, b)
+        renderer.draw_line(glm.Vec3(-L, 0, z), glm.Vec3(L, 0, z), r, g, b)
     end
 end
 

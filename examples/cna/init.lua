@@ -422,7 +422,7 @@ end
 
 function M:audio_init()
     self.audio = {}
-    self.audio.engine, self.audio.vfs = audio_lib.create_engine()
+    self.audio.engine, self.audio.vfs = audio_lib.CreateEngine()
     self.audio.engine:Start()
     self.audio.engine:SetVolume(0.4)
 
@@ -702,7 +702,7 @@ function M:init()
         environment = glue.Environment(),
     }))
 
-    self.tex_result = texture.load("examples/cna/assets/texture.png", {
+    self.tex_result = texture.Load("examples/cna/assets/texture.png", {
         filter_min = gfx.Filter.NEAREST,
         filter_mag = gfx.Filter.NEAREST,
         wrap_u = gfx.Wrap.CLAMP_TO_EDGE,

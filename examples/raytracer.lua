@@ -273,7 +273,7 @@ function M:init()
     sdtx.Setup(sdtx.Desc({ fonts = { sdtx.FontC64() } }))
     last_time = stm.Now()
 
-    shader = shaderMod.compile(shader_source, "raytracer", {
+    shader = shaderMod.Compile(shader_source, "raytracer", {
         { size = 16, stage = gfx.ShaderStage.FRAGMENT }
     })
     if not shader then
@@ -299,7 +299,7 @@ function M:init()
 
     -- Fullscreen quad
     vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = util.pack_floats({ -1, -1, 1, -1, -1, 1, 1, 1 }),
+        data = util.PackFloats({ -1, -1, 1, -1, -1, 1, 1, 1 }),
         usage = { vertex_buffer = true, immutable = true }
     }))
 end
@@ -332,7 +332,7 @@ function M:frame()
     gfx.ApplyBindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
 
     -- Pass uniforms (time, aspect ratio)
-    gfx.ApplyUniforms(0, gfx.Range(util.pack_floats({ t, w / h, 0, 0 })))
+    gfx.ApplyUniforms(0, gfx.Range(util.PackFloats({ t, w / h, 0, 0 })))
 
     gfx.Draw(0, 4, 1)
 

@@ -419,37 +419,37 @@ public class Box2dModule : IModule
         // ===== ExtraLuaRegs + ExtraLuaFuncs =====
         var extraRegs = new List<(string LuaName, string CFunc)>
         {
-            ("default_world_def", "l_b2d_default_world_def"),
-            ("world_get_contact_events", "l_b2d_world_get_contact_events"),
-            ("world_get_sensor_events", "l_b2d_world_get_sensor_events"),
-            ("world_get_body_events", "l_b2d_world_get_body_events"),
-            ("body_get_shapes", "l_b2d_body_get_shapes"),
-            ("body_get_joints", "l_b2d_body_get_joints"),
-            ("world_cast_ray_closest", "l_b2d_world_cast_ray_closest"),
-            ("world_overlap_aabb", "l_b2d_world_overlap_aabb"),
-            ("world_cast_ray", "l_b2d_world_cast_ray"),
+            ("DefaultWorldDef", "l_b2d_default_world_def"),
+            ("WorldGetContactEvents", "l_b2d_world_get_contact_events"),
+            ("WorldGetSensorEvents", "l_b2d_world_get_sensor_events"),
+            ("WorldGetBodyEvents", "l_b2d_world_get_body_events"),
+            ("BodyGetShapes", "l_b2d_body_get_shapes"),
+            ("BodyGetJoints", "l_b2d_body_get_joints"),
+            ("WorldCastRayClosest", "l_b2d_world_cast_ray_closest"),
+            ("WorldOverlapAabb", "l_b2d_world_overlap_aabb"),
+            ("WorldCastRay", "l_b2d_world_cast_ray"),
         };
 
         var extraLuaFuncs = new List<FuncBinding>
         {
-            new("l_b2d_default_world_def", "default_world_def", [],
+            new("l_b2d_default_world_def", "DefaultWorldDef", [],
                 HandleType("b2WorldDef"), null),
-            new("l_b2d_world_get_contact_events", "world_get_contact_events",
+            new("l_b2d_world_get_contact_events", "WorldGetContactEvents",
                 [new ParamBinding("worldId", HandleType("b2WorldId"))],
                 new BindingType.Void(), null),
-            new("l_b2d_world_get_sensor_events", "world_get_sensor_events",
+            new("l_b2d_world_get_sensor_events", "WorldGetSensorEvents",
                 [new ParamBinding("worldId", HandleType("b2WorldId"))],
                 new BindingType.Void(), null),
-            new("l_b2d_world_get_body_events", "world_get_body_events",
+            new("l_b2d_world_get_body_events", "WorldGetBodyEvents",
                 [new ParamBinding("worldId", HandleType("b2WorldId"))],
                 new BindingType.Void(), null),
-            new("l_b2d_body_get_shapes", "body_get_shapes",
+            new("l_b2d_body_get_shapes", "BodyGetShapes",
                 [new ParamBinding("bodyId", HandleType("b2BodyId"))],
                 new BindingType.Void(), null),
-            new("l_b2d_body_get_joints", "body_get_joints",
+            new("l_b2d_body_get_joints", "BodyGetJoints",
                 [new ParamBinding("bodyId", HandleType("b2BodyId"))],
                 new BindingType.Void(), null),
-            new("l_b2d_world_cast_ray_closest", "world_cast_ray_closest",
+            new("l_b2d_world_cast_ray_closest", "WorldCastRayClosest",
                 [
                     new ParamBinding("worldId", HandleType("b2WorldId")),
                     new ParamBinding("origin", B2Vec2Type),
@@ -457,7 +457,7 @@ public class Box2dModule : IModule
                     new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
                 ],
                 new BindingType.Void(), null),
-            new("l_b2d_world_overlap_aabb", "world_overlap_aabb",
+            new("l_b2d_world_overlap_aabb", "WorldOverlapAabb",
                 [
                     new ParamBinding("worldId", HandleType("b2WorldId")),
                     new ParamBinding("aabb", B2AABBType),
@@ -465,7 +465,7 @@ public class Box2dModule : IModule
                     new ParamBinding("callback", new BindingType.Callback([], null)),
                 ],
                 new BindingType.Void(), null),
-            new("l_b2d_world_cast_ray", "world_cast_ray",
+            new("l_b2d_world_cast_ray", "WorldCastRay",
                 [
                     new ParamBinding("worldId", HandleType("b2WorldId")),
                     new ParamBinding("origin", B2Vec2Type),
@@ -503,48 +503,25 @@ public class Box2dModule : IModule
     // ===== 名前変換 =====
 
     /// <summary>
-    /// Box2D 関数名 → Lua 名
-    /// b2CreateWorld → create_world
-    /// b2World_Step → world_step
-    /// b2Body_GetPosition → body_get_position
-    /// b2DefaultBodyDef → default_body_def
-    /// b2MakeBox → make_box
+    /// Box2D 関数名 → Lua 名 (PascalCase)
+    /// b2CreateWorld → CreateWorld
+    /// b2World_Step → WorldStep
+    /// b2Body_GetPosition → BodyGetPosition
+    /// b2DefaultBodyDef → DefaultBodyDef
+    /// b2MakeBox → MakeBox
     /// </summary>
     private static string ToLuaFuncName(string cName)
     {
         var stripped = Pipeline.StripPrefix(cName, "b2");
-        return ToSnakeCase(stripped);
-    }
-
-    /// <summary>PascalCase / CamelCase → snake_case (underscore preserving)</summary>
-    private static string ToSnakeCase(string s)
-    {
-        var result = new System.Text.StringBuilder();
-        for (var i = 0; i < s.Length; i++)
-        {
-            var c = s[i];
-            if (c == '_')
-            {
-                result.Append('_');
-                continue;
-            }
-            if (char.IsUpper(c) && i > 0 && s[i - 1] != '_')
-            {
-                // Don't add underscore between consecutive capitals (e.g., "AABB" → "aabb")
-                if (char.IsLower(s[i - 1]) || (i + 1 < s.Length && char.IsLower(s[i + 1])))
-                    result.Append('_');
-            }
-            result.Append(char.ToLower(c));
-        }
-        return result.ToString();
+        return Pipeline.ToPascalCase(stripped);
     }
 
     /// <summary>Box2D enum item name → Lua name (strip common prefix)</summary>
     private static string B2EnumItemName(string itemName, string enumName)
     {
-        // b2_staticBody → STATICBODY, b2_dynamicBody → DYNAMICBODY
+        // b2_staticBody → STATIC_BODY, b2_dynamicBody → DYNAMIC_BODY
         var stripped = Pipeline.StripPrefix(itemName, "b2_");
-        return stripped.ToUpper();
+        return Pipeline.ToUpperSnakeCase(stripped);
     }
 
     private static string MapFieldName(string name) => name;

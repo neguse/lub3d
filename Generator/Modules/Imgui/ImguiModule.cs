@@ -291,7 +291,7 @@ public class ImguiModule : IModule
                 int? val = i.Value != null && int.TryParse(i.Value, out var v) ? v : null;
                 var resolvedVal = val ?? next;
                 next = resolvedVal + 1;
-                var itemName = StripEnumItemPrefix(i.Name, e.Name);
+                var itemName = Pipeline.ToUpperSnakeCase(StripEnumItemPrefix(i.Name, e.Name));
                 return new EnumItemBinding(itemName, i.Name, resolvedVal);
             }).ToList();
 

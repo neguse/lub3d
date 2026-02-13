@@ -18,7 +18,7 @@ M.passes = {}
 
 ---Register a pass to the pipeline
 ---@param pass RenderPass
-function M.register(pass)
+function M.Register(pass)
     table.insert(M.passes, pass)
 end
 
@@ -40,7 +40,7 @@ end
 ---Execute all registered passes
 ---@param ctx any Render context
 ---@param frame_data any Frame-specific data (view/proj matrices, etc.)
-function M.execute(ctx, frame_data)
+function M.Execute(ctx, frame_data)
     for _, pass in ipairs(M.passes) do
         -- Check required outputs before calling get_pass_desc
         local req_ok, missing = check_requirements(pass, ctx)
@@ -70,7 +70,7 @@ function M.execute(ctx, frame_data)
 end
 
 ---Destroy all passes and clear the pipeline
-function M.destroy()
+function M.Destroy()
     for _, pass in ipairs(M.passes) do
         if pass.destroy then
             local ok, err = pcall(pass.destroy)
@@ -83,7 +83,7 @@ function M.destroy()
 end
 
 ---Clear all registered passes without destroying them
-function M.clear()
+function M.Clear()
     M.passes = {}
 end
 

@@ -323,7 +323,7 @@ M.shader_desc = {
 }
 
 -- Setup common resource management (on_reload, destroy, ensure_resources)
-render_pass.setup(M, {
+render_pass.Setup(M, {
     shader_name = "light",
     pipeline_desc = function(shader_handle)
         return gfx.PipelineDesc({

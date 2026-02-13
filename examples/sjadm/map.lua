@@ -31,17 +31,17 @@ function map.new(world_id, registry)
                     local offx, offy = rotated(obj.width / 2, -obj.height / 2, angle)
                     local cx, cy = obj.x + offx, -obj.y + offy
 
-                    local body_def = b2d.default_body_def()
+                    local body_def = b2d.DefaultBodyDef()
                     body_def.position = { cx, cy }
                     body_def.rotation = { math.cos(angle), math.sin(angle) }
-                    local body_id = b2d.create_body(world_id, body_def)
+                    local body_id = b2d.CreateBody(world_id, body_def)
 
-                    local shape_def = b2d.default_shape_def()
-                    local box = b2d.make_box(obj.width / 2, obj.height / 2)
+                    local shape_def = b2d.DefaultShapeDef()
+                    local box = b2d.MakeBox(obj.width / 2, obj.height / 2)
 
                     if obj.type == "kill" then
                         shape_def.enableContactEvents = true
-                        local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
+                        local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
                         local entity = { getType = function() return "K" end }
                         registry[tostring(shape_id)] = entity
                         table.insert(kills,
@@ -49,19 +49,19 @@ function map.new(world_id, registry)
                     elseif obj.type == "start" then
                         shape_def.isSensor = true
                         shape_def.enableSensorEvents = true
-                        local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
+                        local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
                         local entity = { getType = function() return "S" end }
                         registry[tostring(shape_id)] = entity
                     elseif obj.type == "goal" then
                         shape_def.isSensor = true
                         shape_def.enableSensorEvents = true
-                        local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
+                        local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
                         local entity = { getType = function() return "G" end }
                         registry[tostring(shape_id)] = entity
                     else
                         -- normal platform wall (no entity needed, contact with nil entity = wall)
                         shape_def.enableContactEvents = true
-                        b2d.create_polygon_shape(body_id, shape_def, box)
+                        b2d.CreatePolygonShape(body_id, shape_def, box)
                         table.insert(bodies,
                             { body_id = body_id, cx = cx, cy = cy, hw = obj.width / 2, hh = obj.height / 2, angle = angle })
                     end

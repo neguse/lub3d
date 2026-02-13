@@ -12,7 +12,7 @@ local M = {}
 ---Setup common resource management on a pass module
 ---@param pass table The pass module table
 ---@param opts {shader_name: string, pipeline_desc: fun(shader_handle: any): sokol.gfx.PipelineDesc}
-function M.setup(pass, opts)
+function M.Setup(pass, opts)
     -- Preserve across hotreload
     pass.resources = pass.resources
     pass._compile_attempted = pass._compile_attempted or false
@@ -24,14 +24,14 @@ function M.setup(pass, opts)
         if pass._compile_attempted then return false end
         pass._compile_attempted = true
 
-        local shader = gpu.shader(pass.shader_source, opts.shader_name, pass.shader_desc)
+        local shader = gpu.Shader(pass.shader_source, opts.shader_name, pass.shader_desc)
         if not shader then
             if notify then notify.error("[shader] " .. pass.name .. " FAILED") end
             return false
         end
 
         local pip_desc = opts.pipeline_desc(shader.handle)
-        local pipeline = gpu.pipeline(pip_desc)
+        local pipeline = gpu.Pipeline(pip_desc)
 
         pass.resources = { shader = shader, pipeline = pipeline }
         if notify then notify.ok("[shader] " .. pass.name .. " OK") end

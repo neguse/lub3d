@@ -28,21 +28,21 @@ local M = {}
 ---@param h integer Height
 ---@param format integer? PixelFormat (default: RGBA8)
 ---@return render_target.ColorTarget
-function M.color(w, h, format)
+function M.Color(w, h, format)
     format = format or gfx.PixelFormat.RGBA8
 
-    local image = gpu.image(gfx.ImageDesc({
+    local image = gpu.Image(gfx.ImageDesc({
         usage = { color_attachment = true },
         width = w,
         height = h,
         pixel_format = format,
     }))
 
-    local attach = gpu.view(gfx.ViewDesc({
+    local attach = gpu.View(gfx.ViewDesc({
         color_attachment = { image = image.handle },
     }))
 
-    local tex = gpu.view(gfx.ViewDesc({
+    local tex = gpu.View(gfx.ViewDesc({
         texture = { image = image.handle },
     }))
 
@@ -66,17 +66,17 @@ end
 ---@param h integer Height
 ---@param format integer? PixelFormat (default: DEPTH)
 ---@return render_target.DepthTarget
-function M.depth(w, h, format)
+function M.Depth(w, h, format)
     format = format or gfx.PixelFormat.DEPTH
 
-    local image = gpu.image(gfx.ImageDesc({
+    local image = gpu.Image(gfx.ImageDesc({
         usage = { depth_stencil_attachment = true },
         width = w,
         height = h,
         pixel_format = format,
     }))
 
-    local attach = gpu.view(gfx.ViewDesc({
+    local attach = gpu.View(gfx.ViewDesc({
         depth_stencil_attachment = { image = image.handle },
     }))
 

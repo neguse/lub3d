@@ -57,7 +57,7 @@ function M:init()
         log.log(string.format("  %s (%s)", lib.name, lib.type))
     end
 
-    shader = shaderMod.compile(shader_source, "triangle")
+    shader = shaderMod.Compile(shader_source, "triangle")
     if not shader then
         log.log("Shader compilation failed!")
         return
@@ -106,7 +106,7 @@ function M:frame()
         table.insert(vertices, b)
         table.insert(vertices, 1.0)
     end
-    gfx.UpdateBuffer(vbuf, gfx.Range(util.pack_floats(vertices)))
+    gfx.UpdateBuffer(vbuf, gfx.Range(util.PackFloats(vertices)))
 
     -- Render
     gfx.BeginPass(gfx.Pass({

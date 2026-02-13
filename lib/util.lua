@@ -20,7 +20,7 @@ M.profile = {
 --- Start a profiling measurement
 ---@param category string category (e.g., "shader", "texture")
 ---@param name string specific item name
-function M.profile_begin(category, name)
+function M.ProfileBegin(category, name)
     if not M.profile.enabled then return end
     local key = category .. ":" .. name
     M.profile.pending[key] = stm.Now()
@@ -29,7 +29,7 @@ end
 --- End a profiling measurement, log if slow
 ---@param category string category (e.g., "shader", "texture")
 ---@param name string specific item name
-function M.profile_end(category, name)
+function M.ProfileEnd(category, name)
     if not M.profile.enabled then return end
     local key = category .. ":" .. name
     local start = M.profile.pending[key]
@@ -47,7 +47,7 @@ end
 -- Absolute paths (starting with / or X:) are returned as-is
 ---@param path string
 ---@return string
-function M.resolve_path(path)
+function M.ResolvePath(path)
     if path:match("^/") or path:match("^%a:") then
         return path
     end
@@ -55,7 +55,7 @@ function M.resolve_path(path)
 end
 
 -- Helper to pack vertex data as floats (handles large arrays)
-function M.pack_floats(floats)
+function M.PackFloats(floats)
     local CHUNK_SIZE = 200 -- Lua unpack limit is around 200-1000
     local result = {}
     for i = 1, #floats, CHUNK_SIZE do
@@ -70,7 +70,7 @@ function M.pack_floats(floats)
 end
 
 -- Helper to pack index data as u32 (handles large arrays)
-function M.pack_u32(ints)
+function M.PackU32(ints)
     local CHUNK_SIZE = 200
     local result = {}
     for i = 1, #ints, CHUNK_SIZE do

@@ -55,7 +55,7 @@ end
 
 function M:create_resources()
     -- Compile shader using lib.shader (auto-detects backend language)
-    self.shd = shader.compile(shader_source, "triangle", {
+    self.shd = shader.Compile(shader_source, "triangle", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 16, -- rotation (float) padded to 16 bytes

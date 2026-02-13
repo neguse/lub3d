@@ -8,7 +8,7 @@ local particle = require("examples.hakonotaiatari.particle")
 
 -- Helper functions
 local function pcs(radius, angle)
-    return glm.vec2(math.cos(angle) * radius, math.sin(angle) * radius)
+    return glm.Vec2(math.cos(angle) * radius, math.sin(angle) * radius)
 end
 
 local function sub_rad(a, b)
@@ -132,10 +132,10 @@ function NormalEnemy:update(dt, player_pos, audio)
         self.velo = const.E_FUTTOBI_V
         -- Emit smog particles (original: amount=3, velo=50, tick=50, acc=(40,20,40))
         if self.tick % 3 == 0 then
-            local pos3d = glm.vec3(self.pos.x, self.length, self.pos.y)
+            local pos3d = glm.Vec3(self.pos.x, self.length, self.pos.y)
             particle.emit_cone(3, pos3d, const.PI - self.angle, 0.4,
                 0, 0.4, 50, 50, 50, 50,
-                glm.vec3(0, 0, 0), glm.vec3(40, 20, 40), 0xff404040)
+                glm.Vec3(0, 0, 0), glm.Vec3(40, 20, 40), 0xff404040)
         end
 
         if self:is_out_of_area() then
@@ -155,10 +155,10 @@ function NormalEnemy:update(dt, player_pos, audio)
         self.length = self.length + (-self.length * 0.03)
         -- Emit fire particles (original: amount=2+t/20, velo=100, tick=50, acc=(0,-100,0)+(150,0,150))
         if self.tick % 2 == 0 then
-            local pos3d = glm.vec3(self.pos.x, 0, self.pos.y)
+            local pos3d = glm.Vec3(self.pos.x, 0, self.pos.y)
             particle.emit_cone(2 + math.floor(self.tick / 20), pos3d, 0, 0.2,
                 const.PI * 0.5, 0.2, 100, 100, 50, 50,
-                glm.vec3(0, -100, 0), glm.vec3(150, 0, 150), 0xffff0000)
+                glm.Vec3(0, -100, 0), glm.Vec3(150, 0, 150), 0xffff0000)
         end
         if self.tick > const.E_FADEOUT_F then
             self.stat = const.E_ST_DEAD
@@ -257,18 +257,18 @@ function DashEnemy:update(dt, player_pos, audio)
         -- Emit dash particles (original: velo=300,70, tick=50,10, acc=(0,-100,0)+(5,0,5))
         local px = self.pos.x - math.cos(self.angle) * self.length
         local py = self.pos.y - math.sin(self.angle) * self.length
-        local pos3d = glm.vec3(px, self.length, py)
+        local pos3d = glm.Vec3(px, self.length, py)
         particle.emit_cone(1, pos3d, const.PI + self.angle, const.PI,
             const.PI * 0.25, const.PI, 300, 70, 50, 10,
-            glm.vec3(0, -100, 0), glm.vec3(5, 0, 5), const.E_COL_DASH_PARTICLE)
+            glm.Vec3(0, -100, 0), glm.Vec3(5, 0, 5), const.E_COL_DASH_PARTICLE)
     elseif self.stat == const.E_ST_FUTTOBI then
         self.velo = const.E_FUTTOBI_V
         -- Emit smog particles (original: amount=3, velo=50, tick=50, acc=(40,20,40))
         if self.tick % 3 == 0 then
-            local pos3d = glm.vec3(self.pos.x, self.length, self.pos.y)
+            local pos3d = glm.Vec3(self.pos.x, self.length, self.pos.y)
             particle.emit_cone(3, pos3d, const.PI - self.angle, 0.4,
                 0, 0.4, 50, 50, 50, 50,
-                glm.vec3(0, 0, 0), glm.vec3(40, 20, 40), 0xff404040)
+                glm.Vec3(0, 0, 0), glm.Vec3(40, 20, 40), 0xff404040)
         end
 
         if self:is_out_of_area() then
@@ -288,10 +288,10 @@ function DashEnemy:update(dt, player_pos, audio)
         self.length = self.length + (-self.length * 0.05)
         -- Emit fire particles (original: amount=2+t/20, velo=100, tick=50, acc=(0,-100,0)+(150,0,150))
         if self.tick % 2 == 0 then
-            local pos3d = glm.vec3(self.pos.x, 0, self.pos.y)
+            local pos3d = glm.Vec3(self.pos.x, 0, self.pos.y)
             particle.emit_cone(2 + math.floor(self.tick / 20), pos3d, 0, 0.2,
                 const.PI * 0.5, 0.2, 100, 100, 50, 50,
-                glm.vec3(0, -100, 0), glm.vec3(150, 0, 150), 0xffff0000)
+                glm.Vec3(0, -100, 0), glm.Vec3(150, 0, 150), 0xffff0000)
         end
         if self.tick > const.E_FADEOUT_F then
             self.stat = const.E_ST_DEAD
@@ -321,8 +321,8 @@ function DashEnemy:render(proj, view)
     local deco_size = self.length * (1.0 / math.sqrt(2))
     local r, g, b = const.argb_to_rgb(self.color)
     renderer.draw_cube(
-        glm.vec3(self.pos.x, 0, self.pos.y),
-        glm.vec3(deco_size, deco_size * 2, deco_size),
+        glm.Vec3(self.pos.x, 0, self.pos.y),
+        glm.Vec3(deco_size, deco_size * 2, deco_size),
         rot_angle,
         r, g, b,
         proj, view
@@ -456,7 +456,7 @@ function EnemyGenerator:create_level(level)
                 table.insert(self.commands,
                     {
                         type = "spawn_normal",
-                        pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                        pos = glm.Vec2(rand_range_mid(0, const.FIELD_Lf),
                             rand_range_mid(0, const.FIELD_Lf)),
                         count = 5,
                         life = 1,
@@ -484,7 +484,7 @@ function EnemyGenerator:create_level(level)
             table.insert(self.commands,
                 {
                     type = "spawn_normal",
-                    pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                    pos = glm.Vec2(rand_range_mid(0, const.FIELD_Lf),
                         rand_range_mid(0, const.FIELD_Lf)),
                     count = math.min(1 + level // 8, 3),
                     life = 1,
@@ -501,7 +501,7 @@ function EnemyGenerator:create_level(level)
             table.insert(self.commands,
                 {
                     type = "spawn_normal",
-                    pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
+                    pos = glm.Vec2(rand_range_mid(0, const.FIELD_Lf),
                         rand_range_mid(0, const.FIELD_Lf)),
                     count = 1,
                     life = 2,
@@ -515,7 +515,7 @@ function EnemyGenerator:create_level(level)
                 table.insert(self.commands,
                     {
                         type = "spawn_normal",
-                        pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf * 2),
+                        pos = glm.Vec2(rand_range_mid(0, const.FIELD_Lf * 2),
                             rand_range_mid(0, const.FIELD_Lf * 2)),
                         count = 3,
                         life = 1,
@@ -532,7 +532,7 @@ function EnemyGenerator:create_level(level)
         local boss_life = math.min(2 + level // 8, 4)
         for i = 1, boss_count do
             table.insert(self.commands,
-                { type = "spawn_dash", pos = glm.vec2(0, 0), count = 1, life = boss_life, length = const.E_LEN * 1.5 })
+                { type = "spawn_dash", pos = glm.Vec2(0, 0), count = 1, life = boss_life, length = const.E_LEN * 1.5 })
             if i < boss_count then
                 table.insert(self.commands, { type = "sleep", tick = 90 })
             end

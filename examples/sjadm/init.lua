@@ -31,7 +31,7 @@ local function timeString(sec)
 end
 
 local function process_contact_events()
-    local events = b2d.world_get_contact_events(world_id)
+    local events = b2d.WorldGetContactEvents(world_id)
     if not events then return end
 
     -- begin contacts
@@ -89,7 +89,7 @@ local function process_contact_events()
 end
 
 local function process_sensor_events()
-    local events = b2d.world_get_sensor_events(world_id)
+    local events = b2d.WorldGetSensorEvents(world_id)
     if not events then return end
 
     for _, ev in ipairs(events.begin) do
@@ -132,10 +132,10 @@ function M:init()
     sdtx.Setup(sdtx.Desc({ fonts = { sdtx.FontC64() } }))
 
     -- Create Box2D world
-    local world_def = b2d.default_world_def()
+    local world_def = b2d.DefaultWorldDef()
     world_def.gravity = { 0, -1000 }
     world_def.maximumLinearSpeed = 2000
-    world_id = b2d.create_world(world_def)
+    world_id = b2d.CreateWorld(world_def)
 
     -- Initialize subsystems
     input.init()
@@ -157,7 +157,7 @@ function M:frame()
     if dt > 0.1 then dt = 0.1 end
 
     -- Variable timestep (matches original LOVE 2D behaviour)
-    b2d.world_step(world_id, dt, 4)
+    b2d.WorldStep(world_id, dt, 4)
 
     -- Process events
     process_contact_events()
@@ -243,7 +243,7 @@ end
 
 function M:cleanup()
     audio.cleanup()
-    b2d.destroy_world(world_id)
+    b2d.DestroyWorld(world_id)
     gl.Shutdown()
     gfx.Shutdown()
     log.info("sjadm cleanup complete")

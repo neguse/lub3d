@@ -15,14 +15,14 @@ M.height = 768
 M.window_title = "Lub3d - Model Loading"
 
 -- Camera
-local camera_pos = glm.vec3(0, -20, 10)
+local camera_pos = glm.Vec3(0, -20, 10)
 local camera_yaw = 0
 local camera_pitch = 0.3
 
 -- Light
-local light_pos = glm.vec3(10, -10, 20)
-local light_color = glm.vec3(1.5, 1.4, 1.3)
-local ambient_color = glm.vec3(0.2, 0.2, 0.25)
+local light_pos = glm.Vec3(10, -10, 20)
+local light_color = glm.Vec3(1.5, 1.4, 1.3)
+local ambient_color = glm.Vec3(0.2, 0.2, 0.25)
 
 -- Graphics resources
 local shader = nil
@@ -213,7 +213,7 @@ local function load_texture_cached(path)
     end
 
     local full_path = "textures/" .. path
-    local tex = texture.load(full_path)
+    local tex = texture.Load(full_path)
     if tex then
         textures_cache[path] = tex
         return tex.view.handle, tex.smp.handle
@@ -323,7 +323,7 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 3 },
         },
     }
-    shader = shaderMod.compile_full(shader_source, "model", shader_desc)
+    shader = shaderMod.CompileFull(shader_source, "model", shader_desc)
 
     if not shader then
         log.error("Failed to compile shader")
@@ -369,7 +369,7 @@ function M:init()
 
             if #verts_with_tangents > 0 then
                 local vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-                    data = gfx.Range(util.pack_floats(verts_with_tangents)),
+                    data = gfx.Range(util.PackFloats(verts_with_tangents)),
                 }))
 
                 -- Get textures (views)
@@ -430,13 +430,13 @@ function M:frame()
 
     -- Camera controls
     local move_speed = 0.3
-    local camera_up = glm.vec3(0, 0, 1)
-    local forward = glm.vec3(
+    local camera_up = glm.Vec3(0, 0, 1)
+    local forward = glm.Vec3(
         math.sin(camera_yaw) * math.cos(camera_pitch),
         math.cos(camera_yaw) * math.cos(camera_pitch),
         math.sin(camera_pitch)
     )
-    local right = glm.normalize(glm.cross(forward, camera_up))
+    local right = glm.Normalize(glm.Cross(forward, camera_up))
 
     if keys_down["W"] then
         camera_pos = camera_pos + forward * move_speed
@@ -462,11 +462,11 @@ function M:frame()
     local h = app.Height()
     local aspect = w / h
 
-    local proj = glm.perspective(math.rad(60), aspect, 0.1, 500)
+    local proj = glm.Perspective(math.rad(60), aspect, 0.1, 500)
     local center = camera_pos + forward
-    local view = glm.lookat(camera_pos, center, camera_up)
+    local view = glm.Lookat(camera_pos, center, camera_up)
 
-    local model = glm.mat4() -- identity
+    local model = glm.Mat4() -- identity
 
     -- Begin pass
     gfx.BeginPass(gfx.Pass({
@@ -498,9 +498,9 @@ function M:frame()
         }))
 
         local mat = mesh.material
-        local uniforms = mvp:pack()
-            .. model:pack()
-            .. util.pack_floats({
+        local uniforms = mvp:Pack()
+            .. model:Pack()
+            .. util.PackFloats({
                 light_pos.x,
                 light_pos.y,
                 light_pos.z,

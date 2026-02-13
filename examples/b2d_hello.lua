@@ -40,37 +40,37 @@ function M:init()
     gl.Setup(gl.Desc({}))
 
     -- Create world
-    local world_def = b2d.default_world_def()
+    local world_def = b2d.DefaultWorldDef()
     world_def.gravity = { 0, -10 }
-    world_id = b2d.create_world(world_def)
+    world_id = b2d.CreateWorld(world_def)
 
     -- Ground (static body)
-    local body_def = b2d.default_body_def()
+    local body_def = b2d.DefaultBodyDef()
     body_def.position = { 0, -10 }
-    ground_id = b2d.create_body(world_id, body_def)
+    ground_id = b2d.CreateBody(world_id, body_def)
 
-    local shape_def = b2d.default_shape_def()
-    local ground_box = b2d.make_box(50, 10)
-    b2d.create_polygon_shape(ground_id, shape_def, ground_box)
+    local shape_def = b2d.DefaultShapeDef()
+    local ground_box = b2d.MakeBox(50, 10)
+    b2d.CreatePolygonShape(ground_id, shape_def, ground_box)
 
     -- Dynamic body
-    body_def = b2d.default_body_def()
-    body_def.type = b2d.BodyType.DYNAMICBODY
+    body_def = b2d.DefaultBodyDef()
+    body_def.type = b2d.BodyType.DYNAMIC_BODY
     body_def.position = { 0, 8 }
-    body_id = b2d.create_body(world_id, body_def)
+    body_id = b2d.CreateBody(world_id, body_def)
 
-    shape_def = b2d.default_shape_def()
+    shape_def = b2d.DefaultShapeDef()
     shape_def.density = 1.0
-    local mat = b2d.default_surface_material()
+    local mat = b2d.DefaultSurfaceMaterial()
     mat.friction = 0.3
     shape_def.material = mat
-    local dynamic_box = b2d.make_box(1, 1)
-    b2d.create_polygon_shape(body_id, shape_def, dynamic_box)
+    local dynamic_box = b2d.MakeBox(1, 1)
+    b2d.CreatePolygonShape(body_id, shape_def, dynamic_box)
 end
 
 function M:frame()
     -- Step physics
-    b2d.world_step(world_id, 1.0 / 60.0, 4)
+    b2d.WorldStep(world_id, 1.0 / 60.0, 4)
 
     -- Render
     gfx.BeginPass(gfx.Pass({
@@ -97,10 +97,10 @@ function M:frame()
     draw_box(0, -10, 50, 10, 0, 0.4, 0.6, 0.4)
 
     -- Dynamic body
-    local pos = b2d.body_get_position(body_id)
-    local rot = b2d.body_get_rotation(body_id)
-    local angle = b2d.rot_get_angle(rot)
-    local awake = b2d.body_is_awake(body_id)
+    local pos = b2d.BodyGetPosition(body_id)
+    local rot = b2d.BodyGetRotation(body_id)
+    local angle = b2d.RotGetAngle(rot)
+    local awake = b2d.BodyIsAwake(body_id)
     if awake then
         draw_box(pos[1], pos[2], 1, 1, angle, 0.9, 0.5, 0.2)
     else
@@ -113,7 +113,7 @@ function M:frame()
 end
 
 function M:cleanup()
-    b2d.destroy_world(world_id)
+    b2d.DestroyWorld(world_id)
     gl.Shutdown()
     gfx.Shutdown()
 end

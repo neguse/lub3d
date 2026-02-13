@@ -136,7 +136,7 @@ local function load_cache(cache_path)
 end
 
 -- Get shader language for current backend
-function M.get_lang()
+function M.GetLang()
     local backend = gfx.QueryBackend()
     if backend == gfx.Backend.D3D11 then
         return "hlsl5"
@@ -164,12 +164,12 @@ end
 ---@param attrs? table vertex attribute semantics for D3D11
 ---@param texture_sampler_pairs? table texture-sampler pair descriptors
 ---@return sokol.gfx.Shader? shader shader handle or nil on failure
-function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
+function M.Compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
     if not shdc then
         log.error("shdc module not available (requires LUB3D_BUILD_SHDC=ON)")
         return nil
     end
-    local lang = M.get_lang()
+    local lang = M.GetLang()
 
     -- Try to load from cache first
     local cache_path = get_cache_path(source, program_name, lang)
@@ -264,12 +264,12 @@ end
 ---@param program_name string program name in shader
 ---@param shader_desc table full shader descriptor (uniform_blocks, views, samplers, texture_sampler_pairs, attrs)
 ---@return sokol.gfx.Shader? shader shader handle or nil on failure
-function M.compile_full(source, program_name, shader_desc)
+function M.CompileFull(source, program_name, shader_desc)
     if not shdc then
         log.error("shdc module not available (requires LUB3D_BUILD_SHDC=ON)")
         return nil
     end
-    local lang = M.get_lang()
+    local lang = M.GetLang()
 
     -- Try to load from cache first
     local cache_path = get_cache_path(source, program_name, lang)

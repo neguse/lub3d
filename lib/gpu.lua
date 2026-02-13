@@ -66,28 +66,28 @@ end
 ---Create an image resource
 ---@param desc sokol.gfx.ImageDesc
 ---@return gpu.Image
-function M.image(desc)
+function M.Image(desc)
     return wrap(gfx.MakeImage(desc), gfx.DestroyImage) --[[@as gpu.Image]]
 end
 
 ---Create a view resource
 ---@param desc sokol.gfx.ViewDesc
 ---@return gpu.View
-function M.view(desc)
+function M.View(desc)
     return wrap(gfx.MakeView(desc), gfx.DestroyView) --[[@as gpu.View]]
 end
 
 ---Create a buffer resource
 ---@param desc sokol.gfx.BufferDesc
 ---@return gpu.Buffer
-function M.buffer(desc)
+function M.Buffer(desc)
     return wrap(gfx.MakeBuffer(desc), gfx.DestroyBuffer) --[[@as gpu.Buffer]]
 end
 
 ---Create a sampler resource
 ---@param desc sokol.gfx.SamplerDesc
 ---@return gpu.Sampler
-function M.sampler(desc)
+function M.Sampler(desc)
     return wrap(gfx.MakeSampler(desc), gfx.DestroySampler) --[[@as gpu.Sampler]]
 end
 
@@ -96,8 +96,8 @@ end
 ---@param name string Program name
 ---@param desc table Shader descriptor
 ---@return gpu.Shader?
-function M.shader(source, name, desc)
-    local handle = shader.compile_full(source, name, desc)
+function M.Shader(source, name, desc)
+    local handle = shader.CompileFull(source, name, desc)
     if not handle then
         log.error("Failed to compile shader: " .. name)
         return nil
@@ -108,7 +108,7 @@ end
 ---Create a pipeline resource
 ---@param desc sokol.gfx.PipelineDesc
 ---@return gpu.Pipeline
-function M.pipeline(desc)
+function M.Pipeline(desc)
     return wrap(gfx.MakePipeline(desc), gfx.DestroyPipeline) --[[@as gpu.Pipeline]]
 end
 
