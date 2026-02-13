@@ -1,25 +1,96 @@
 {
-  "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
-  "workspace.library": ["gen", "types", "lib"],
-  "workspace.ignoreDir": [
-    "build",
-    "out",
-    "deps",
-    "examples/hakonotaiatari/font.lua"
-  ],
-  "runtime.version": "Lua 5.5",
-  "diagnostics.globals": [
-    "init",
-    "frame",
-    "cleanup",
-    "event",
-    "_headless_frames"
-  ],
-  "diagnostics.neededFileStatus": {
-    "param-type-mismatch": "Any",
-    "undefined-field": "Any",
-    "missing-parameter": "Any",
-    "redundant-parameter": "Any",
-    "codestyle-check": "Any"
-  }
+    "$schema": "https://raw.githubusercontent.com/LuaLS/vscode-lua/master/setting/schema.json",
+    "workspace.library": ["gen", "types", "lib"],
+    "workspace.ignoreDir": [
+        "build",
+        "out",
+        "deps",
+        "examples/hakonotaiatari/font.lua"
+    ],
+    "runtime.version": "Lua 5.5",
+    "diagnostics.globals": [
+        "Init",
+        "Frame",
+        "Cleanup",
+        "Event",
+        "_headless_frames"
+    ],
+    "diagnostics.neededFileStatus": {
+        "param-type-mismatch": "Any",
+        "undefined-field": "Any",
+        "missing-parameter": "Any",
+        "redundant-parameter": "Any",
+        "codestyle-check": "Any",
+        "name-style-check": "Any"
+    },
+    "nameStyle.config": {
+        "function_name_style": [
+            "snake_case",
+            {
+                "type": "ignore",
+                "param": [
+                    "__tostring",
+                    "__index",
+                    "__newindex",
+                    "__call",
+                    "__add",
+                    "__sub",
+                    "__mul",
+                    "__div",
+                    "__mod",
+                    "__pow",
+                    "__unm",
+                    "__eq",
+                    "__lt",
+                    "__le",
+                    "__concat",
+                    "__len",
+                    "__gc",
+                    "__close"
+                ]
+            }
+        ],
+        "local_function_name_style": "snake_case",
+        "local_name_style": "snake_case",
+        "function_param_name_style": "snake_case",
+        "table_field_name_style": [
+            "snake_case",
+            { "type": "pattern", "param": "^[A-Z][A-Z0-9_]*$" },
+            { "type": "pattern", "param": "^_[a-z][a-z0-9_]*$" },
+            {
+                "type": "ignore",
+                "param": [
+                    "__tostring",
+                    "__index",
+                    "__newindex",
+                    "__call",
+                    "__add",
+                    "__sub",
+                    "__mul",
+                    "__div",
+                    "__mod",
+                    "__pow",
+                    "__unm",
+                    "__eq",
+                    "__lt",
+                    "__le",
+                    "__concat",
+                    "__len",
+                    "__gc",
+                    "__close"
+                ]
+            }
+        ],
+        "module_local_name_style": [
+            "snake_case",
+            { "type": "ignore", "param": ["M"] }
+        ],
+        "const_variable_name_style": "upper_snake_case",
+        "global_variable_name_style": "upper_snake_case",
+        "class_name_style": "pascal_case",
+        "module_name_style": [
+            "snake_case",
+            { "type": "ignore", "param": ["M"] }
+        ]
+    }
 }

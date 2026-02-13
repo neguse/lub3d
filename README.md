@@ -126,17 +126,18 @@ end
 
 ## Lua API Naming Convention
 
+Follows standard Lua naming conventions ([LuaRocks Style Guide](https://github.com/luarocks/lua-style-guide), [lua-users wiki](http://lua-users.org/wiki/LuaStyleGuide)).
+
 | Category | Style | Example |
 |---|---|---|
 | Module (require path) | `snake_case` | `sokol.gfx`, `lib.shader`, `stb.image` |
-| Type / Class | `module.PascalCase` | `sokol.gfx.Buffer`, `glm.Vec3` |
-| Enum type | `module.PascalCase` | `sokol.gfx.PixelFormat`, `imgui.WindowFlags` |
+| Type / Class | `PascalCase` | `gfx.PipelineDesc`, `glm.Vec3` |
+| Enum type | `PascalCase` | `gfx.PixelFormat`, `imgui.WindowFlags` |
 | Enum value | `UPPER_SNAKE_CASE` | `gfx.LoadAction.CLEAR`, `app.Keycode.ESCAPE` |
-| Function | `PascalCase` | `gfx.MakeBuffer()`, `shader.Compile()` |
-| Method | `PascalCase` | `vec:Normalize()`, `engine:GetChannels()` |
+| Function / Method | `snake_case` | `gfx.make_buffer()`, `vec:normalize()` |
 | Property / Field | `snake_case` | `event.key_code`, `desc.pixel_format` |
-| Constant | `UPPER_SNAKE_CASE` | `VALIDATE_BUFFERDESC_CANARY` |
-| Private / Internal | `_lowercase` | `M._destroy_fn` |
+| Constant | `UPPER_SNAKE_CASE` | `DEAD_TIMER_MAX` |
+| Private / Internal | `_snake_case` | `M._destroy_fn` |
 
 ## Generative AI Usage Disclosure
 
