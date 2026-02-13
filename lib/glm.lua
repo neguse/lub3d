@@ -693,6 +693,204 @@ function mat4:inverse()
 end
 
 --------------------------------------------------------------------------------
+-- quat (quaternion, x, y, z, w order like GLM C++)
+--------------------------------------------------------------------------------
+
+---@class quat
+---@field x number
+---@field y number
+---@field z number
+---@field w number
+---@operator mul(quat): quat
+---@operator mul(vec3): vec3
+---@operator unm: quat
+local quat = {}
+quat.__index = quat
+
+---Create a quaternion
+---@overload fun(): quat Identity quaternion (0,0,0,1)
+---@overload fun(x: number, y: number, z: number, w: number): quat
+---@return quat
+function glm.quat(x, y, z, w)
+    if x == nil then
+        return setmetatable({ x = 0, y = 0, z = 0, w = 1 }, quat)
+    end
+    return setmetatable({ x = x, y = y, z = z, w = w }, quat)
+end
+
+---Create a quaternion from axis-angle
+---@param axis vec3 Rotation axis (will be normalized)
+---@param angle number Angle in radians
+---@return quat
+function glm.quatAxisAngle(axis, angle)
+    local half = angle * 0.5
+    local s = math.sin(half)
+    local n = axis:normalize()
+    return setmetatable({ x = n.x * s, y = n.y * s, z = n.z * s, w = math.cos(half) }, quat)
+end
+
+---Create a quaternion from euler angles (pitch, yaw, roll)
+---@param pitch number Rotation around X axis in radians
+---@param yaw number Rotation around Y axis in radians
+---@param roll number Rotation around Z axis in radians
+---@return quat
+function glm.quatEuler(pitch, yaw, roll)
+    local hp = pitch * 0.5
+    local hy = yaw * 0.5
+    local hr = roll * 0.5
+    local cp, sp = math.cos(hp), math.sin(hp)
+    local cy, sy = math.cos(hy), math.sin(hy)
+    local cr, sr = math.cos(hr), math.sin(hr)
+    return setmetatable({
+        x = sr * cp * cy - cr * sp * sy,
+        y = cr * sp * cy + sr * cp * sy,
+        z = cr * cp * sy - sr * sp * cy,
+        w = cr * cp * cy + sr * sp * sy,
+    }, quat)
+end
+
+---Quaternion multiplication (Hamilton product)
+---@param a quat|vec3
+---@param b quat|vec3
+---@return quat|vec3
+function quat.__mul(a, b)
+    if getmetatable(a) == quat and getmetatable(b) == quat then
+        ---@cast a quat
+        ---@cast b quat
+        return setmetatable({
+            x = a.w * b.x + a.x * b.w + a.y * b.z - a.z * b.y,
+            y = a.w * b.y - a.x * b.z + a.y * b.w + a.z * b.x,
+            z = a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
+            w = a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z,
+        }, quat)
+    elseif getmetatable(a) == quat and getmetatable(b) == vec3 then
+        ---@cast a quat
+        ---@cast b vec3
+        -- Optimized q*v*q^-1: t = 2 * cross(q.xyz, v); result = v + q.w*t + cross(q.xyz, t)
+        local qx, qy, qz, qw = a.x, a.y, a.z, a.w
+        local tx = 2 * (qy * b.z - qz * b.y)
+        local ty = 2 * (qz * b.x - qx * b.z)
+        local tz = 2 * (qx * b.y - qy * b.x)
+        return glm.vec3(
+            b.x + qw * tx + (qy * tz - qz * ty),
+            b.y + qw * ty + (qz * tx - qx * tz),
+            b.z + qw * tz + (qx * ty - qy * tx)
+        )
+    else
+        error("quat multiplication: unsupported operand")
+    end
+end
+
+---@param a quat
+---@return quat
+function quat.__unm(a)
+    return setmetatable({ x = -a.x, y = -a.y, z = -a.z, w = -a.w }, quat)
+end
+
+---@param a quat
+---@param b quat
+---@return boolean
+function quat.__eq(a, b)
+    return a.x == b.x and a.y == b.y and a.z == b.z and a.w == b.w
+end
+
+---@param q quat
+---@return string
+function quat.__tostring(q)
+    return string.format("quat(%.4f, %.4f, %.4f, %.4f)", q.x, q.y, q.z, q.w)
+end
+
+---Get the length of the quaternion
+---@return number
+function quat:length()
+    return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
+end
+
+---Get the normalized quaternion
+---@return quat
+function quat:normalize()
+    local len = self:length()
+    if len > 0 then
+        local inv = 1 / len
+        return setmetatable({ x = self.x * inv, y = self.y * inv, z = self.z * inv, w = self.w * inv }, quat)
+    end
+    return glm.quat()
+end
+
+---Get the conjugate of the quaternion
+---@return quat
+function quat:conjugate()
+    return setmetatable({ x = -self.x, y = -self.y, z = -self.z, w = self.w }, quat)
+end
+
+---Get the inverse of the quaternion
+---@return quat
+function quat:inverse()
+    local len2 = self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
+    if len2 > 0 then
+        local inv = 1 / len2
+        return setmetatable({ x = -self.x * inv, y = -self.y * inv, z = -self.z * inv, w = self.w * inv }, quat)
+    end
+    return glm.quat()
+end
+
+---Convert quaternion to rotation matrix
+---@return mat4
+function quat:toMat4()
+    local x, y, z, w = self.x, self.y, self.z, self.w
+    local x2 = x + x
+    local y2 = y + y
+    local z2 = z + z
+    local xx = x * x2
+    local xy = x * y2
+    local xz = x * z2
+    local yy = y * y2
+    local yz = y * z2
+    local zz = z * z2
+    local wx = w * x2
+    local wy = w * y2
+    local wz = w * z2
+    return glm.mat4(
+        1 - (yy + zz), xy + wz, xz - wy, 0,
+        xy - wz, 1 - (xx + zz), yz + wx, 0,
+        xz + wy, yz - wx, 1 - (xx + yy), 0,
+        0, 0, 0, 1
+    )
+end
+
+---Spherical linear interpolation between two quaternions
+---@param a quat
+---@param b quat
+---@param t number Interpolation factor (0 to 1)
+---@return quat
+function glm.slerp(a, b, t)
+    local dot = a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w
+    -- Take shortest path
+    local bx, by, bz, bw = b.x, b.y, b.z, b.w
+    if dot < 0 then
+        dot = -dot
+        bx, by, bz, bw = -bx, -by, -bz, -bw
+    end
+    local s0, s1
+    if dot > 0.9995 then
+        -- Linear interpolation for very close quaternions
+        s0 = 1 - t
+        s1 = t
+    else
+        local theta = math.acos(dot)
+        local sin_theta = math.sin(theta)
+        s0 = math.sin((1 - t) * theta) / sin_theta
+        s1 = math.sin(t * theta) / sin_theta
+    end
+    return setmetatable({
+        x = s0 * a.x + s1 * bx,
+        y = s0 * a.y + s1 * by,
+        z = s0 * a.z + s1 * bz,
+        w = s0 * a.w + s1 * bw,
+    }, quat)
+end
+
+--------------------------------------------------------------------------------
 -- Matrix construction functions
 --------------------------------------------------------------------------------
 

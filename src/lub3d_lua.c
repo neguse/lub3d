@@ -20,6 +20,7 @@ extern int luaopen_stb_image(lua_State *L);
 extern int luaopen_miniaudio(lua_State *L);
 extern int luaopen_lub3d_fs(lua_State *L);
 extern int luaopen_mane3d_encoding(lua_State *L);
+extern int luaopen_lib_glm(lua_State *L);
 
 #ifdef LUB3D_HAS_SHDC
 extern int luaopen_shdc(lua_State *L);
@@ -107,6 +108,8 @@ void lub3d_lua_register_all(lua_State *L)
     luaL_requiref(L, "lub3d.fs", luaopen_lub3d_fs, 0);
     lua_pop(L, 1);
     luaL_requiref(L, "mane3d.encoding", luaopen_mane3d_encoding, 0);
+    lua_pop(L, 1);
+    luaL_requiref(L, "lib.glm", luaopen_lib_glm, 0);
     lua_pop(L, 1);
 
     /* Export write_floats for audio stream_cb */
