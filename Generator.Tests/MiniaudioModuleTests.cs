@@ -302,7 +302,7 @@ public class MiniaudioModuleTests
         var spec = BuildTestSpec();
         var engine = spec.OpaqueTypes.First(ot => ot.CName == "ma_engine");
         var playSound = engine.Methods.First(m => m.CName == "ma_engine_play_sound");
-        Assert.Equal("PlaySound", playSound.LuaName);
+        Assert.Equal("play_sound", playSound.LuaName);
     }
 
     // ===== Opaque type: Sound =====

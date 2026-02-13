@@ -22,7 +22,7 @@ public class App : SokolModule
         CallbackNames.GetValueOrDefault(fieldName, fieldName);
 
     protected override IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs =>
-        [("Run", "l_sapp_run")];
+        [("run", "l_sapp_run")];
 
     protected override string? ExtraCCode(TypeRegistry reg) =>
         ContextStruct() +

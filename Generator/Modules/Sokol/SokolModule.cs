@@ -65,7 +65,7 @@ public abstract class SokolModule : IModule
         {
             if (Ignores.Contains(f.Name)) continue;
             if (!ShouldGenerateFunc(f)) continue;
-            var luaName = Pipeline.ToPascalCase(Pipeline.StripPrefix(f.Name, Prefix));
+            var luaName = Pipeline.StripPrefix(f.Name, Prefix);
             var parms = f.Params.Select(p => new ParamBinding(
                 p.Name,
                 Resolve(p.ParsedType)

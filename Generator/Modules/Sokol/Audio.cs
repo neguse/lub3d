@@ -10,7 +10,7 @@ public class Audio : SokolModule
     protected override IReadOnlySet<string> Ignores => new HashSet<string> { "saudio_push" };
 
     protected override IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs =>
-        [("Push", "l_saudio_push")];
+        [("push", "l_saudio_push")];
 
     protected override string? ExtraCCode(ClangAst.TypeRegistry reg) => """
         static int l_saudio_push(lua_State *L) {

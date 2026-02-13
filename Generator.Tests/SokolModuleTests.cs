@@ -273,7 +273,7 @@ public class SokolModuleTests
         Assert.Single(spec.Funcs);
         var f = spec.Funcs[0];
         Assert.Equal("stest_init", f.CName);
-        Assert.Equal("Init", f.LuaName);
+        Assert.Equal("init", f.LuaName);
         Assert.Single(f.Params);
         Assert.Equal("desc", f.Params[0].Name);
         Assert.IsType<BindingType.Void>(f.ReturnType);
@@ -717,8 +717,8 @@ public class SokolModuleTests
         var reg = TypeRegistry.FromJson(FullAppJson);
         var spec = new CustomTestModule().BuildSpec(reg, AppPrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
-        Assert.Contains("---@field ColorFormat fun(): sokol.app.PixelFormat", code);
-        Assert.Contains("---@field GetMouseCursor fun(): sokol.app.MouseCursor", code);
+        Assert.Contains("---@field color_format fun(): sokol.app.PixelFormat", code);
+        Assert.Contains("---@field get_mouse_cursor fun(): sokol.app.MouseCursor", code);
     }
 
     [Fact]
@@ -891,15 +891,15 @@ public class SokolModuleTests
     {
         var reg = TypeRegistry.FromJson(TimeJson);
         var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Setup");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Now");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Diff");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Since");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Sec");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Ms");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Us");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "Ns");
-        Assert.Contains(spec.Funcs, f => f.LuaName == "RoundToCommonRefreshRate");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "setup");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "now");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "diff");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "since");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "sec");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "ms");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "us");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "ns");
+        Assert.Contains(spec.Funcs, f => f.LuaName == "round_to_common_refresh_rate");
     }
 
     [Fact]
@@ -978,10 +978,10 @@ public class SokolModuleTests
         var reg = TypeRegistry.FromJson(TimeJson);
         var spec = new TimeTestModule().BuildSpec(reg, TimePrefixToModule);
         var code = LuaCats.LuaCatsGen.Generate(spec);
-        Assert.Contains("---@field Setup fun()", code);
-        Assert.Contains("---@field Now fun(): integer", code);
-        Assert.Contains("---@field Sec fun(ticks: integer): number", code);
-        Assert.Contains("---@field Ms fun(ticks: integer): number", code);
+        Assert.Contains("---@field setup fun()", code);
+        Assert.Contains("---@field now fun(): integer", code);
+        Assert.Contains("---@field sec fun(ticks: integer): number", code);
+        Assert.Contains("---@field ms fun(ticks: integer): number", code);
     }
 
     [Fact]

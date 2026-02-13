@@ -250,8 +250,7 @@ public class MiniaudioModule : IModule
                     ? allParams.Skip(1).Select(p => new ParamBinding(p.Name, Resolve(p.ParsedType))).ToList()
                     : [];
                 var retType = Resolve(CTypeParser.ParseReturnType(f.TypeStr));
-                var luaName = Pipeline.ToPascalCase(
-                    Pipeline.StripPrefix(f.Name, otDef.CName + "_"));
+                var luaName = Pipeline.StripPrefix(f.Name, otDef.CName + "_");
                 methods.Add(new MethodBinding(f.Name, luaName, methodParams, retType, GetLink(f, sourceLink)));
             }
 
@@ -273,18 +272,18 @@ public class MiniaudioModule : IModule
             ["miniaudio.h"],
             ExtraCCode(),
             structs, [], enums,
-            [("SoundInitFromFile", "l_ma_sound_new"), ("VfsNew", "l_ma_vfs_new")],
+            [("sound_init_from_file", "l_ma_sound_new"), ("vfs_new", "l_ma_vfs_new")],
             opaqueTypes,
             ExtraLuaFuncs:
             [
-                new FuncBinding("l_ma_sound_new", "SoundInitFromFile",
+                new FuncBinding("l_ma_sound_new", "sound_init_from_file",
                     [
                         new ParamBinding("engine", new BindingType.Struct("ma_engine", "miniaudio.Engine", "miniaudio.Engine")),
                         new ParamBinding("filePath", new BindingType.Str()),
                         new ParamBinding("flags", new BindingType.Int(), IsOptional: true),
                     ],
                     new BindingType.Struct("ma_sound", "miniaudio.Sound", "miniaudio.Sound"), null),
-                new FuncBinding("l_ma_vfs_new", "VfsNew",
+                new FuncBinding("l_ma_vfs_new", "vfs_new",
                     [
                         new ParamBinding("callbacks", new BindingType.Custom(
                             "lua_State*", "table",
