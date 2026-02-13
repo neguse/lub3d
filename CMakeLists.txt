@@ -227,6 +227,7 @@ set(LUB3D_SOURCES
     src/lub3d_lua.c
     src/lub3d_fs.c
     src/encoding_lua.c
+    src/glm_lua.c
     ${LUB3D_GENERATED}
 )
 
@@ -247,6 +248,7 @@ target_include_directories(lub3d
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/stb
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/miniaudio
+    PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/deps/HandmadeMath
 )
 
 # Link Lua
