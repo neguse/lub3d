@@ -1220,6 +1220,55 @@ public class CBindingGenSpecTests
         Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
     }
 
+    // ===== ArrayAdapter =====
+
+    private static ModuleSpec SpecWithArrayAdapter() => new(
+        "b2d", "b2", ["box2d.h"], null,
+        [new StructBinding("b2ShapeId", "ShapeId", "b2d.ShapeId", false,
+            [new FieldBinding("index1", "index1", new BindingType.Int())], null)],
+        [], [], [],
+        ArrayAdapters:
+        [
+            new ArrayAdapterBinding("body_get_shapes", "b2Body_GetShapeCount", "b2Body_GetShapes",
+                [new ParamBinding("bodyId", new BindingType.Struct("b2BodyId", "b2d.BodyId", "b2d.BodyId"))],
+                new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+        ]);
+
+    [Fact]
+    public void ArrayAdapter_GeneratesMallocFreePattern()
+    {
+        var code = CBindingGen.Generate(SpecWithArrayAdapter());
+        Assert.Contains("b2Body_GetShapeCount(bodyId)", code);
+        Assert.Contains("malloc(_count * sizeof(b2ShapeId))", code);
+        Assert.Contains("b2Body_GetShapes(bodyId, _buf, _count)", code);
+        Assert.Contains("free(_buf)", code);
+    }
+
+    [Fact]
+    public void ArrayAdapter_GeneratesStructElementPush()
+    {
+        var code = CBindingGen.Generate(SpecWithArrayAdapter());
+        Assert.Contains("lua_newuserdatauv(L, sizeof(b2ShapeId), 0)", code);
+        Assert.Contains("*_ud = _buf[_i]", code);
+        Assert.Contains("luaL_setmetatable(L, \"b2d.ShapeId\")", code);
+    }
+
+    [Fact]
+    public void ArrayAdapter_GeneratesLuaReg()
+    {
+        var code = CBindingGen.Generate(SpecWithArrayAdapter());
+        Assert.Contains("{\"body_get_shapes\", l_b2d_array_body_get_shapes}", code);
+    }
+
+    [Fact]
+    public void ArrayAdapter_GeneratesNewtableAndLoop()
+    {
+        var code = CBindingGen.Generate(SpecWithArrayAdapter());
+        Assert.Contains("lua_newtable(L)", code);
+        Assert.Contains("for (int _i = 0; _i < _count; _i++)", code);
+        Assert.Contains("lua_rawseti(L, -2, _i + 1)", code);
+    }
+
     [Fact]
     public void Generate_CustomReturn_UsesPushCode()
     {

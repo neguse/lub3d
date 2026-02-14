@@ -185,6 +185,13 @@ public static class LuaCatsGen
                 retTypes.Add(ToLuaCatsType(op.Type));
             moduleFields.Add(FuncField(f.LuaName, parms, retTypes, f.SourceLink));
         }
+        foreach (var aa in spec.ArrayAdapters)
+        {
+            var parms = aa.InputParams.Select(p => (p.Name, ToLuaCatsType(p.Type)));
+            var elemType = ToLuaCatsType(aa.ElementType);
+            var arrayType = new Type.Class(TypeToString(elemType) + "[]");
+            moduleFields.Add(FuncField(aa.LuaName, parms, arrayType));
+        }
         foreach (var e in spec.Enums)
             moduleFields.Add($"---@field {e.FieldName} {e.LuaName}");
         sb += ModuleClass(spec.ModuleName, moduleFields);

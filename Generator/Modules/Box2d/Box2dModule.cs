@@ -376,8 +376,6 @@ public class Box2dModule : IModule
             ("world_get_contact_events", "l_b2d_world_get_contact_events"),
             ("world_get_sensor_events", "l_b2d_world_get_sensor_events"),
             ("world_get_body_events", "l_b2d_world_get_body_events"),
-            ("body_get_shapes", "l_b2d_body_get_shapes"),
-            ("body_get_joints", "l_b2d_body_get_joints"),
             ("world_cast_ray_closest", "l_b2d_world_cast_ray_closest"),
         };
 
@@ -394,12 +392,6 @@ public class Box2dModule : IModule
             new("l_b2d_world_get_body_events", "world_get_body_events",
                 [new ParamBinding("worldId", HandleType("b2WorldId"))],
                 new BindingType.Void(), null),
-            new("l_b2d_body_get_shapes", "body_get_shapes",
-                [new ParamBinding("bodyId", HandleType("b2BodyId"))],
-                new BindingType.Void(), null),
-            new("l_b2d_body_get_joints", "body_get_joints",
-                [new ParamBinding("bodyId", HandleType("b2BodyId"))],
-                new BindingType.Void(), null),
             new("l_b2d_world_cast_ray_closest", "world_cast_ray_closest",
                 [
                     new ParamBinding("worldId", HandleType("b2WorldId")),
@@ -410,6 +402,16 @@ public class Box2dModule : IModule
                 new BindingType.Void(), null),
         };
 
+        var arrayAdapters = new List<ArrayAdapterBinding>
+        {
+            new("body_get_shapes", "b2Body_GetShapeCount", "b2Body_GetShapes",
+                [new ParamBinding("bodyId", HandleType("b2BodyId"))],
+                HandleType("b2ShapeId")),
+            new("body_get_joints", "b2Body_GetJointCount", "b2Body_GetJoints",
+                [new ParamBinding("bodyId", HandleType("b2BodyId"))],
+                HandleType("b2JointId")),
+        };
+
         return new ModuleSpec(
             ModuleName, Prefix,
             ["box2d/box2d.h", "box2d/math_functions.h", "box2d/collision.h"],
@@ -417,7 +419,8 @@ public class Box2dModule : IModule
             structs, funcs, enums,
             extraRegs,
             [],
-            ExtraLuaFuncs: extraLuaFuncs);
+            ExtraLuaFuncs: extraLuaFuncs,
+            ArrayAdapters: arrayAdapters);
     }
 
     // ===== IModule 実装 =====
@@ -647,40 +650,6 @@ public class Box2dModule : IModule
             }
             lua_setfield(L, -2, "move_events");
 
-            return 1;
-        }
-
-        /* Body get shapes → table of ShapeId */
-        static int l_b2d_body_get_shapes(lua_State *L) {
-            b2BodyId bodyId = *(b2BodyId*)luaL_checkudata(L, 1, "b2d.BodyId");
-            int count = b2Body_GetShapeCount(bodyId);
-            b2ShapeId* shapes = (b2ShapeId*)malloc(count * sizeof(b2ShapeId));
-            b2Body_GetShapes(bodyId, shapes, count);
-            lua_newtable(L);
-            for (int i = 0; i < count; i++) {
-                b2ShapeId* ud = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *ud = shapes[i];
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_rawseti(L, -2, i + 1);
-            }
-            free(shapes);
-            return 1;
-        }
-
-        /* Body get joints → table of JointId */
-        static int l_b2d_body_get_joints(lua_State *L) {
-            b2BodyId bodyId = *(b2BodyId*)luaL_checkudata(L, 1, "b2d.BodyId");
-            int count = b2Body_GetJointCount(bodyId);
-            b2JointId* joints = (b2JointId*)malloc(count * sizeof(b2JointId));
-            b2Body_GetJoints(bodyId, joints, count);
-            lua_newtable(L);
-            for (int i = 0; i < count; i++) {
-                b2JointId* ud = (b2JointId*)lua_newuserdatauv(L, sizeof(b2JointId), 0);
-                *ud = joints[i];
-                luaL_setmetatable(L, "b2d.JointId");
-                lua_rawseti(L, -2, i + 1);
-            }
-            free(joints);
             return 1;
         }
 

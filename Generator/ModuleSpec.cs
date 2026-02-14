@@ -15,11 +15,13 @@ public record ModuleSpec(
     List<OpaqueTypeBinding> OpaqueTypes = default!,
     bool IsCpp = false,
     string? EntryPoint = null,
-    List<FuncBinding>? ExtraLuaFuncs = null
+    List<FuncBinding>? ExtraLuaFuncs = null,
+    List<ArrayAdapterBinding>? ArrayAdapters = null
 )
 {
     public List<OpaqueTypeBinding> OpaqueTypes { get; init; } = OpaqueTypes ?? [];
     public List<FuncBinding> ExtraLuaFuncs { get; init; } = ExtraLuaFuncs ?? [];
+    public List<ArrayAdapterBinding> ArrayAdapters { get; init; } = ArrayAdapters ?? [];
 }
 
 /// <summary>
@@ -102,4 +104,12 @@ public record MethodBinding(
     List<ParamBinding> Params,
     BindingType ReturnType,
     string? SourceLink
+);
+
+public record ArrayAdapterBinding(
+    string LuaName,
+    string CountFuncCName,
+    string FillFuncCName,
+    List<ParamBinding> InputParams,
+    BindingType ElementType
 );
