@@ -26,7 +26,7 @@ function M.create_engine()
         onClose = function(handle) end,
     })
 
-    local config = ma.EngineConfig({ pResourceManagerVFS = vfs })
+    local config = ma.EngineConfig({ p_resource_manager_vfs = vfs })
     return ma.engine_init(config), vfs
 end
 

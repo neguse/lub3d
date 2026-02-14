@@ -40,6 +40,15 @@ public class MiniaudioModuleTests
             },
             {
                 "kind": "enum",
+                "name": "ma_pan_mode",
+                "items": [
+                    {"name": "ma_pan_mode_balance", "value": "0"},
+                    {"name": "ma_pan_mode_pan", "value": "1"}
+                ],
+                "is_dep": false
+            },
+            {
+                "kind": "enum",
                 "name": "ma_format",
                 "items": [
                     {"name": "ma_format_f32", "value": "5"}
@@ -55,7 +64,12 @@ public class MiniaudioModuleTests
             {
                 "kind": "struct",
                 "name": "ma_engine_config",
-                "fields": [],
+                "fields": [
+                    {"name": "listenerCount", "type": "ma_uint32"},
+                    {"name": "channels", "type": "ma_uint32"},
+                    {"name": "sampleRate", "type": "ma_uint32"},
+                    {"name": "pResourceManagerVFS", "type": "void *"}
+                ],
                 "is_dep": false
             },
             {
@@ -242,6 +256,29 @@ public class MiniaudioModuleTests
         var result = spec.Enums.First(e => e.CName == "ma_result");
         Assert.Contains(result.Items, i => i.CConstName == "MA_SUCCESS");
         Assert.Contains(result.Items, i => i.CConstName == "MA_ERROR");
+    }
+
+    // ===== Struct field naming =====
+
+    [Fact]
+    public void BuildSpec_StructFields_AreSnakeCase()
+    {
+        var spec = BuildTestSpec();
+        var config = spec.Structs.First(s => s.CName == "ma_engine_config");
+        Assert.Contains(config.Fields, f => f.CName == "listenerCount" && f.LuaName == "listener_count");
+        Assert.Contains(config.Fields, f => f.CName == "sampleRate" && f.LuaName == "sample_rate");
+        Assert.Contains(config.Fields, f => f.CName == "pResourceManagerVFS" && f.LuaName == "p_resource_manager_vfs");
+    }
+
+    // ===== Enum item naming =====
+
+    [Fact]
+    public void BuildSpec_EnumItems_AreUpperSnake()
+    {
+        var spec = BuildTestSpec();
+        var panMode = spec.Enums.First(e => e.CName == "ma_pan_mode");
+        Assert.Contains(panMode.Items, i => i.LuaName == "BALANCE");
+        Assert.Contains(panMode.Items, i => i.LuaName == "PAN");
     }
 
     // ===== Opaque type: Engine =====

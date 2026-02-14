@@ -209,7 +209,7 @@ public class MiniaudioModule : IModule
                 int? val = i.Value != null && int.TryParse(i.Value, out var v) ? v : null;
                 var resolvedVal = val ?? next;
                 next = resolvedVal + 1;
-                var itemName = Pipeline.EnumItemName(i.Name, e.Name, Prefix);
+                var itemName = Pipeline.EnumItemName(i.Name, e.Name, Prefix).ToUpper();
                 return new EnumItemBinding(itemName, i.Name, resolvedVal);
             }).ToList();
             enums.Add(new EnumBinding(e.Name, luaName, fieldName, items, GetLink(e, sourceLink)));
@@ -225,7 +225,7 @@ public class MiniaudioModule : IModule
             var metatable = $"{ModuleName}.{pascalName}";
             var fields = s.Fields.Select(f => new FieldBinding(
                 f.Name,
-                f.Name,
+                Pipeline.ToSnakeCase(f.Name),
                 Resolve(f.ParsedType)
             )).ToList();
             structs.Add(new StructBinding(
