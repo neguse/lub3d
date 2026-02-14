@@ -68,7 +68,7 @@ function M.load(filename, opts)
     log.info("Loaded texture: " .. filename .. " (" .. data.w .. "x" .. data.h .. ")")
 
     -- Create image with gpu wrapper (GC-safe)
-    local img = gpu.image(gfx.image_desc({
+    local img = gpu.image(gfx.ImageDesc({
         width = data.w,
         height = data.h,
         pixel_format = gfx.PixelFormat.RGBA8,
@@ -80,12 +80,12 @@ function M.load(filename, opts)
     end
 
     -- Create view from image (required for binding)
-    local view = gpu.view(gfx.view_desc({
+    local view = gpu.view(gfx.ViewDesc({
         texture = { image = img.handle },
     }))
 
     -- Create sampler
-    local smp = gpu.sampler(gfx.sampler_desc({
+    local smp = gpu.sampler(gfx.SamplerDesc({
         min_filter = opts.filter_min or gfx.Filter.LINEAR,
         mag_filter = opts.filter_mag or gfx.Filter.LINEAR,
         wrap_u = opts.wrap_u or gfx.Wrap.REPEAT,
@@ -162,7 +162,7 @@ function M.load_bc7(filename, opts)
 
     -- Upload BC7 to GPU
     local pixel_format = opts.srgb and gfx.PixelFormat.BC7_SRGBA or gfx.PixelFormat.BC7_RGBA
-    local img = gpu.image(gfx.image_desc({
+    local img = gpu.image(gfx.ImageDesc({
         width = w,
         height = h,
         pixel_format = pixel_format,
@@ -173,11 +173,11 @@ function M.load_bc7(filename, opts)
         return nil, "Failed to create BC7 image"
     end
 
-    local view = gpu.view(gfx.view_desc({
+    local view = gpu.view(gfx.ViewDesc({
         texture = { image = img.handle },
     }))
 
-    local smp = gpu.sampler(gfx.sampler_desc({
+    local smp = gpu.sampler(gfx.SamplerDesc({
         min_filter = opts.filter_min or gfx.Filter.LINEAR,
         mag_filter = opts.filter_mag or gfx.Filter.LINEAR,
         wrap_u = opts.wrap_u or gfx.Wrap.REPEAT,

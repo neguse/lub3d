@@ -17,7 +17,7 @@ M.window_title = "Lub3d - ImGui Test"
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
@@ -54,8 +54,8 @@ function M:frame()
     end
 
     -- Render
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = color[1], g = color[2], b = color[3], a = 1.0 }

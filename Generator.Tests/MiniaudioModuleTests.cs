@@ -409,8 +409,8 @@ public class MiniaudioModuleTests
         var reg = TypeRegistry.FromJson(MiniaudioJson);
         var mod = new MiniaudioModule();
         var code = mod.GenerateLua(reg, PrefixToModule);
-        Assert.Contains("---@enum miniaudio.Result", code);
-        Assert.Contains("---@enum miniaudio.SoundFlags", code);
+        Assert.Contains("---@class miniaudio.Result", code);
+        Assert.Contains("---@class miniaudio.SoundFlags", code);
     }
 
     [Fact]
@@ -420,6 +420,6 @@ public class MiniaudioModuleTests
         var mod = new MiniaudioModule();
         var code = mod.GenerateLua(reg, PrefixToModule);
         Assert.Contains("---@class miniaudio", code);
-        Assert.Contains("---@field EngineInit fun(config?: miniaudio.EngineConfig): miniaudio.Engine", code);
+        Assert.Contains("---@field engine_init fun(config?: miniaudio.EngineConfig): miniaudio.Engine", code);
     }
 }

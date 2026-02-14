@@ -36,8 +36,8 @@ local function draw_box(cx, cy, hw, hh, angle, r, g, b)
 end
 
 function M:init()
-    gfx.setup(gfx.desc({ environment = glue.environment() }))
-    gl.setup(gl.desc({}))
+    gfx.setup(gfx.Desc({ environment = glue.environment() }))
+    gl.setup(gl.Desc({}))
 
     -- Create world
     local world_def = b2d.default_world_def()
@@ -73,12 +73,12 @@ function M:frame()
     b2d.world_step(world_id, 1.0 / 60.0, 4)
 
     -- Render
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = {
-                gfx.color_attachment_action({
+                gfx.ColorAttachmentAction({
                     load_action = gfx.LoadAction.CLEAR,
-                    clear_value = gfx.color({ r = 0.2, g = 0.2, b = 0.3, a = 1.0 }),
+                    clear_value = gfx.Color({ r = 0.2, g = 0.2, b = 0.3, a = 1.0 }),
                 }),
             },
         }),

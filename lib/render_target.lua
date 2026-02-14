@@ -31,18 +31,18 @@ local M = {}
 function M.color(w, h, format)
     format = format or gfx.PixelFormat.RGBA8
 
-    local image = gpu.image(gfx.image_desc({
+    local image = gpu.image(gfx.ImageDesc({
         usage = { color_attachment = true },
         width = w,
         height = h,
         pixel_format = format,
     }))
 
-    local attach = gpu.view(gfx.view_desc({
+    local attach = gpu.view(gfx.ViewDesc({
         color_attachment = { image = image.handle },
     }))
 
-    local tex = gpu.view(gfx.view_desc({
+    local tex = gpu.view(gfx.ViewDesc({
         texture = { image = image.handle },
     }))
 
@@ -69,14 +69,14 @@ end
 function M.depth(w, h, format)
     format = format or gfx.PixelFormat.DEPTH
 
-    local image = gpu.image(gfx.image_desc({
+    local image = gpu.image(gfx.ImageDesc({
         usage = { depth_stencil_attachment = true },
         width = w,
         height = h,
         pixel_format = format,
     }))
 
-    local attach = gpu.view(gfx.view_desc({
+    local attach = gpu.view(gfx.ViewDesc({
         depth_stencil_attachment = { image = image.handle },
     }))
 

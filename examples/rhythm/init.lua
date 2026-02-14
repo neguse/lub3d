@@ -163,18 +163,18 @@ local function init()
     stm.setup()
 
     -- Initialize graphics
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
         logger = { func = slog.func },
     }))
 
     -- Initialize sokol-gl
-    sgl.setup(sgl.desc({
+    sgl.setup(sgl.Desc({
         logger = { func = slog.func },
     }))
 
     -- Initialize debug text
-    sdtx.setup(sdtx.desc({
+    sdtx.setup(sdtx.Desc({
         fonts = { sdtx.font_kc854() },
         logger = { func = slog.func },
     }))
@@ -244,12 +244,12 @@ local function frame()
     local current_time_us = math.floor(stm.us(stm.now()))
 
     -- Begin rendering
-    local pass_action = gfx.pass_action({
+    local pass_action = gfx.PassAction({
         colors = {
             [0] = { load_action = gfx.LoadAction.CLEAR, clear_value = { 0.1, 0.1, 0.15, 1.0 } },
         },
     })
-    gfx.begin_pass(gfx.pass({ action = pass_action, swapchain = glue.swapchain() }))
+    gfx.begin_pass(gfx.Pass({ action = pass_action, swapchain = glue.swapchain() }))
 
     if app_state == "select" then
         -- Draw select screen with ImGui

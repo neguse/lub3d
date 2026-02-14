@@ -66,7 +66,7 @@ function M:init()
     log.info("Simple triangle example init")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
@@ -82,8 +82,8 @@ function M:init()
         -0.5, -0.5, 0.0, 0.0, 1.0, -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
-    vbuf = gfx.make_buffer(gfx.buffer_desc({
-        data = gfx.range(data),
+    vbuf = gfx.make_buffer(gfx.BufferDesc({
+        data = gfx.Range(data),
     }))
 
     -- Compile shader
@@ -110,7 +110,7 @@ function M:init()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -132,8 +132,8 @@ function M:frame()
     end
 
     -- === RENDER PASS ===
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 },
@@ -144,7 +144,7 @@ function M:frame()
 
     gfx.apply_pipeline(pipeline)
 
-    gfx.apply_bindings(gfx.bindings({
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { vbuf },
     }))
 
@@ -154,7 +154,7 @@ function M:frame()
         triangle_color[1], triangle_color[2], triangle_color[3], 1.0,
         rotation, 0.0, 0.0, 0.0
     )
-    gfx.apply_uniforms(0, gfx.range(uniform_data))
+    gfx.apply_uniforms(0, gfx.Range(uniform_data))
 
     gfx.draw(0, 3, 1)
 

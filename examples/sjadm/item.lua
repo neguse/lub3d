@@ -16,7 +16,7 @@ function item.new(world_id, x, y, type, registry)
     local shape_def = b2d.default_shape_def()
     shape_def.enable_contact_events = true
     shape_def.density = 1.0
-    local circle = b2d.circle({ center = { 0, 0 }, radius = RADIUS })
+    local circle = b2d.Circle({ center = { 0, 0 }, radius = RADIUS })
     local shape_id = b2d.create_circle_shape(body_id, shape_def, circle)
 
     local it = setmetatable({

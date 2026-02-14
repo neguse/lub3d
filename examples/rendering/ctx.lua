@@ -53,10 +53,10 @@ function M.init()
         -1, 1, 0, 1,
     }
     local quad_data = string.pack(string.rep("f", #quad_vertices), table.unpack(quad_vertices))
-    M.quad_vbuf = gpu.buffer(gfx.buffer_desc({ data = gfx.range(quad_data) }))
+    M.quad_vbuf = gpu.buffer(gfx.BufferDesc({ data = gfx.Range(quad_data) }))
 
     -- Create sampler for reading G-Buffer
-    M.gbuf_sampler = gpu.sampler(gfx.sampler_desc({
+    M.gbuf_sampler = gpu.sampler(gfx.SamplerDesc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
         wrap_u = gfx.Wrap.CLAMP_TO_EDGE,
@@ -65,16 +65,16 @@ function M.init()
 
     -- Create white texture for fallback
     local white_data = string.pack("BBBB", 255, 255, 255, 255)
-    local white_img = gpu.image(gfx.image_desc({
+    local white_img = gpu.image(gfx.ImageDesc({
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { white_data } },
     }))
-    local white_view = gpu.view(gfx.view_desc({
+    local white_view = gpu.view(gfx.ViewDesc({
         texture = { image = white_img.handle },
     }))
-    local white_smp = gpu.sampler(gfx.sampler_desc({
+    local white_smp = gpu.sampler(gfx.SamplerDesc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
     }))

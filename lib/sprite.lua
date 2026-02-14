@@ -146,7 +146,7 @@ local function ensure_shared_resources()
     end
     shared_shader = shd
 
-    local pip = gfx.make_pipeline(gfx.pipeline_desc({
+    local pip = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shd,
         layout = {
             attrs = {
@@ -190,14 +190,14 @@ end
 function M.new_batch(tex_result, tex_w, tex_h, screen_w, screen_h)
     ensure_shared_resources()
 
-    local vbuf = gpu.buffer(gfx.buffer_desc({
+    local vbuf = gpu.buffer(gfx.BufferDesc({
         usage = { vertex_buffer = true, dynamic_update = true },
         size = MAX_QUADS * VERTS_PER_QUAD * FLOATS_PER_VERT * 4,
     }))
 
-    local ibuf = gpu.buffer(gfx.buffer_desc({
+    local ibuf = gpu.buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
-        data = gfx.range(get_ibuf_data()),
+        data = gfx.Range(get_ibuf_data()),
     }))
 
     ---@type sprite.Batch
@@ -326,11 +326,11 @@ function M.flush(batch)
 
     -- Upload vertex data
     local packed = util.pack_floats(batch.verts)
-    gfx.update_buffer(batch.vbuf.handle, gfx.range(packed))
+    gfx.update_buffer(batch.vbuf.handle, gfx.Range(packed))
 
     -- Apply pipeline and bindings
     gfx.apply_pipeline(shared_pipeline)
-    gfx.apply_bindings(gfx.bindings({
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { batch.vbuf.handle },
         index_buffer = batch.ibuf.handle,
         views = { batch.tex_view.handle },
@@ -339,7 +339,7 @@ function M.flush(batch)
 
     -- Set screen size uniform
     local params = util.pack_floats({ batch.screen_w, batch.screen_h, 0, 0 })
-    gfx.apply_uniforms(0, gfx.range(params))
+    gfx.apply_uniforms(0, gfx.Range(params))
 
     -- Draw
     gfx.draw(0, batch.quad_count * INDICES_PER_QUAD, 1)

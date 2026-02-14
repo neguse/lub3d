@@ -29,7 +29,7 @@ local colors = {
 ---Initialize debugtext (call once in init)
 function M.setup()
     if initialized then return end
-    sdtx.setup(sdtx.desc({
+    sdtx.setup(sdtx.Desc({
         fonts = { sdtx.font_oric() },
     }))
     initialized = true

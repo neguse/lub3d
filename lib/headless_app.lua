@@ -12,8 +12,8 @@ M._frame_count = 0
 -- Callbacks stored from desc
 local callbacks = {}
 
--- app.desc() compatible constructor
-function M.desc(desc)
+-- app.Desc() compatible constructor
+M.Desc = function(desc)
     callbacks = desc or {}
     if desc.width then M._width = desc.width end
     if desc.height then M._height = desc.height end
@@ -268,56 +268,33 @@ M.MouseCursor = {
     NUM = 27,
 }
 
--- Struct constructors (just return the table)
-function M.touchpoint(t) return t or {} end
-
-function M.event(t) return t or {} end
-
-function M.range(t) return t or {} end
-
-function M.image_desc(t) return t or {} end
-
-function M.icon_desc(t) return t or {} end
-
-function M.allocator(t) return t or {} end
-
-function M.environment_defaults(t) return t or {} end
-
-function M.metal_environment(t) return t or {} end
-
-function M.d3d11_environment(t) return t or {} end
-
-function M.wgpu_environment(t) return t or {} end
-
-function M.vulkan_environment(t) return t or {} end
-
-function M.environment(t) return t or {} end
-
-function M.metal_swapchain(t) return t or {} end
-
-function M.d3d11_swapchain(t) return t or {} end
-
-function M.wgpu_swapchain(t) return t or {} end
-
-function M.vulkan_swapchain(t) return t or {} end
-
-function M.gl_swapchain(t) return t or {} end
-
-function M.swapchain(t) return t or {} end
-
-function M.logger(t) return t or {} end
-
-function M.gl_desc(t) return t or {} end
-
-function M.win32_desc(t) return t or {} end
-
-function M.html5_desc(t) return t or {} end
-
-function M.ios_desc(t) return t or {} end
-
-function M.html5_fetch_response(t) return t or {} end
-
-function M.html5_fetch_request(t) return t or {} end
+-- Struct constructors (PascalCase, matching C registration)
+-- Use M.X = function() syntax so lint checks TableFieldDefineName (allows PascalCase)
+M.Touchpoint = function(t) return t or {} end
+M.Event = function(t) return t or {} end
+M.Range = function(t) return t or {} end
+M.ImageDesc = function(t) return t or {} end
+M.IconDesc = function(t) return t or {} end
+M.Allocator = function(t) return t or {} end
+M.EnvironmentDefaults = function(t) return t or {} end
+M.MetalEnvironment = function(t) return t or {} end
+M.D3d11Environment = function(t) return t or {} end
+M.WgpuEnvironment = function(t) return t or {} end
+M.VulkanEnvironment = function(t) return t or {} end
+M.Environment = function(t) return t or {} end
+M.MetalSwapchain = function(t) return t or {} end
+M.D3d11Swapchain = function(t) return t or {} end
+M.WgpuSwapchain = function(t) return t or {} end
+M.VulkanSwapchain = function(t) return t or {} end
+M.GlSwapchain = function(t) return t or {} end
+M.Swapchain = function(t) return t or {} end
+M.Logger = function(t) return t or {} end
+M.GlDesc = function(t) return t or {} end
+M.Win32Desc = function(t) return t or {} end
+M.Html5Desc = function(t) return t or {} end
+M.IosDesc = function(t) return t or {} end
+M.Html5FetchResponse = function(t) return t or {} end
+M.Html5FetchRequest = function(t) return t or {} end
 
 -- Stub functions (no-op in headless mode)
 function M.quit() end

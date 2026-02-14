@@ -326,7 +326,7 @@ M.shader_desc = {
 render_pass.setup(M, {
     shader_name = "light",
     pipeline_desc = function(shader_handle)
-        return gfx.pipeline_desc({
+        return gfx.PipelineDesc({
             shader = shader_handle,
             layout = {
                 attrs = {
@@ -347,8 +347,8 @@ function M.get_pass_desc(ctx)
         return nil
     end
 
-    return gfx.pass({
-        action = gfx.pass_action({
+    return gfx.Pass({
+        action = gfx.PassAction({
             colors = { { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 } } },
         }),
         swapchain = glue.swapchain(),
@@ -360,7 +360,7 @@ end
 ---@param frame_data {light_uniforms: string}
 function M.execute(ctx, frame_data)
     gfx.apply_pipeline(M.resources.pipeline.handle)
-    gfx.apply_bindings(gfx.bindings({
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { ctx.quad_vbuf.handle },
         views = {
             ctx.outputs.gbuf_position.handle,
@@ -376,7 +376,7 @@ function M.execute(ctx, frame_data)
         },
     }))
 
-    gfx.apply_uniforms(0, gfx.range(frame_data.light_uniforms))
+    gfx.apply_uniforms(0, gfx.Range(frame_data.light_uniforms))
     gfx.draw(0, 6, 1)
 end
 

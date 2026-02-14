@@ -41,12 +41,12 @@ function M:init()
     log.info("hakonotaiatari starting...")
 
     -- Initialize sokol.gfx (required for Lua entry point)
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
     -- Initialize sokol.gl
-    gl.setup(gl.desc({
+    gl.setup(gl.Desc({
         max_vertices = 65536,
         max_commands = 16384,
     }))

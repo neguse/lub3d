@@ -236,7 +236,7 @@ function M.init()
     -- Note: gl.setup() is called in init.lua before this
 
     -- Create wireframe pipeline for sokol.gl
-    wireframe_pipeline = gl.make_pipeline(gfx.pipeline_desc({
+    wireframe_pipeline = gl.make_pipeline(gfx.PipelineDesc({
         depth = {
             compare = gfx.CompareFunc.LESS_EQUAL,
             write_enabled = true,
@@ -267,7 +267,7 @@ function M.init()
     end
 
     -- Create shaded pipeline
-    shaded_pipeline = gfx.make_pipeline(gfx.pipeline_desc({
+    shaded_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shaded_shader,
         layout = {
             attrs = {
@@ -291,15 +291,15 @@ function M.init()
 
     -- Create vertex buffer
     local vertices = make_cube_vertices()
-    shaded_vbuf = gfx.make_buffer(gfx.buffer_desc({
-        data = gfx.range(util.pack_floats(vertices))
+    shaded_vbuf = gfx.make_buffer(gfx.BufferDesc({
+        data = gfx.Range(util.pack_floats(vertices))
     }))
 
     -- Create index buffer
     local indices = make_cube_indices()
-    shaded_ibuf = gfx.make_buffer(gfx.buffer_desc({
+    shaded_ibuf = gfx.make_buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
-        data = gfx.range(pack_indices(indices))
+        data = gfx.Range(pack_indices(indices))
     }))
 
     log.info("Renderer initialized")
@@ -352,8 +352,8 @@ function M.begin_frame(clear_r, clear_g, clear_b)
     clear_g = clear_g or 0.0
     clear_b = clear_b or 0.05
 
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = clear_r, g = clear_g, b = clear_b, a = 1.0 }
@@ -374,7 +374,7 @@ function M.begin_frame(clear_r, clear_g, clear_b)
 
     if current_mode == M.MODE_SHADED and shaded_pipeline then
         gfx.apply_pipeline(shaded_pipeline)
-        gfx.apply_bindings(gfx.bindings({
+        gfx.apply_bindings(gfx.Bindings({
             vertex_buffers = { shaded_vbuf },
             index_buffer = shaded_ibuf
         }))
@@ -463,7 +463,7 @@ function M.draw_cube_shaded(pos, size, angle, r, g, b, proj, view)
     local model = glm.translate(pos) * glm.rotate(angle, glm.vec3(0, 1, 0)) * glm.scale(size)
     local mvp = proj * view * model
 
-    gfx.apply_uniforms(0, gfx.range(pack_uniforms(mvp, model, r, g, b, 1.0)))
+    gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, r, g, b, 1.0)))
     gfx.draw(0, 36, 1)
 end
 

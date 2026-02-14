@@ -250,7 +250,7 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
             }
     end
 
-    local shd = gfx.make_shader(gfx.shader_desc(desc_table))
+    local shd = gfx.make_shader(gfx.ShaderDesc(desc_table))
     if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
         log.error("Failed to create shader")
         return nil
@@ -346,7 +346,7 @@ function M.compile_full(source, program_name, shader_desc)
         desc_table.attrs = shader_desc.attrs
     end
 
-    local shd = gfx.make_shader(gfx.shader_desc(desc_table))
+    local shd = gfx.make_shader(gfx.ShaderDesc(desc_table))
     if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
         log.error("Failed to create shader")
         return nil

@@ -224,16 +224,16 @@ end
 -- Create a default 1x1 texture (returns view, sampler)
 local function create_default_texture(r, g, b)
     local pixels = string.char(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), 255)
-    local img = gfx.make_image(gfx.image_desc({
+    local img = gfx.make_image(gfx.ImageDesc({
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { pixels } },
     }))
-    local view = gfx.make_view(gfx.view_desc({
+    local view = gfx.make_view(gfx.ViewDesc({
         texture = { image = img },
     }))
-    local smp = gfx.make_sampler(gfx.sampler_desc({
+    local smp = gfx.make_sampler(gfx.SamplerDesc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
     }))
@@ -245,7 +245,7 @@ local default_normal_view, default_normal_smp
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
@@ -331,7 +331,7 @@ function M:init()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -368,8 +368,8 @@ function M:init()
             local verts_with_tangents = add_tangents(mesh.vertices)
 
             if #verts_with_tangents > 0 then
-                local vbuf = gfx.make_buffer(gfx.buffer_desc({
-                    data = gfx.range(util.pack_floats(verts_with_tangents)),
+                local vbuf = gfx.make_buffer(gfx.BufferDesc({
+                    data = gfx.Range(util.pack_floats(verts_with_tangents)),
                 }))
 
                 -- Get textures (views)
@@ -469,8 +469,8 @@ function M:frame()
     local model = glm.mat4() -- identity
 
     -- Begin pass
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = {
                 {
                     load_action = gfx.LoadAction.CLEAR,
@@ -491,7 +491,7 @@ function M:frame()
 
     -- Draw all meshes
     for _, mesh in ipairs(meshes) do
-        gfx.apply_bindings(gfx.bindings({
+        gfx.apply_bindings(gfx.Bindings({
             vertex_buffers = { mesh.vbuf },
             views = { mesh.diffuse_view, mesh.normal_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp },
@@ -523,7 +523,7 @@ function M:frame()
                 mat.shininess or 32,
             })
 
-        gfx.apply_uniforms(0, gfx.range(uniforms))
+        gfx.apply_uniforms(0, gfx.Range(uniforms))
         gfx.draw(0, mesh.vertex_count, 1)
     end
 

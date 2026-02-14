@@ -14,10 +14,10 @@ M.height = 600
 M.window_title = "Hello Lub3d (Lua Entry Point)"
 
 function M:init()
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
-    gl.setup(gl.desc({}))
+    gl.setup(gl.Desc({}))
 end
 
 function M:frame()
@@ -29,12 +29,12 @@ function M:frame()
     local g = (math.sin(t + 2) + 1) / 2
     local b = (math.sin(t + 4) + 1) / 2
 
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = {
-                gfx.color_attachment_action({
+                gfx.ColorAttachmentAction({
                     load_action = gfx.LoadAction.CLEAR,
-                    clear_value = gfx.color({ r = r, g = g, b = b, a = 1.0 }),
+                    clear_value = gfx.Color({ r = r, g = g, b = b, a = 1.0 }),
                 }),
             },
         }),

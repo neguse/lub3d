@@ -122,7 +122,7 @@ rootCommand.SetAction(parseResult =>
         File.WriteAllText(cPath, mod.GenerateC(reg, prefixToModule));
         Console.WriteLine($"Generated: {cPath}");
 
-        var luaPath = Path.Combine(outputDir, $"{moduleId}.lua");
+        var luaPath = LuaOutputPath(outputDir, mod.ModuleName);
         File.WriteAllText(luaPath, mod.GenerateLua(reg, prefixToModule, sourceLink));
         Console.WriteLine($"Generated: {luaPath}");
     }
@@ -163,7 +163,7 @@ rootCommand.SetAction(parseResult =>
         File.WriteAllText(maCPath, miniaudioModule.GenerateC(maReg, maPrefixToModule));
         Console.WriteLine($"Generated: {maCPath}");
 
-        var maLuaPath = Path.Combine(outputDir, $"{maModuleId}.lua");
+        var maLuaPath = LuaOutputPath(outputDir, miniaudioModule.ModuleName);
         File.WriteAllText(maLuaPath, miniaudioModule.GenerateLua(maReg, maPrefixToModule, maSourceLink));
         Console.WriteLine($"Generated: {maLuaPath}");
     }
@@ -200,7 +200,7 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {imguiCppPath}");
 
         var imguiSourceLink = SourceLink.FromHeader(depsDir, "imgui/imgui.h");
-        var imguiLuaPath = Path.Combine(outputDir, "imgui.lua");
+        var imguiLuaPath = LuaOutputPath(outputDir, imguiModule.ModuleName);
         File.WriteAllText(imguiLuaPath, imguiModule.GenerateLua(imguiReg, imguiPrefixToModule, imguiSourceLink));
         Console.WriteLine($"Generated: {imguiLuaPath}");
     }
@@ -239,7 +239,7 @@ rootCommand.SetAction(parseResult =>
         File.WriteAllText(stbCPath, stbImageModule.GenerateC(stbReg, stbPrefixToModule));
         Console.WriteLine($"Generated: {stbCPath}");
 
-        var stbLuaPath = Path.Combine(outputDir, $"{stbModuleId}.lua");
+        var stbLuaPath = LuaOutputPath(outputDir, stbImageModule.ModuleName);
         File.WriteAllText(stbLuaPath, stbImageModule.GenerateLua(stbReg, stbPrefixToModule, stbSourceLink));
         Console.WriteLine($"Generated: {stbLuaPath}");
     }
@@ -288,7 +288,7 @@ rootCommand.SetAction(parseResult =>
         File.WriteAllText(b2CPath, box2dModule.GenerateC(b2Reg, b2PrefixToModule));
         Console.WriteLine($"Generated: {b2CPath}");
 
-        var b2LuaPath = Path.Combine(outputDir, $"{b2ModuleId}.lua");
+        var b2LuaPath = LuaOutputPath(outputDir, box2dModule.ModuleName);
         File.WriteAllText(b2LuaPath, box2dModule.GenerateLua(b2Reg, b2PrefixToModule, b2SourceLink));
         Console.WriteLine($"Generated: {b2LuaPath}");
     }
@@ -301,6 +301,19 @@ rootCommand.SetAction(parseResult =>
 });
 
 return rootCommand.Parse(args).Invoke();
+
+/// <summary>
+/// モジュール名から LuaCATS .lua ファイルパスを生成 (dots → /)
+/// 例: "sokol.app" → "sokol/app.lua", "miniaudio" → "miniaudio.lua"
+/// </summary>
+static string LuaOutputPath(string outputDir, string moduleName)
+{
+    var relativePath = moduleName.Replace('.', Path.DirectorySeparatorChar) + ".lua";
+    var fullPath = Path.Combine(outputDir, relativePath);
+    var dir = Path.GetDirectoryName(fullPath);
+    if (dir != null) Directory.CreateDirectory(dir);
+    return fullPath;
+}
 
 static string FindHeader(string headerName, List<string> includePaths)
 {

@@ -77,7 +77,7 @@ public class LogModuleTests
         var reg = TypeRegistry.FromJson(LogJson);
         var code = _log.GenerateLua(reg, PrefixToModule);
         Assert.Contains("---@meta", code);
-        Assert.Contains("---@class sokol.log", code);
+        Assert.Contains("---@class sokol_log_module", code);
     }
 
     [Fact]

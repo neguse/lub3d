@@ -36,8 +36,8 @@ local default_specular = nil
 local imgui_pass = {
     name = "imgui",
     get_pass_desc = function()
-        return gfx.pass({
-            action = gfx.pass_action({
+        return gfx.Pass({
+            action = gfx.PassAction({
                 colors = { { load_action = gfx.LoadAction.LOAD } },
             }),
             swapchain = glue.swapchain(),
@@ -314,12 +314,12 @@ local function load_model()
             )
         end
         local vdata = table.concat(vparts)
-        local vbuf = gpu.buffer(gfx.buffer_desc({ data = gfx.range(vdata) }))
+        local vbuf = gpu.buffer(gfx.BufferDesc({ data = gfx.Range(vdata) }))
 
         local idata = util.pack_u32(indices)
-        local ibuf = gpu.buffer(gfx.buffer_desc({
+        local ibuf = gpu.buffer(gfx.BufferDesc({
             usage = { index_buffer = true },
-            data = gfx.range(idata),
+            data = gfx.Range(idata),
         }))
         t_vbuf = t_vbuf + (os.clock() - t1)
 
@@ -362,14 +362,14 @@ local function load_model()
         -- Create default textures if needed
         if not default_diffuse then
             local white = string.pack("BBBB", 255, 255, 255, 255)
-            local img = gpu.image(gfx.image_desc({
+            local img = gpu.image(gfx.ImageDesc({
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { white } },
             }))
-            local view = gpu.view(gfx.view_desc({ texture = { image = img.handle } }))
-            local smp = gpu.sampler(gfx.sampler_desc({
+            local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
+            local smp = gpu.sampler(gfx.SamplerDesc({
                 min_filter = gfx.Filter.NEAREST,
                 mag_filter = gfx.Filter.NEAREST,
             }))
@@ -378,14 +378,14 @@ local function load_model()
         if not default_normal then
             -- Flat normal: (0.5, 0.5, 1.0) = pointing up in tangent space
             local flat = string.pack("BBBB", 128, 128, 255, 255)
-            local img = gpu.image(gfx.image_desc({
+            local img = gpu.image(gfx.ImageDesc({
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { flat } },
             }))
-            local view = gpu.view(gfx.view_desc({ texture = { image = img.handle } }))
-            local smp = gpu.sampler(gfx.sampler_desc({
+            local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
+            local smp = gpu.sampler(gfx.SamplerDesc({
                 min_filter = gfx.Filter.NEAREST,
                 mag_filter = gfx.Filter.NEAREST,
             }))
@@ -394,14 +394,14 @@ local function load_model()
         if not default_specular then
             -- Default specular: R=0.5 (intensity), G=0.25 (shininess=32), B=0.5 (fresnel)
             local spec = string.pack("BBBB", 128, 64, 128, 255)
-            local img = gpu.image(gfx.image_desc({
+            local img = gpu.image(gfx.ImageDesc({
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
                 data = { mip_levels = { spec } },
             }))
-            local view = gpu.view(gfx.view_desc({ texture = { image = img.handle } }))
-            local smp = gpu.sampler(gfx.sampler_desc({
+            local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
+            local smp = gpu.sampler(gfx.SamplerDesc({
                 min_filter = gfx.Filter.NEAREST,
                 mag_filter = gfx.Filter.NEAREST,
             }))
@@ -444,7 +444,7 @@ end
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 

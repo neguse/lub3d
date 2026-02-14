@@ -1,4 +1,3 @@
--- Smoke test: exercise all sokol.app bindings
 local app = require("sokol.app")
 local log = require("sokol.log")
 local tested = false

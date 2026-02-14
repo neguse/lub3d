@@ -47,7 +47,7 @@ M.window_title = "Lub3d - Simple Triangle"
 
 function M:init()
     -- Initialize sokol.gfx (once only, cannot be called twice)
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
     self:create_resources()
@@ -66,7 +66,7 @@ function M:create_resources()
         return
     end
 
-    self.pip = gfx.make_pipeline(gfx.pipeline_desc({
+    self.pip = gfx.make_pipeline(gfx.PipelineDesc({
         shader = self.shd,
         layout = {
             attrs = {
@@ -84,7 +84,7 @@ function M:create_resources()
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
     self.bind = {
-        vertex_buffers = { gfx.make_buffer(gfx.buffer_desc({ data = gfx.range(data) })) }
+        vertex_buffers = { gfx.make_buffer(gfx.BufferDesc({ data = gfx.Range(data) })) }
     }
     self.time = self.time or 0
 end
@@ -92,8 +92,8 @@ end
 function M:frame()
     self.time = (self.time or 0) + 1 / 60
 
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
@@ -103,11 +103,11 @@ function M:frame()
     }))
 
     gfx.apply_pipeline(self.pip)
-    gfx.apply_bindings(gfx.bindings(self.bind))
+    gfx.apply_bindings(gfx.Bindings(self.bind))
 
     -- Pack uniform: rotation (float) padded to 16 bytes
     local uniform_data = string.pack("ffff", self.time, 0, 0, 0)
-    gfx.apply_uniforms(0, gfx.range(uniform_data))
+    gfx.apply_uniforms(0, gfx.Range(uniform_data))
 
     gfx.draw(0, 3, 1)
     gfx.end_pass()

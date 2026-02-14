@@ -20,6 +20,7 @@ public abstract class SokolModule : IModule
         DefaultResolveType(t, moduleName, prefix, prefixToModule);
     protected virtual string? ExtraCCode(TypeRegistry reg) => null;
     protected virtual IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs => [];
+    protected virtual IEnumerable<FuncBinding> ExtraLuaFuncs => [];
 
     // ===== BuildSpec =====
 
@@ -107,7 +108,8 @@ public abstract class SokolModule : IModule
             ModuleName, Prefix, includes,
             ExtraCCode(reg),
             structs, funcs, enums,
-            ExtraLuaRegs.ToList());
+            ExtraLuaRegs.ToList(),
+            ExtraLuaFuncs: ExtraLuaFuncs.ToList());
     }
 
     // ===== IModule 実装 =====

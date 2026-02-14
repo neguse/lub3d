@@ -257,7 +257,7 @@ function M:init()
     log.info("Lighting example init")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
@@ -290,7 +290,7 @@ function M:init()
     end
 
     -- Create pipeline
-    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -311,13 +311,13 @@ function M:init()
     local cube_verts = make_cube_vertices()
     local cube_indices = make_cube_indices()
 
-    cube_vbuf = gfx.make_buffer(gfx.buffer_desc({
-        data = gfx.range(util.pack_floats(cube_verts)),
+    cube_vbuf = gfx.make_buffer(gfx.BufferDesc({
+        data = gfx.Range(util.pack_floats(cube_verts)),
     }))
 
-    cube_ibuf = gfx.make_buffer(gfx.buffer_desc({
+    cube_ibuf = gfx.make_buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
-        data = gfx.range(pack_indices(cube_indices)),
+        data = gfx.Range(pack_indices(cube_indices)),
     }))
 
     cube_data = {
@@ -328,13 +328,13 @@ function M:init()
     local sphere_verts, segs, rings = make_sphere_vertices(24, 12)
     local sphere_indices = make_sphere_indices(segs, rings)
 
-    sphere_vbuf = gfx.make_buffer(gfx.buffer_desc({
-        data = gfx.range(util.pack_floats(sphere_verts)),
+    sphere_vbuf = gfx.make_buffer(gfx.BufferDesc({
+        data = gfx.Range(util.pack_floats(sphere_verts)),
     }))
 
-    sphere_ibuf = gfx.make_buffer(gfx.buffer_desc({
+    sphere_ibuf = gfx.make_buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
-        data = gfx.range(pack_indices(sphere_indices)),
+        data = gfx.Range(pack_indices(sphere_indices)),
     }))
 
     sphere_data = {
@@ -384,8 +384,8 @@ function M:frame()
     camera_pos = eye -- for lighting calculation
 
     -- Begin pass
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 }
@@ -401,7 +401,7 @@ function M:frame()
     gfx.apply_pipeline(pipeline)
 
     -- Draw spheres (better for showing Fresnel)
-    gfx.apply_bindings(gfx.bindings({
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { sphere_vbuf },
         index_buffer = sphere_ibuf,
     }))
@@ -437,7 +437,7 @@ function M:frame()
             0.3, 0.3, 0.3, 64,               -- specular + shininess
         })
 
-        gfx.apply_uniforms(0, gfx.range(uniforms))
+        gfx.apply_uniforms(0, gfx.Range(uniforms))
         gfx.draw(0, sphere_data.index_count, 1)
     end
 
@@ -454,7 +454,7 @@ function M:frame()
         0, 0, 0, 1,
     })
 
-    gfx.apply_uniforms(0, gfx.range(uniforms))
+    gfx.apply_uniforms(0, gfx.Range(uniforms))
     gfx.draw(0, sphere_data.index_count, 1)
 
     gfx.end_pass()

@@ -60,10 +60,10 @@ M.height = 480
 M.window_title = "miniaudio test"
 
 function M:init()
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
-    gl.setup(gl.desc({}))
+    gl.setup(gl.Desc({}))
 
     -- Generate test WAV
     generate_wav(wav_path, 440, 2.0)
@@ -93,12 +93,12 @@ function M:frame()
         sound:set_volume(vol)
     end
 
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = {
-                gfx.color_attachment_action({
+                gfx.ColorAttachmentAction({
                     load_action = gfx.LoadAction.CLEAR,
-                    clear_value = gfx.color({ r = 0.1, g = 0.1, b = 0.15, a = 1.0 }),
+                    clear_value = gfx.Color({ r = 0.1, g = 0.1, b = 0.15, a = 1.0 }),
                 }),
             },
         }),

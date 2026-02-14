@@ -698,7 +698,7 @@ end
 -- === Callbacks ===
 
 function M:init()
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
@@ -740,12 +740,12 @@ function M:frame()
         self:game_update()
     end
 
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = {
-                gfx.color_attachment_action({
+                gfx.ColorAttachmentAction({
                     load_action = gfx.LoadAction.CLEAR,
-                    clear_value = gfx.color({ r = 0.502, g = 0.502, b = 0.502, a = 1.0 }),
+                    clear_value = gfx.Color({ r = 0.502, g = 0.502, b = 0.502, a = 1.0 }),
                 }),
             },
         }),

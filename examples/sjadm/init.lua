@@ -35,35 +35,35 @@ local function process_contact_events()
     if not events then return end
 
     -- begin contacts
-    for _, c in ipairs(events.begin) do
+    for _, c in ipairs(events.begin_events) do
         local e1 = registry[tostring(c.shape_id_a)]
         local e2 = registry[tostring(c.shape_id_b)]
         -- Dispatch: if one is player, call onContact with the other
-        if e1 and e1.get_type and e1:getType() == "P" then
+        if e1 and e1.get_type and e1:get_type() == "P" then
             e1:on_contact(e2)
-        elseif e2 and e2.get_type and e2:getType() == "P" then
+        elseif e2 and e2.get_type and e2:get_type() == "P" then
             e2:on_contact(e1)
         end
         -- Track wall contacts (entity is nil for plain walls)
-        if e1 and e1.get_type and e1:getType() == "P" and not e2 then
+        if e1 and e1.get_type and e1:get_type() == "P" and not e2 then
             e1.touching_walls = e1.touching_walls + 1
-        elseif e2 and e2.get_type and e2:getType() == "P" and not e1 then
+        elseif e2 and e2.get_type and e2:get_type() == "P" and not e1 then
             e2.touching_walls = e2.touching_walls + 1
         end
     end
 
     -- end contacts
-    for _, c in ipairs(events.end_) do
+    for _, c in ipairs(events.end_events) do
         local e1 = registry[tostring(c.shape_id_a)]
         local e2 = registry[tostring(c.shape_id_b)]
-        if e1 and e1.get_type and e1:getType() == "P" then
+        if e1 and e1.get_type and e1:get_type() == "P" then
             if e2 and e2.get_type then
                 e1:on_end_contact(e2)
             end
             if not e2 then
                 e1.touching_walls = math.max(0, e1.touching_walls - 1)
             end
-        elseif e2 and e2.get_type and e2:getType() == "P" then
+        elseif e2 and e2.get_type and e2:get_type() == "P" then
             if e1 and e1.get_type then
                 e2:on_end_contact(e1)
             end
@@ -74,13 +74,13 @@ local function process_contact_events()
     end
 
     -- hit events (have normal info for wall-jump direction)
-    for _, c in ipairs(events.hit) do
+    for _, c in ipairs(events.hit_events) do
         local e1 = registry[tostring(c.shape_id_a)]
         local e2 = registry[tostring(c.shape_id_b)]
-        if e1 and e1.get_type and e1:getType() == "P" and not e2 then
+        if e1 and e1.get_type and e1:get_type() == "P" and not e2 then
             e1.contact_normal_x = e1.contact_normal_x + (c.normal[1] or 0)
             e1.contact_normal_y = e1.contact_normal_y + (c.normal[2] or 0)
-        elseif e2 and e2.get_type and e2:getType() == "P" and not e1 then
+        elseif e2 and e2.get_type and e2:get_type() == "P" and not e1 then
             -- normal points from A to B, negate for B side
             e2.contact_normal_x = e2.contact_normal_x - (c.normal[1] or 0)
             e2.contact_normal_y = e2.contact_normal_y - (c.normal[2] or 0)
@@ -92,24 +92,24 @@ local function process_sensor_events()
     local events = b2d.world_get_sensor_events(world_id)
     if not events then return end
 
-    for _, ev in ipairs(events.begin) do
+    for _, ev in ipairs(events.begin_events) do
         local sensor = registry[tostring(ev.sensor_shape_id)]
         local visitor = registry[tostring(ev.visitor_shape_id)]
-        if visitor and visitor.get_type and visitor:getType() == "P" then
+        if visitor and visitor.get_type and visitor:get_type() == "P" then
             visitor:on_contact(sensor)
-        elseif sensor and sensor.get_type and sensor:getType() == "P" then
+        elseif sensor and sensor.get_type and sensor:get_type() == "P" then
             sensor:on_contact(visitor)
         end
     end
 
-    for _, ev in ipairs(events.end_) do
+    for _, ev in ipairs(events.end_events) do
         local sensor = registry[tostring(ev.sensor_shape_id)]
         local visitor = registry[tostring(ev.visitor_shape_id)]
-        if visitor and visitor.get_type and visitor:getType() == "P" then
+        if visitor and visitor.get_type and visitor:get_type() == "P" then
             if sensor and sensor.get_type then
                 visitor:on_end_contact(sensor)
             end
-        elseif sensor and sensor.get_type and sensor:getType() == "P" then
+        elseif sensor and sensor.get_type and sensor:get_type() == "P" then
             if visitor and visitor.get_type then
                 sensor:on_end_contact(visitor)
             end
@@ -120,16 +120,16 @@ end
 function M:init()
     log.info("sjadm starting...")
 
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
-    gl.setup(gl.desc({
+    gl.setup(gl.Desc({
         max_vertices = 65536,
         max_commands = 16384,
     }))
 
-    sdtx.setup(sdtx.desc({ fonts = { sdtx.font_c64() } }))
+    sdtx.setup(sdtx.Desc({ fonts = { sdtx.font_c64() } }))
 
     -- Create Box2D world
     local world_def = b2d.default_world_def()
@@ -170,8 +170,8 @@ function M:frame()
     cam:update(dt)
 
     -- Render
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.05, g = 0.05, b = 0.1, a = 1.0 },

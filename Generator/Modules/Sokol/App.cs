@@ -24,6 +24,11 @@ public class App : SokolModule
     protected override IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs =>
         [("run", "l_sapp_run")];
 
+    protected override IEnumerable<FuncBinding> ExtraLuaFuncs =>
+        [new FuncBinding("l_sapp_run", "run",
+            [new ParamBinding("desc", new BindingType.Struct("sapp_desc", "sokol.app.Desc", $"{ModuleName}.Desc"))],
+            new BindingType.Void(), null)];
+
     protected override string? ExtraCCode(TypeRegistry reg) =>
         ContextStruct() +
         Trampoline("init", "init") +

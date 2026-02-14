@@ -265,12 +265,12 @@ function M:init()
     log.log("Raytracer init starting...")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
     stm.setup()
-    sdtx.setup(sdtx.desc({ fonts = { sdtx.font_c64() } }))
+    sdtx.setup(sdtx.Desc({ fonts = { sdtx.font_c64() } }))
     last_time = stm.now()
 
     shader = shader_mod.compile(shader_source, "raytracer", {
@@ -282,7 +282,7 @@ function M:init()
     end
     log.log("Shader compiled OK")
 
-    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -298,7 +298,7 @@ function M:init()
     end
 
     -- Fullscreen quad
-    vbuf = gfx.make_buffer(gfx.buffer_desc({
+    vbuf = gfx.make_buffer(gfx.BufferDesc({
         data = util.pack_floats({ -1, -1, 1, -1, -1, 1, 1, 1 }),
         usage = { vertex_buffer = true, immutable = true }
     }))
@@ -321,18 +321,18 @@ function M:frame()
     local w = app.width()
     local h = app.height()
 
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0, g = 0, b = 0, a = 1 } } }
         }),
         swapchain = glue.swapchain()
     }))
 
     gfx.apply_pipeline(pipeline)
-    gfx.apply_bindings(gfx.bindings({ vertex_buffers = { vbuf } }))
+    gfx.apply_bindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
 
     -- Pass uniforms (time, aspect ratio)
-    gfx.apply_uniforms(0, gfx.range(util.pack_floats({ t, w / h, 0, 0 })))
+    gfx.apply_uniforms(0, gfx.Range(util.pack_floats({ t, w / h, 0, 0 })))
 
     gfx.draw(0, 4, 1)
 

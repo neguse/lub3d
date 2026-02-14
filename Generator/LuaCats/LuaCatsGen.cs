@@ -47,15 +47,25 @@ public static class LuaCatsGen
         $"---@field {name} fun(t?: {moduleName}.{name}): {moduleName}.{name}";
 
     /// <summary>
+    /// モジュール名 → モジュールテーブルクラス名 (---@meta との衝突回避)
+    /// </summary>
+    public static string ModuleTableClassName(string moduleName) =>
+        moduleName.Replace('.', '_') + "_module";
+
+    /// <summary>
     /// モジュールクラス定義
     /// </summary>
-    public static string ModuleClass(string moduleName, IEnumerable<string> fields) => $$"""
-        ---@class {{moduleName}}
-        {{string.Join("\n", fields)}}
-        ---@type {{moduleName}}
-        local M = {}
+    public static string ModuleClass(string moduleName, IEnumerable<string> fields)
+    {
+        var cls = ModuleTableClassName(moduleName);
+        return $$"""
+            ---@class {{cls}}
+            {{string.Join("\n", fields)}}
+            ---@type {{cls}}
+            local M = {}
 
-        """;
+            """;
+    }
 
     /// <summary>
     /// 関数の LuaCATS フィールド定義 (複数戻り値対応)
@@ -79,16 +89,14 @@ public static class LuaCatsGen
     }
 
     /// <summary>
-    /// Enum の LuaCATS 定義
+    /// Enum の LuaCATS 定義 (---@class + ---@field で enum テーブルを表現)
     /// </summary>
     public static string EnumDef(string enumName, string fieldName, IEnumerable<(string name, int value)> items, string? sourceLink = null)
     {
-        var itemLines = string.Join("\n", items.Select(item => $"    {item.name} = {item.value},"));
-        return SourceComment(sourceLink) + $$"""
-            ---@enum {{enumName}}
-            M.{{fieldName}} = {
-            {{itemLines}}
-            }
+        var fieldLines = string.Join("\n", items.Select(item => $"---@field {item.name} {enumName}"));
+        return SourceComment(sourceLink) + $"""
+            ---@class {enumName}
+            {fieldLines}
 
             """;
     }
@@ -134,17 +142,20 @@ public static class LuaCatsGen
             moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName));
         foreach (var ot in spec.OpaqueTypes)
         {
+            if (ot.InitFunc == null) continue;
             if (ot.ConfigType != null)
             {
                 var configStruct = spec.Structs.FirstOrDefault(s => s.CName == ot.ConfigType);
                 var configClass = configStruct != null
                     ? $"{spec.ModuleName}.{configStruct.PascalName}"
                     : "any";
-                moduleFields.Add($"---@field {ot.PascalName}Init fun(config?: {configClass}): {ot.LuaClassName}");
+                var initName = Pipeline.StripPrefix(ot.InitFunc, spec.Prefix);
+                moduleFields.Add($"---@field {initName} fun(config?: {configClass}): {ot.LuaClassName}");
             }
             else
             {
-                moduleFields.Add($"---@field {ot.PascalName}Init fun(): {ot.LuaClassName}");
+                var initName = Pipeline.StripPrefix(ot.InitFunc, spec.Prefix);
+                moduleFields.Add($"---@field {initName} fun(): {ot.LuaClassName}");
             }
         }
         foreach (var f in spec.Funcs)
@@ -169,6 +180,8 @@ public static class LuaCatsGen
                 retTypes.Add(ToLuaCatsType(op.Type));
             moduleFields.Add(FuncField(f.LuaName, parms, retTypes, f.SourceLink));
         }
+        foreach (var e in spec.Enums)
+            moduleFields.Add($"---@field {e.FieldName} {e.LuaName}");
         sb += ModuleClass(spec.ModuleName, moduleFields);
 
         // Enums

@@ -276,7 +276,7 @@ local function draw_cube(proj, view, pos, scale, color)
     local model = glm.translate(pos) * glm.scale(scale)
     local mvp = proj * view * model
 
-    gfx.apply_uniforms(0, gfx.range(pack_uniforms(mvp, model, color)))
+    gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
     gfx.draw(0, 36, 1)
 end
 
@@ -289,7 +289,7 @@ function M:init()
     log.info("3D Block Breaker starting...")
 
     -- Initialize sokol.gfx
-    gfx.setup(gfx.desc({
+    gfx.setup(gfx.Desc({
         environment = glue.environment(),
     }))
 
@@ -314,7 +314,7 @@ function M:init()
         return
     end
 
-    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -338,14 +338,14 @@ function M:init()
 
     -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
     local vertices = make_cube_vertices()
-    vbuf = gfx.make_buffer(gfx.buffer_desc({
-        data = gfx.range(util.pack_floats(vertices))
+    vbuf = gfx.make_buffer(gfx.BufferDesc({
+        data = gfx.Range(util.pack_floats(vertices))
     }))
 
     local indices = make_cube_indices()
-    ibuf = gfx.make_buffer(gfx.buffer_desc({
+    ibuf = gfx.make_buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
-        data = gfx.range(pack_indices(indices))
+        data = gfx.Range(pack_indices(indices))
     }))
 
     init_blocks()
@@ -382,8 +382,8 @@ function M:frame()
     )
 
     -- Begin render pass
-    gfx.begin_pass(gfx.pass({
-        action = gfx.pass_action({
+    gfx.begin_pass(gfx.Pass({
+        action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 }
@@ -397,7 +397,7 @@ function M:frame()
     }))
 
     gfx.apply_pipeline(pipeline)
-    gfx.apply_bindings(gfx.bindings({
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { vbuf },
         index_buffer = ibuf
     }))

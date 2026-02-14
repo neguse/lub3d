@@ -65,7 +65,7 @@ function M:init()
     print(string.format("=== Lua vs C benchmark (%d iterations) ===\n", ITERATIONS))
 
     -- Setup test data for each implementation
-    -- setup_lua uses snake_case (lib/glm.lua), setup_c uses PascalCase (C binding)
+    -- Both use snake_case API
     local function setup_lua(g)
         local pos = g.vec3(100, 0, 200)
         local size = g.vec3(30, 30, 30)
@@ -88,13 +88,13 @@ function M:init()
     end
 
     local function setup_c(g)
-        local pos = g.Vec3(100, 0, 200)
-        local size = g.Vec3(30, 30, 30)
+        local pos = g.vec3(100, 0, 200)
+        local size = g.vec3(30, 30, 30)
         local angle = 1.57
-        local axis = g.Vec3(0, 1, 0)
-        local proj = g.Perspective(math.rad(45), 1.0, 1.0, 5000.0)
-        local view = g.Lookat(g.Vec3(0, 500, 500), g.Vec3(0, 0, 0), g.Vec3(0, 1, 0))
-        local model = g.Translate(pos) * g.Rotate(angle, axis) * g.Scale(size)
+        local axis = g.vec3(0, 1, 0)
+        local proj = g.perspective(math.rad(45), 1.0, 1.0, 5000.0)
+        local view = g.lookat(g.vec3(0, 500, 500), g.vec3(0, 0, 0), g.vec3(0, 1, 0))
+        local model = g.translate(pos) * g.rotate(angle, axis) * g.scale(size)
         local mvp = proj * view * model
         return {
             pos = pos,
@@ -118,19 +118,19 @@ function M:init()
 
     bench_pair("alloc vec3()", ITERATIONS,
         function() local _ = glm_lua.vec3(1, 2, 3) end,
-        function() local _ = glm_c.Vec3(1, 2, 3) end)
+        function() local _ = glm_c.vec3(1, 2, 3) end)
 
     bench_pair("alloc mat4()", ITERATIONS,
         function() local _ = glm_lua.mat4() end,
-        function() local _ = glm_c.Mat4() end)
+        function() local _ = glm_c.mat4() end)
 
     bench_pair("translate", ITERATIONS,
         function() glm_lua.translate(dl.pos) end,
-        function() glm_c.Translate(dc.pos) end)
+        function() glm_c.translate(dc.pos) end)
 
     bench_pair("rotate", ITERATIONS,
         function() glm_lua.rotate(dl.angle, dl.axis) end,
-        function() glm_c.Rotate(dc.angle, dc.axis) end)
+        function() glm_c.rotate(dc.angle, dc.axis) end)
 
     bench_pair("mat4*mat4", ITERATIONS,
         function() local _ = dl.proj * dl.view end,
@@ -138,7 +138,7 @@ function M:init()
 
     bench_pair("model (T*R*S)", ITERATIONS,
         function() local _ = glm_lua.translate(dl.pos) * glm_lua.rotate(dl.angle, dl.axis) * glm_lua.scale(dl.size) end,
-        function() local _ = glm_c.Translate(dc.pos) * glm_c.Rotate(dc.angle, dc.axis) * glm_c.Scale(dc.size) end)
+        function() local _ = glm_c.translate(dc.pos) * glm_c.rotate(dc.angle, dc.axis) * glm_c.scale(dc.size) end)
 
     bench_pair("full pipeline", ITERATIONS,
         function()
@@ -147,7 +147,7 @@ function M:init()
             pack_uniforms_lua(glm_lua, mv, m, 1.0, 0.5, 0.2, 1.0)
         end,
         function()
-            local m = glm_c.Translate(dc.pos) * glm_c.Rotate(dc.angle, dc.axis) * glm_c.Scale(dc.size)
+            local m = glm_c.translate(dc.pos) * glm_c.rotate(dc.angle, dc.axis) * glm_c.scale(dc.size)
             local mv = dc.proj * dc.view * m
             pack_uniforms_c(glm_c, mv, m, 1.0, 0.5, 0.2, 1.0)
         end)
@@ -158,15 +158,15 @@ function M:init()
 
     bench_pair("alloc vec3()", ITERATIONS,
         function() local _ = glm_lua.vec3(1, 2, 3) end,
-        function() local _ = glm_c.Vec3(1, 2, 3) end)
+        function() local _ = glm_c.vec3(1, 2, 3) end)
 
     bench_pair("alloc mat4()", ITERATIONS,
         function() local _ = glm_lua.mat4() end,
-        function() local _ = glm_c.Mat4() end)
+        function() local _ = glm_c.mat4() end)
 
     bench_pair("model (T*R*S)", ITERATIONS,
         function() local _ = glm_lua.translate(dl.pos) * glm_lua.rotate(dl.angle, dl.axis) * glm_lua.scale(dl.size) end,
-        function() local _ = glm_c.Translate(dc.pos) * glm_c.Rotate(dc.angle, dc.axis) * glm_c.Scale(dc.size) end)
+        function() local _ = glm_c.translate(dc.pos) * glm_c.rotate(dc.angle, dc.axis) * glm_c.scale(dc.size) end)
 
     bench_pair("full pipeline", ITERATIONS,
         function()
@@ -175,7 +175,7 @@ function M:init()
             pack_uniforms_lua(glm_lua, mv, m, 1.0, 0.5, 0.2, 1.0)
         end,
         function()
-            local m = glm_c.Translate(dc.pos) * glm_c.Rotate(dc.angle, dc.axis) * glm_c.Scale(dc.size)
+            local m = glm_c.translate(dc.pos) * glm_c.rotate(dc.angle, dc.axis) * glm_c.scale(dc.size)
             local mv = dc.proj * dc.view * m
             pack_uniforms_c(glm_c, mv, m, 1.0, 0.5, 0.2, 1.0)
         end)
