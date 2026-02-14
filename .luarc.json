@@ -10,10 +10,6 @@
     ],
     "runtime.version": "Lua 5.5",
     "diagnostics.globals": [
-        "Init",
-        "Frame",
-        "Cleanup",
-        "Event",
         "_headless_frames"
     ],
     "diagnostics.neededFileStatus": {

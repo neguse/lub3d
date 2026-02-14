@@ -3,8 +3,6 @@
 
 local stm = require("sokol.time")
 local util = require("lib.util")
--- Note: glm_c (C userdata) still uses PascalCase API (Pack, Vec3, etc.)
--- glm_lua (lib/glm.lua) uses snake_case API (pack, vec3, etc.)
 
 local M = {}
 M.window_title = "bench_glm"
