@@ -959,6 +959,12 @@ public static class CBindingGen
             $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"\");",
         BindingType.Struct(var cName, var mt, _) =>
             $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
+        BindingType.ValueStruct(var cType, _, var vsFields, _) =>
+            GenValueStructParamDecl(p.Name, idx, cType, vsFields),
+        BindingType.Ptr(BindingType.ValueStruct(var cName, _, _, _)) =>
+            $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"\");",
+        BindingType.ConstPtr(BindingType.ValueStruct(var cName, _, _, _)) =>
+            $"    const {cName}* {p.Name} = (const {cName}*)luaL_checkudata(L, {idx}, \"\");",
         _ => throw new InvalidOperationException($"Unsupported parameter type: {p.Type} for '{p.Name}'")
     };
 
@@ -985,6 +991,8 @@ public static class CBindingGen
             $"    *ud = result;\n" +
             $"    luaL_setmetatable(L, \"{retMt}\");\n" +
             $"    return 1;",
+        BindingType.ValueStruct(var cType, _, var vsFields, _) =>
+            GenValueStructReturnPush(callExpr, cType, vsFields),
         BindingType.Custom(_, _, _, _, var pushCode, _) when pushCode != null =>
             $"    {pushCode.Replace("{value}", callExpr)}\n    return 1;",
         BindingType.Custom(_, _, _, _, null, _) =>
@@ -1026,6 +1034,7 @@ public static class CBindingGen
         BindingType.Void => "void",
         BindingType.Enum(var cName, _) => cName,
         BindingType.Struct(var cName, _, _) => cName,
+        BindingType.ValueStruct(var cName, _, _, _) => cName,
         BindingType.Custom(var cName, _, _, _, _, _) => cName,
         _ => throw new ArgumentException($"Unknown BindingType: {bt}")
     };
@@ -1037,6 +1046,8 @@ public static class CBindingGen
     {
         return f.Type switch
         {
+            BindingType.ValueStruct(_, _, var vsFields, _) =>
+                GenValueStructPushExpr($"self->{f.CName}", vsFields),
             BindingType.Custom(_, _, _, _, var pushCode, _) when pushCode != null =>
                 pushCode.Replace("{value}", $"self->{f.CName}"),
             BindingType.Struct(var cName, var mt, _) =>
@@ -1066,6 +1077,8 @@ public static class CBindingGen
     {
         return f.Type switch
         {
+            BindingType.ValueStruct(_, _, var vsFields, true) =>
+                GenValueStructSetCode(f.CName, vsFields),
             BindingType.Custom(_, _, _, _, _, var setCode) when setCode != null =>
                 setCode.Replace("{fieldName}", f.CName),
             BindingType.Struct(var cName, var mt, _) when structBindings != null && structBindings.ContainsKey(cName) =>
@@ -1112,6 +1125,10 @@ public static class CBindingGen
             BindingType.Struct(var sName, var mt, _) =>
                 $"{getField}\n" +
                 $"        if (lua_isuserdata(L, -1)) ud->{cName} = *({sName}*)luaL_checkudata(L, -1, \"{mt}\");\n        lua_pop(L, 1);",
+
+            // ValueStruct: read table and set struct fields
+            BindingType.ValueStruct(_, _, var vsFields, _) =>
+                GenValueStructFieldInit(getField, cName, vsFields),
 
             // Custom type: just pop (Custom fields use PushCode/SetCode in index/newindex only)
             BindingType.Custom(_, _, _, _, _, _) =>
@@ -1232,5 +1249,153 @@ public static class CBindingGen
                 }
                 lua_pop(L, 1);
         """;
+    }
+
+    // ===== ValueStruct ヘルパー =====
+
+    private static string GenValueStructParamDecl(string name, int idx, string cType, List<BindingType.ValueStructField> fields)
+    {
+        var lines = new List<string>
+        {
+            $"    luaL_checktype(L, {idx}, LUA_TTABLE);",
+            $"    {cType} {name};"
+        };
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    lines.Add($"    lua_rawgeti(L, {idx}, {fi}); {name}.{acc} = (float)lua_tonumber(L, -1); lua_pop(L, 1);");
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    lines.Add($"    lua_rawgeti(L, {idx}, {fi}); luaL_checktype(L, -1, LUA_TTABLE);");
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        lines.Add($"    lua_rawgeti(L, -1, {si}); {name}.{acc}.{sub} = (float)lua_tonumber(L, -1); lua_pop(L, 1);");
+                        si++;
+                    }
+                    lines.Add("    lua_pop(L, 1);");
+                    break;
+            }
+            fi++;
+        }
+        return string.Join("\n", lines);
+    }
+
+    private static string GenValueStructReturnPush(string callExpr, string cType, List<BindingType.ValueStructField> fields)
+    {
+        var sb = $"    {cType} _v = {callExpr};\n";
+        sb += "    lua_newtable(L);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"    lua_pushnumber(L, _v.{acc}); lua_rawseti(L, -2, {fi});\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += "    lua_newtable(L);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"    lua_pushnumber(L, _v.{acc}.{sub}); lua_rawseti(L, -2, {si});\n";
+                        si++;
+                    }
+                    sb += $"    lua_rawseti(L, -2, {fi});\n";
+                    break;
+            }
+            fi++;
+        }
+        sb += "    return 1;";
+        return sb;
+    }
+
+    private static string GenValueStructPushExpr(string prefix, List<BindingType.ValueStructField> fields)
+    {
+        var sb = "lua_newtable(L);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"        lua_pushnumber(L, {prefix}.{acc}); lua_rawseti(L, -2, {fi});\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += "        lua_newtable(L);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"        lua_pushnumber(L, {prefix}.{acc}.{sub}); lua_rawseti(L, -2, {si});\n";
+                        si++;
+                    }
+                    sb += $"        lua_rawseti(L, -2, {fi});\n";
+                    break;
+            }
+            fi++;
+        }
+        sb += "        return 1";
+        return sb;
+    }
+
+    private static string GenValueStructSetCode(string fieldName, List<BindingType.ValueStructField> fields)
+    {
+        var sb = "luaL_checktype(L, 3, LUA_TTABLE)";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $";\n            lua_rawgeti(L, 3, {fi}); self->{fieldName}.{acc} = (float)lua_tonumber(L, -1); lua_pop(L, 1)";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += $";\n            lua_rawgeti(L, 3, {fi}); luaL_checktype(L, -1, LUA_TTABLE)";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $";\n            lua_rawgeti(L, -1, {si}); self->{fieldName}.{acc}.{sub} = (float)lua_tonumber(L, -1); lua_pop(L, 1)";
+                        si++;
+                    }
+                    sb += ";\n            lua_pop(L, 1)";
+                    break;
+            }
+            fi++;
+        }
+        return sb;
+    }
+
+    private static string GenValueStructFieldInit(string getField, string cName, List<BindingType.ValueStructField> fields)
+    {
+        var sb = $"{getField}\n";
+        sb += "        if (!lua_isnil(L, -1)) {\n";
+        sb += "            luaL_checktype(L, -1, LUA_TTABLE);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"            lua_rawgeti(L, -1, {fi}); ud->{cName}.{acc} = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += $"            lua_rawgeti(L, -1, {fi}); luaL_checktype(L, -1, LUA_TTABLE);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"            lua_rawgeti(L, -1, {si}); ud->{cName}.{acc}.{sub} = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n";
+                        si++;
+                    }
+                    sb += "            lua_pop(L, 1);\n";
+                    break;
+            }
+            fi++;
+        }
+        sb += "        }\n";
+        sb += "        lua_pop(L, 1);";
+        return sb;
     }
 }

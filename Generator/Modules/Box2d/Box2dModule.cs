@@ -11,117 +11,37 @@ public class Box2dModule : IModule
     public string ModuleName => "b2d";
     public string Prefix => "b2";
 
-    // ===== Custom 型定義 (b2Vec2, b2Rot) =====
+    // ===== ValueStruct 型定義 (b2Vec2, b2Rot, etc.) =====
 
     /// <summary>b2Vec2 → Lua table {x, y}</summary>
-    private static readonly BindingType B2Vec2Type = new BindingType.Custom(
+    private static readonly BindingType B2Vec2Type = new BindingType.ValueStruct(
         "b2Vec2", "number[]",
-        InitCode: null,
-        CheckCode:
-            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n" +
-            "    b2Vec2 {name};\n" +
-            "    lua_rawgeti(L, {idx}, 1); {name}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, {idx}, 2); {name}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);",
-        PushCode:
-            "b2Vec2 _v = {value};\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _v.x); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _v.y); lua_rawseti(L, -2, 2);",
-        SetCode:
-            "luaL_checktype(L, 3, LUA_TTABLE);\n" +
-            "            lua_rawgeti(L, 3, 1); self->{fieldName}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "            lua_rawgeti(L, 3, 2); self->{fieldName}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1)");
+        [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
 
     /// <summary>b2CosSin → Lua table {cosine, sine}</summary>
-    private static readonly BindingType B2CosSinType = new BindingType.Custom(
+    private static readonly BindingType B2CosSinType = new BindingType.ValueStruct(
         "b2CosSin", "number[]",
-        InitCode: null,
-        CheckCode:
-            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n" +
-            "    b2CosSin {name};\n" +
-            "    lua_rawgeti(L, {idx}, 1); {name}.cosine = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, {idx}, 2); {name}.sine = (float)lua_tonumber(L, -1); lua_pop(L, 1);",
-        PushCode:
-            "b2CosSin _cs = {value};\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _cs.cosine); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _cs.sine); lua_rawseti(L, -2, 2);",
-        SetCode: null);
+        [new BindingType.ScalarField("cosine"), new BindingType.ScalarField("sine")],
+        Settable: false);
 
     /// <summary>b2Rot → Lua table {c, s}</summary>
-    private static readonly BindingType B2RotType = new BindingType.Custom(
+    private static readonly BindingType B2RotType = new BindingType.ValueStruct(
         "b2Rot", "number[]",
-        InitCode: null,
-        CheckCode:
-            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n" +
-            "    b2Rot {name};\n" +
-            "    lua_rawgeti(L, {idx}, 1); {name}.c = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, {idx}, 2); {name}.s = (float)lua_tonumber(L, -1); lua_pop(L, 1);",
-        PushCode:
-            "b2Rot _r = {value};\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _r.c); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _r.s); lua_rawseti(L, -2, 2);",
-        SetCode:
-            "luaL_checktype(L, 3, LUA_TTABLE);\n" +
-            "            lua_rawgeti(L, 3, 1); self->{fieldName}.c = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "            lua_rawgeti(L, 3, 2); self->{fieldName}.s = (float)lua_tonumber(L, -1); lua_pop(L, 1)");
+        [new BindingType.ScalarField("c"), new BindingType.ScalarField("s")]);
 
     /// <summary>b2Transform → Lua table {{px,py},{c,s}}</summary>
-    private static readonly BindingType B2TransformType = new BindingType.Custom(
+    private static readonly BindingType B2TransformType = new BindingType.ValueStruct(
         "b2Transform", "number[][]",
-        InitCode: null,
-        CheckCode:
-            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n" +
-            "    b2Transform {name};\n" +
-            "    lua_rawgeti(L, {idx}, 1); luaL_checktype(L, -1, LUA_TTABLE);\n" +
-            "    lua_rawgeti(L, -1, 1); {name}.p.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, -1, 2); {name}.p.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, {idx}, 2); luaL_checktype(L, -1, LUA_TTABLE);\n" +
-            "    lua_rawgeti(L, -1, 1); {name}.q.c = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, -1, 2); {name}.q.s = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_pop(L, 1);",
-        PushCode:
-            "b2Transform _t = {value};\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _t.p.x); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _t.p.y); lua_rawseti(L, -2, 2);\n" +
-            "    lua_rawseti(L, -2, 1);\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _t.q.c); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _t.q.s); lua_rawseti(L, -2, 2);\n" +
-            "    lua_rawseti(L, -2, 2);",
-        SetCode: null);
+        [new BindingType.NestedFields("p", ["x", "y"]),
+         new BindingType.NestedFields("q", ["c", "s"])],
+        Settable: false);
 
     /// <summary>b2AABB → Lua table {{lx,ly},{ux,uy}}</summary>
-    private static readonly BindingType B2AABBType = new BindingType.Custom(
+    private static readonly BindingType B2AABBType = new BindingType.ValueStruct(
         "b2AABB", "number[][]",
-        InitCode: null,
-        CheckCode:
-            "    luaL_checktype(L, {idx}, LUA_TTABLE);\n" +
-            "    b2AABB {name};\n" +
-            "    lua_rawgeti(L, {idx}, 1); luaL_checktype(L, -1, LUA_TTABLE);\n" +
-            "    lua_rawgeti(L, -1, 1); {name}.lowerBound.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, -1, 2); {name}.lowerBound.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, {idx}, 2); luaL_checktype(L, -1, LUA_TTABLE);\n" +
-            "    lua_rawgeti(L, -1, 1); {name}.upperBound.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_rawgeti(L, -1, 2); {name}.upperBound.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n" +
-            "    lua_pop(L, 1);",
-        PushCode:
-            "b2AABB _a = {value};\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _a.lowerBound.x); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _a.lowerBound.y); lua_rawseti(L, -2, 2);\n" +
-            "    lua_rawseti(L, -2, 1);\n" +
-            "    lua_newtable(L);\n" +
-            "    lua_pushnumber(L, _a.upperBound.x); lua_rawseti(L, -2, 1);\n" +
-            "    lua_pushnumber(L, _a.upperBound.y); lua_rawseti(L, -2, 2);\n" +
-            "    lua_rawseti(L, -2, 2);",
-        SetCode: null);
+        [new BindingType.NestedFields("lowerBound", ["x", "y"]),
+         new BindingType.NestedFields("upperBound", ["x", "y"])],
+        Settable: false);
 
     // ===== Handle 型 (struct userdata) =====
 

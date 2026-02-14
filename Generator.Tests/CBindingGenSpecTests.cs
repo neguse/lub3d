@@ -941,6 +941,151 @@ public class CBindingGenSpecTests
         Assert.Null(expanded.Structs[0].ExtraMetamethods);
     }
 
+    // ===== ValueStruct =====
+
+    [Fact]
+    public void Generate_ValueStructParam_Tuple2()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2Body_SetPosition", "BodySetPosition",
+                [new ParamBinding("pos", vsType)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checktype(L, 1, LUA_TTABLE)", code);
+        Assert.Contains("b2Vec2 pos;", code);
+        Assert.Contains("pos.x = (float)lua_tonumber(L, -1)", code);
+        Assert.Contains("pos.y = (float)lua_tonumber(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructReturn_Tuple2()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2Body_GetPosition", "BodyGetPosition",
+                [new ParamBinding("bodyId", new BindingType.Struct("b2BodyId", "b2d.BodyId", "b2d.BodyId"))],
+                vsType, null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2Vec2 _v = b2Body_GetPosition(bodyId)", code);
+        Assert.Contains("lua_newtable(L)", code);
+        Assert.Contains("lua_pushnumber(L, _v.x); lua_rawseti(L, -2, 1)", code);
+        Assert.Contains("lua_pushnumber(L, _v.y); lua_rawseti(L, -2, 2)", code);
+        Assert.Contains("return 1", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructField_Index()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", true,
+                [new FieldBinding("position", "position", vsType)], null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("strcmp(key, \"position\")", code);
+        Assert.Contains("lua_newtable(L)", code);
+        Assert.Contains("self->position.x", code);
+        Assert.Contains("self->position.y", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructField_NewIndex()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", true,
+                [new FieldBinding("gravity", "gravity", vsType)], null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checktype(L, 3, LUA_TTABLE)", code);
+        Assert.Contains("self->gravity.x = (float)lua_tonumber(L, -1)", code);
+        Assert.Contains("self->gravity.y = (float)lua_tonumber(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructParam_Nested()
+    {
+        var vsType = new BindingType.ValueStruct("b2Transform", "number[][]",
+            [new BindingType.NestedFields("p", ["x", "y"]),
+             new BindingType.NestedFields("q", ["c", "s"])]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2Body_SetTransform", "BodySetTransform",
+                [new ParamBinding("xf", vsType)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2Transform xf;", code);
+        Assert.Contains("xf.p.x = (float)lua_tonumber(L, -1)", code);
+        Assert.Contains("xf.p.y = (float)lua_tonumber(L, -1)", code);
+        Assert.Contains("xf.q.c = (float)lua_tonumber(L, -1)", code);
+        Assert.Contains("xf.q.s = (float)lua_tonumber(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructReturn_Nested()
+    {
+        var vsType = new BindingType.ValueStruct("b2Transform", "number[][]",
+            [new BindingType.NestedFields("p", ["x", "y"]),
+             new BindingType.NestedFields("q", ["c", "s"])]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2Body_GetTransform", "BodyGetTransform",
+                [new ParamBinding("bodyId", new BindingType.Struct("b2BodyId", "b2d.BodyId", "b2d.BodyId"))],
+                vsType, null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2Transform _v = b2Body_GetTransform(bodyId)", code);
+        Assert.Contains("lua_pushnumber(L, _v.p.x)", code);
+        Assert.Contains("lua_pushnumber(L, _v.q.s)", code);
+        Assert.Contains("lua_rawseti(L, -2, 1)", code);
+        Assert.Contains("lua_rawseti(L, -2, 2)", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructFieldInit()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", false,
+                [new FieldBinding("position", "position", vsType)], null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_getfield(L, 1, \"position\")", code);
+        Assert.Contains("if (!lua_isnil(L, -1))", code);
+        Assert.Contains("ud->position.x = (float)lua_tonumber(L, -1)", code);
+        Assert.Contains("ud->position.y = (float)lua_tonumber(L, -1)", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructNotSettable_ErrorInNewindex()
+    {
+        var vsType = new BindingType.ValueStruct("b2CosSin", "number[]",
+            [new BindingType.ScalarField("cosine"), new BindingType.ScalarField("sine")],
+            Settable: false);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", true,
+                [new FieldBinding("cs", "cs", vsType)], null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // __newindex should fall through to error for non-settable ValueStruct
+        Assert.Contains("unsupported type for field", code);
+    }
+
     // ===== Custom 型戻り値 =====
 
     [Fact]
