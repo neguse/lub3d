@@ -1,5 +1,6 @@
 -- lib/headless_app.lua
 -- sokol.app compatible Lua module for headless testing
+---@class headless_app
 local M = {}
 
 -- Configuration (can be set from C via _headless_frames global)

@@ -2,6 +2,7 @@
 -- Hot reload module using rxi/lume hotswap
 -- Tracks require'd files and reloads them when modified
 
+---@class hotreload
 local M = {}
 
 local lume = require("deps.lume.lume")

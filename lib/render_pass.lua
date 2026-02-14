@@ -7,6 +7,7 @@ local gpu = require("lib.gpu")
 local notify = nil
 pcall(function() notify = require("lib.notify") end)
 
+---@class render_pass
 local M = {}
 
 ---Setup common resource management on a pass module

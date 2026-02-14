@@ -1,6 +1,7 @@
 -- Logging utilities for lub3d
 local slog = require("sokol.log")
 
+---@class log
 local M = {}
 
 function M.info(msg)

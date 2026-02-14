@@ -11,6 +11,7 @@ if shdc_ok then
     shdc = shdc_mod
 end
 
+---@class shader
 local M = {}
 
 -- Simple string hash for cache keys (djb2 algorithm)

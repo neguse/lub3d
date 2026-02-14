@@ -8,6 +8,7 @@ local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local log = require("lib.log")
 
+---@class sprite
 local M = {}
 
 local MAX_QUADS <const> = 4096
@@ -86,7 +87,7 @@ local function get_ibuf_data()
         indices[#indices + 1] = base + 2
         indices[#indices + 1] = base + 3
     end
-    shared_ibuf_data = util.PackU32(indices)
+    shared_ibuf_data = util.pack_u32(indices)
     return shared_ibuf_data
 end
 

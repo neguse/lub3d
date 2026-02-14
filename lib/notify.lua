@@ -2,6 +2,7 @@
 -- Simple toast notification system using sokol_debugtext
 local sdtx = require("sokol.debugtext")
 
+---@class notify
 local M = {}
 
 -- Configuration

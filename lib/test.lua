@@ -1,6 +1,7 @@
 -- Pure Lua test runner
 local log = require("lib.log")
 
+---@class test
 local M = {}
 
 --- Run a named test suite.

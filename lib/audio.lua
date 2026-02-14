@@ -1,6 +1,7 @@
 local fs = require("lub3d.fs")
 local ma = require("miniaudio")
 
+---@class audio
 local M = {}
 
 --- VFS 付き ma_engine を生成して返す (WASM 対応)
