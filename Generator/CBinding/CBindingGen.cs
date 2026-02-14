@@ -299,7 +299,7 @@ public static class CBindingGen
         {
             foreach (var p in f.Params)
             {
-                if (p.Type is BindingType.Callback)
+                if (p.Type is BindingType.Callback && p.CallbackBridge == CallbackBridgeMode.None)
                     throw new InvalidOperationException(
                         $"Function '{f.CName}' has Callback parameter '{p.Name}'. " +
                         "Callback parameters must be excluded from spec.Funcs (use ExtraLuaFuncs + ExtraCCode instead).");
@@ -358,7 +358,12 @@ public static class CBindingGen
 
         // Functions
         foreach (var f in spec.Funcs)
-            sb += GenBindingFunc(f);
+        {
+            if (f.Params.Any(p => p.CallbackBridge == CallbackBridgeMode.Immediate))
+                sb += GenCallbackBridgeCode(f);
+            else
+                sb += GenBindingFunc(f);
+        }
 
         // Opaque types
         foreach (var ot in spec.OpaqueTypes)
@@ -1014,6 +1019,161 @@ public static class CBindingGen
             }
 
             """;
+    }
+
+    // ===== Immediate Callback Bridge =====
+
+    /// <summary>
+    /// Immediate callback bridge: context struct + trampoline + binding func を生成
+    /// </summary>
+    private static string GenCallbackBridgeCode(FuncBinding f)
+    {
+        var cbParam = f.Params.First(p => p.CallbackBridge == CallbackBridgeMode.Immediate);
+        var cbType = (BindingType.Callback)cbParam.Type;
+        var ctxName = $"{f.CName}_cb_ctx";
+        var trampolineName = $"{f.CName}_trampoline";
+
+        var sb = "";
+        sb += GenContextStruct(ctxName);
+        sb += GenTrampolineFunc(f.CName, ctxName, trampolineName, cbType);
+        sb += GenBindingFuncWithCallback(f, cbParam, ctxName, trampolineName);
+        return sb;
+    }
+
+    private static string GenContextStruct(string ctxName) => $$"""
+        typedef struct { lua_State* L; int callback_idx; } {{ctxName}};
+
+        """;
+
+    private static string GenTrampolineFunc(string funcName, string ctxName, string trampolineName, BindingType.Callback cbType)
+    {
+        var retCType = cbType.Ret switch
+        {
+            BindingType.Bool => "bool",
+            BindingType.Float => "float",
+            _ => "bool"
+        };
+
+        // Build C parameter list
+        var cParams = new List<string>();
+        foreach (var (name, type) in cbType.Params)
+            cParams.Add($"{BindingTypeToString(type)} {name}");
+        cParams.Add("void* context");
+
+        var sb = $"static {retCType} {trampolineName}({string.Join(", ", cParams)}) {{\n";
+        sb += $"    {ctxName}* ctx = ({ctxName}*)context;\n";
+        sb += "    lua_pushvalue(ctx->L, ctx->callback_idx);\n";
+
+        // Push each callback argument onto Lua stack
+        foreach (var (name, type) in cbType.Params)
+            sb += GenCallbackArgPush(type, name);
+
+        var argCount = cbType.Params.Count;
+        sb += $"    lua_call(ctx->L, {argCount}, 1);\n";
+
+        // Extract return value
+        sb += GenCallbackReturnExtract(cbType.Ret);
+
+        sb += "}\n\n";
+        return sb;
+    }
+
+    /// <summary>C 値を Lua スタックへ push (trampoline 内用)</summary>
+    private static string GenCallbackArgPush(BindingType type, string varName) => type switch
+    {
+        BindingType.Struct(var cName, _, var mt) =>
+            $"    {cName}* _ud_{varName} = ({cName}*)lua_newuserdatauv(ctx->L, sizeof({cName}), 0);\n" +
+            $"    *_ud_{varName} = {varName};\n" +
+            $"    luaL_setmetatable(ctx->L, \"{mt}\");\n",
+        BindingType.ValueStruct(_, _, var vsFields, _) =>
+            GenCallbackValueStructPush(varName, vsFields),
+        BindingType.Float =>
+            $"    lua_pushnumber(ctx->L, {varName});\n",
+        BindingType.Double =>
+            $"    lua_pushnumber(ctx->L, {varName});\n",
+        BindingType.Bool =>
+            $"    lua_pushboolean(ctx->L, {varName});\n",
+        BindingType.Int or BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64
+            or BindingType.Size or BindingType.UIntPtr or BindingType.IntPtr =>
+            $"    lua_pushinteger(ctx->L, (lua_Integer){varName});\n",
+        BindingType.Str =>
+            $"    lua_pushstring(ctx->L, {varName});\n",
+        _ => $"    lua_pushlightuserdata(ctx->L, (void*){varName});\n"
+    };
+
+    private static string GenCallbackValueStructPush(string varName, List<BindingType.ValueStructField> fields)
+    {
+        var sb = "    lua_newtable(ctx->L);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"    lua_pushnumber(ctx->L, {varName}.{acc}); lua_rawseti(ctx->L, -2, {fi});\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += "    lua_newtable(ctx->L);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"    lua_pushnumber(ctx->L, {varName}.{acc}.{sub}); lua_rawseti(ctx->L, -2, {si});\n";
+                        si++;
+                    }
+                    sb += $"    lua_rawseti(ctx->L, -2, {fi});\n";
+                    break;
+            }
+            fi++;
+        }
+        return sb;
+    }
+
+    /// <summary>Lua 戻り値を C 型に変換し return</summary>
+    private static string GenCallbackReturnExtract(BindingType? retType) => retType switch
+    {
+        BindingType.Bool =>
+            "    bool _cb_ret = lua_toboolean(ctx->L, -1);\n" +
+            "    lua_pop(ctx->L, 1);\n" +
+            "    return _cb_ret;\n",
+        BindingType.Float =>
+            "    float _cb_ret = (float)lua_tonumber(ctx->L, -1);\n" +
+            "    lua_pop(ctx->L, 1);\n" +
+            "    return _cb_ret;\n",
+        _ =>
+            "    bool _cb_ret = lua_toboolean(ctx->L, -1);\n" +
+            "    lua_pop(ctx->L, 1);\n" +
+            "    return _cb_ret;\n"
+    };
+
+    /// <summary>callback 付き binding 関数を生成</summary>
+    private static string GenBindingFuncWithCallback(FuncBinding f, ParamBinding cbParam, string ctxName, string trampolineName)
+    {
+        var sb = $"static int l_{f.CName}(lua_State *L) {{\n";
+        var argNames = new List<string>();
+        var idx = 1;
+
+        foreach (var p in f.Params)
+        {
+            if (p.CallbackBridge == CallbackBridgeMode.Immediate)
+            {
+                sb += $"    luaL_checktype(L, {idx}, LUA_TFUNCTION);\n";
+                sb += $"    {ctxName} _cb_ctx = {{ L, {idx} }};\n";
+                argNames.Add(trampolineName);
+                argNames.Add("&_cb_ctx");
+                idx++;
+            }
+            else
+            {
+                sb += GenBindingParamDecl(p, idx) + "\n";
+                argNames.Add(p.Name);
+                idx++;
+            }
+        }
+
+        var args = string.Join(", ", argNames);
+        sb += GenBindingReturnPush(f.ReturnType, $"{f.CName}({args})");
+        sb += "\n}\n\n";
+        return sb;
     }
 
     // ===== BindingType ベース フィールド処理 =====

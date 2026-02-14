@@ -43,6 +43,18 @@ public class Box2dModule : IModule
          new BindingType.NestedFields("upperBound", ["x", "y"])],
         Settable: false);
 
+    // ===== Callback 型定義 =====
+
+    /// <summary>b2OverlapResultFcn: bool callback(b2ShapeId shapeId, void* context)</summary>
+    private BindingType OverlapCallbackType => new BindingType.Callback(
+        [("shapeId", HandleType("b2ShapeId"))], new BindingType.Bool());
+
+    /// <summary>b2CastResultFcn: float callback(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* context)</summary>
+    private BindingType CastCallbackType => new BindingType.Callback(
+        [("shapeId", HandleType("b2ShapeId")), ("point", B2Vec2Type),
+         ("normal", B2Vec2Type), ("fraction", new BindingType.Float())],
+        new BindingType.Float());
+
     // ===== Handle 型 (struct userdata) =====
 
     private BindingType HandleType(string cName) =>
@@ -65,9 +77,9 @@ public class Box2dModule : IModule
         // Callback setters (need custom wrappers or skip)
         "b2World_SetCustomFilterCallback", "b2World_SetPreSolveCallback",
         "b2World_SetFrictionCallback", "b2World_SetRestitutionCallback",
-        // Query functions (need Lua callback wrappers → ExtraCCode)
-        "b2World_OverlapAABB", "b2World_OverlapShape",
-        "b2World_CastRay", "b2World_CastShape",
+        // Query functions (need Lua callback wrappers → ExtraCCode or CallbackBridge)
+        "b2World_OverlapShape",
+        "b2World_CastShape",
         "b2World_CastMover", "b2World_CollideMover",
         // Array output functions → ExtraCCode
         "b2Body_GetShapes", "b2Body_GetJoints", "b2Body_GetContactData",
@@ -198,6 +210,9 @@ public class Box2dModule : IModule
             Types.Bool => new BindingType.Bool(),
             Types.String => new BindingType.Str(),
             Types.Ptr(Types.Void) => new BindingType.VoidPtr(),
+            // Box2D callback typedefs (must precede generic Ptr/ConstPtr)
+            Types.Ptr(Types.StructRef("b2OverlapResultFcn")) => OverlapCallbackType,
+            Types.Ptr(Types.StructRef("b2CastResultFcn")) => CastCallbackType,
             Types.ConstPtr(Types.String) => new BindingType.Str(),
             Types.ConstPtr(var inner) => new BindingType.ConstPtr(Resolve(inner)),
             Types.Ptr(var inner) => new BindingType.Ptr(Resolve(inner)),
@@ -286,10 +301,28 @@ public class Box2dModule : IModule
             var retType = Resolve(CTypeParser.ParseReturnType(f.TypeStr));
             var parms = new List<ParamBinding>();
             var skip = false;
+            var skipNextVoidPtr = false;
 
             foreach (var p in f.Params)
             {
+                // Skip void* context param that follows a callback
+                if (skipNextVoidPtr && p.ParsedType is Types.Ptr(Types.Void))
+                {
+                    skipNextVoidPtr = false;
+                    continue;
+                }
+                skipNextVoidPtr = false;
+
                 var pt = Resolve(p.ParsedType);
+
+                // Callback parameter → set CallbackBridge and skip next void* context
+                if (pt is BindingType.Callback)
+                {
+                    parms.Add(new ParamBinding(p.Name, pt, CallbackBridge: CallbackBridgeMode.Immediate));
+                    skipNextVoidPtr = true;
+                    continue;
+                }
+
                 // Skip functions with unsupported parameter types
                 if (pt is BindingType.Void && p.ParsedType is not Types.Void)
                 {
@@ -346,8 +379,6 @@ public class Box2dModule : IModule
             ("body_get_shapes", "l_b2d_body_get_shapes"),
             ("body_get_joints", "l_b2d_body_get_joints"),
             ("world_cast_ray_closest", "l_b2d_world_cast_ray_closest"),
-            ("world_overlap_aabb", "l_b2d_world_overlap_aabb"),
-            ("world_cast_ray", "l_b2d_world_cast_ray"),
         };
 
         var extraLuaFuncs = new List<FuncBinding>
@@ -375,23 +406,6 @@ public class Box2dModule : IModule
                     new ParamBinding("origin", B2Vec2Type),
                     new ParamBinding("translation", B2Vec2Type),
                     new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
-                ],
-                new BindingType.Void(), null),
-            new("l_b2d_world_overlap_aabb", "world_overlap_aabb",
-                [
-                    new ParamBinding("worldId", HandleType("b2WorldId")),
-                    new ParamBinding("aabb", B2AABBType),
-                    new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
-                    new ParamBinding("callback", new BindingType.Callback([], null)),
-                ],
-                new BindingType.Void(), null),
-            new("l_b2d_world_cast_ray", "world_cast_ray",
-                [
-                    new ParamBinding("worldId", HandleType("b2WorldId")),
-                    new ParamBinding("origin", B2Vec2Type),
-                    new ParamBinding("translation", B2Vec2Type),
-                    new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
-                    new ParamBinding("callback", new BindingType.Callback([], null)),
                 ],
                 new BindingType.Void(), null),
         };
@@ -702,80 +716,6 @@ public class Box2dModule : IModule
             lua_pushboolean(L, result.hit);
             lua_setfield(L, -2, "hit");
             return 1;
-        }
-
-        /* Overlap AABB with Lua callback */
-        typedef struct {
-            lua_State* L;
-            int callback_idx;
-        } b2d_query_context;
-
-        static bool b2d_overlap_callback(b2ShapeId shapeId, void* context) {
-            b2d_query_context* ctx = (b2d_query_context*)context;
-            lua_pushvalue(ctx->L, ctx->callback_idx);
-            b2ShapeId* ud = (b2ShapeId*)lua_newuserdatauv(ctx->L, sizeof(b2ShapeId), 0);
-            *ud = shapeId;
-            luaL_setmetatable(ctx->L, "b2d.ShapeId");
-            lua_call(ctx->L, 1, 1);
-            bool cont = lua_toboolean(ctx->L, -1);
-            lua_pop(ctx->L, 1);
-            return cont;
-        }
-
-        static int l_b2d_world_overlap_aabb(lua_State *L) {
-            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
-            luaL_checktype(L, 2, LUA_TTABLE);
-            b2AABB aabb;
-            lua_rawgeti(L, 2, 1); luaL_checktype(L, -1, LUA_TTABLE);
-            lua_rawgeti(L, -1, 1); aabb.lowerBound.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_rawgeti(L, -1, 2); aabb.lowerBound.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_pop(L, 1);
-            lua_rawgeti(L, 2, 2); luaL_checktype(L, -1, LUA_TTABLE);
-            lua_rawgeti(L, -1, 1); aabb.upperBound.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_rawgeti(L, -1, 2); aabb.upperBound.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_pop(L, 1);
-            b2QueryFilter filter = *(b2QueryFilter*)luaL_checkudata(L, 3, "b2d.QueryFilter");
-            luaL_checktype(L, 4, LUA_TFUNCTION);
-            b2d_query_context ctx = { L, 4 };
-            b2World_OverlapAABB(worldId, aabb, filter, b2d_overlap_callback, &ctx);
-            return 0;
-        }
-
-        /* CastRay with Lua callback */
-        static float b2d_cast_callback(b2ShapeId shapeId, b2Vec2 point, b2Vec2 normal, float fraction, void* context) {
-            b2d_query_context* ctx = (b2d_query_context*)context;
-            lua_pushvalue(ctx->L, ctx->callback_idx);
-            b2ShapeId* ud = (b2ShapeId*)lua_newuserdatauv(ctx->L, sizeof(b2ShapeId), 0);
-            *ud = shapeId;
-            luaL_setmetatable(ctx->L, "b2d.ShapeId");
-            lua_newtable(ctx->L);
-            lua_pushnumber(ctx->L, point.x); lua_rawseti(ctx->L, -2, 1);
-            lua_pushnumber(ctx->L, point.y); lua_rawseti(ctx->L, -2, 2);
-            lua_newtable(ctx->L);
-            lua_pushnumber(ctx->L, normal.x); lua_rawseti(ctx->L, -2, 1);
-            lua_pushnumber(ctx->L, normal.y); lua_rawseti(ctx->L, -2, 2);
-            lua_pushnumber(ctx->L, fraction);
-            lua_call(ctx->L, 4, 1);
-            float result = (float)lua_tonumber(ctx->L, -1);
-            lua_pop(ctx->L, 1);
-            return result;
-        }
-
-        static int l_b2d_world_cast_ray(lua_State *L) {
-            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
-            luaL_checktype(L, 2, LUA_TTABLE);
-            b2Vec2 origin;
-            lua_rawgeti(L, 2, 1); origin.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_rawgeti(L, 2, 2); origin.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            luaL_checktype(L, 3, LUA_TTABLE);
-            b2Vec2 translation;
-            lua_rawgeti(L, 3, 1); translation.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_rawgeti(L, 3, 2); translation.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            b2QueryFilter filter = *(b2QueryFilter*)luaL_checkudata(L, 4, "b2d.QueryFilter");
-            luaL_checktype(L, 5, LUA_TFUNCTION);
-            b2d_query_context ctx = { L, 5 };
-            b2World_CastRay(worldId, origin, translation, filter, b2d_cast_callback, &ctx);
-            return 0;
         }
 
         """;
