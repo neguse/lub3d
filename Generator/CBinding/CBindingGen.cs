@@ -365,6 +365,10 @@ public static class CBindingGen
                 sb += GenBindingFunc(f);
         }
 
+        // Array adapters
+        foreach (var aa in spec.ArrayAdapters)
+            sb += GenArrayAdapterFunc(spec.ModuleName, aa);
+
         // Opaque types
         foreach (var ot in spec.OpaqueTypes)
         {
@@ -435,6 +439,10 @@ public static class CBindingGen
         // Functions
         foreach (var f in spec.Funcs)
             regEntries.Add((f.LuaName, $"l_{f.CName}"));
+
+        // Array adapters
+        foreach (var aa in spec.ArrayAdapters)
+            regEntries.Add((aa.LuaName, $"l_{spec.ModuleName}_array_{aa.LuaName}"));
 
         sb += LuaReg(funcArrayName, regEntries);
 
@@ -1173,6 +1181,96 @@ public static class CBindingGen
         var args = string.Join(", ", argNames);
         sb += GenBindingReturnPush(f.ReturnType, $"{f.CName}({args})");
         sb += "\n}\n\n";
+        return sb;
+    }
+
+    // ===== ArrayAdapter 生成 =====
+
+    /// <summary>
+    /// 配列アダプタ関数を生成: count → malloc → fill → table → free
+    /// </summary>
+    private static string GenArrayAdapterFunc(string moduleName, ArrayAdapterBinding aa)
+    {
+        var funcName = $"l_{moduleName}_array_{aa.LuaName}";
+        var sb = $"static int {funcName}(lua_State *L) {{\n";
+
+        // 1. 入力パラメータを decode
+        var argNames = new List<string>();
+        foreach (var (p, i) in aa.InputParams.Select((p, i) => (p, i)))
+        {
+            sb += GenBindingParamDecl(p, i + 1) + "\n";
+            argNames.Add(p.Name);
+        }
+        var args = string.Join(", ", argNames);
+
+        // 2. count = CountFunc(inputParams...)
+        sb += $"    int _count = {aa.CountFuncCName}({args});\n";
+
+        // 3. ElementType* _buf = malloc(...)
+        var elemCType = BindingTypeToString(aa.ElementType);
+        sb += $"    {elemCType}* _buf = ({elemCType}*)malloc(_count * sizeof({elemCType}));\n";
+
+        // 4. FillFunc(inputParams..., _buf, _count)
+        sb += $"    {aa.FillFuncCName}({args}, _buf, _count);\n";
+
+        // 5. lua_newtable + loop
+        sb += "    lua_newtable(L);\n";
+        sb += "    for (int _i = 0; _i < _count; _i++) {\n";
+        sb += GenArrayAdapterElementPush(aa.ElementType);
+        sb += "        lua_rawseti(L, -2, _i + 1);\n";
+        sb += "    }\n";
+
+        // 6. free
+        sb += "    free(_buf);\n";
+        sb += "    return 1;\n}\n\n";
+        return sb;
+    }
+
+    /// <summary>
+    /// 配列アダプタの要素 push コード生成
+    /// </summary>
+    private static string GenArrayAdapterElementPush(BindingType elemType) => elemType switch
+    {
+        BindingType.Struct(var cName, var mt, _) =>
+            $"        {cName}* _ud = ({cName}*)lua_newuserdatauv(L, sizeof({cName}), 0);\n" +
+            $"        *_ud = _buf[_i];\n" +
+            $"        luaL_setmetatable(L, \"{mt}\");\n",
+        BindingType.ValueStruct(_, _, var vsFields, _) =>
+            GenArrayAdapterValueStructPush(vsFields),
+        BindingType.Int or BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64
+            or BindingType.Size or BindingType.UIntPtr or BindingType.IntPtr =>
+            "        lua_pushinteger(L, (lua_Integer)_buf[_i]);\n",
+        BindingType.Float or BindingType.Double =>
+            "        lua_pushnumber(L, (lua_Number)_buf[_i]);\n",
+        BindingType.Bool =>
+            "        lua_pushboolean(L, _buf[_i]);\n",
+        _ => "        lua_pushnil(L); /* unsupported element type */\n"
+    };
+
+    private static string GenArrayAdapterValueStructPush(List<BindingType.ValueStructField> fields)
+    {
+        var sb = "        lua_newtable(L);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"        lua_pushnumber(L, _buf[_i].{acc}); lua_rawseti(L, -2, {fi});\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += "        lua_newtable(L);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"        lua_pushnumber(L, _buf[_i].{acc}.{sub}); lua_rawseti(L, -2, {si});\n";
+                        si++;
+                    }
+                    sb += $"        lua_rawseti(L, -2, {fi});\n";
+                    break;
+            }
+            fi++;
+        }
         return sb;
     }
 

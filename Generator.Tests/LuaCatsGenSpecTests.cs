@@ -290,6 +290,23 @@ public class LuaCatsGenSpecTests
         Assert.Contains("fun(bodyId: b2d.BodyId): number[]", code);
     }
 
+    // ===== ArrayAdapter =====
+
+    [Fact]
+    public void Generate_ArrayAdapter_GeneratesArrayReturnType()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [], [], [], [],
+            ArrayAdapters:
+            [
+                new ArrayAdapterBinding("body_get_shapes", "b2Body_GetShapeCount", "b2Body_GetShapes",
+                    [new ParamBinding("bodyId", new BindingType.Struct("b2BodyId", "b2d.BodyId", "b2d.BodyId"))],
+                    new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+            ]);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field body_get_shapes fun(bodyId: b2d.BodyId): b2d.ShapeId[]", code);
+    }
+
     // ===== ExtraLuaFuncs =====
 
     [Fact]
