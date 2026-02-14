@@ -369,6 +369,10 @@ public static class CBindingGen
         foreach (var aa in spec.ArrayAdapters)
             sb += GenArrayAdapterFunc(spec.ModuleName, aa);
 
+        // Event adapters
+        foreach (var ea in spec.EventAdapters)
+            sb += GenEventAdapterFunc(spec.ModuleName, ea);
+
         // Opaque types
         foreach (var ot in spec.OpaqueTypes)
         {
@@ -443,6 +447,10 @@ public static class CBindingGen
         // Array adapters
         foreach (var aa in spec.ArrayAdapters)
             regEntries.Add((aa.LuaName, $"l_{spec.ModuleName}_array_{aa.LuaName}"));
+
+        // Event adapters
+        foreach (var ea in spec.EventAdapters)
+            regEntries.Add((ea.LuaName, $"l_{spec.ModuleName}_event_{ea.LuaName}"));
 
         sb += LuaReg(funcArrayName, regEntries);
 
@@ -1018,6 +1026,26 @@ public static class CBindingGen
         var paramDecls = string.Join("\n", f.Params.Select((p, i) =>
             GenBindingParamDecl(p, i + 1)).Where(s => s != ""));
         var argNames = string.Join(", ", f.Params.Select(p => p.Name));
+
+        // PostCallPatch: Struct return の場合、*ud = result と luaL_setmetatable の間にパッチを挿入
+        if (f.PostCallPatches is { Count: > 0 } && f.ReturnType is BindingType.Struct(var retCName, var retMt, _))
+        {
+            var patchLines = string.Join("\n", f.PostCallPatches.Select(p =>
+                $"    ud->{p.FieldName} = {p.CExpression};"));
+            return $$"""
+                static int l_{{f.CName}}(lua_State *L) {
+                {{paramDecls}}
+                    {{retCName}} result = {{f.CName}}({{argNames}});
+                    {{retCName}}* ud = ({{retCName}}*)lua_newuserdatauv(L, sizeof({{retCName}}), 0);
+                    *ud = result;
+                {{patchLines}}
+                    luaL_setmetatable(L, "{{retMt}}");
+                    return 1;
+                }
+
+                """;
+        }
+
         var call = GenBindingReturnPush(f.ReturnType, $"{f.CName}({argNames})");
 
         return $$"""
@@ -1271,6 +1299,108 @@ public static class CBindingGen
             }
             fi++;
         }
+        return sb;
+    }
+
+    // ===== EventAdapter 生成 =====
+
+    /// <summary>
+    /// イベントアダプタ関数を生成: C関数呼出 → outer table → array field ループ → element push
+    /// </summary>
+    private static string GenEventAdapterFunc(string moduleName, EventAdapterBinding ea)
+    {
+        var funcName = $"l_{moduleName}_event_{ea.LuaName}";
+        var sb = $"static int {funcName}(lua_State *L) {{\n";
+
+        // 1. 入力パラメータを decode
+        var argNames = new List<string>();
+        foreach (var (p, i) in ea.InputParams.Select((p, i) => (p, i)))
+        {
+            sb += GenBindingParamDecl(p, i + 1) + "\n";
+            argNames.Add(p.Name);
+        }
+        var args = string.Join(", ", argNames);
+
+        // 2. C 関数呼出
+        sb += $"    {ea.CReturnType} _events = {ea.CFuncName}({args});\n";
+
+        // 3. outer table
+        sb += "    lua_newtable(L);\n";
+
+        // 4. array field ループ
+        foreach (var af in ea.ArrayFields)
+        {
+            sb += "    lua_newtable(L);\n";
+            sb += $"    for (int _i = 0; _i < _events.{af.CCountAccessor}; _i++) {{\n";
+            sb += "        lua_newtable(L);\n";
+            foreach (var ef in af.ElementFields)
+            {
+                sb += GenEventElementFieldPush($"_events.{af.CArrayAccessor}[_i]", ef);
+            }
+            sb += "        lua_rawseti(L, -2, _i + 1);\n";
+            sb += "    }\n";
+            sb += $"    lua_setfield(L, -2, \"{af.LuaFieldName}\");\n";
+        }
+
+        sb += "    return 1;\n}\n\n";
+        return sb;
+    }
+
+    /// <summary>
+    /// イベント要素フィールドの push コード生成
+    /// </summary>
+    private static string GenEventElementFieldPush(string arrayAccessor, EventElementField ef) => ef.Type switch
+    {
+        BindingType.Struct(var cName, var mt, _) =>
+            $"        {cName}* _ef_{ef.LuaFieldName} = ({cName}*)lua_newuserdatauv(L, sizeof({cName}), 0);\n" +
+            $"        *_ef_{ef.LuaFieldName} = {arrayAccessor}.{ef.CAccessor};\n" +
+            $"        luaL_setmetatable(L, \"{mt}\");\n" +
+            $"        lua_setfield(L, -2, \"{ef.LuaFieldName}\");\n",
+        BindingType.ValueStruct(_, _, var vsFields, _) =>
+            GenEventValueStructPush(arrayAccessor, ef.CAccessor, ef.LuaFieldName, vsFields),
+        BindingType.Float or BindingType.Double =>
+            $"        lua_pushnumber(L, {arrayAccessor}.{ef.CAccessor});\n" +
+            $"        lua_setfield(L, -2, \"{ef.LuaFieldName}\");\n",
+        BindingType.Bool =>
+            $"        lua_pushboolean(L, {arrayAccessor}.{ef.CAccessor});\n" +
+            $"        lua_setfield(L, -2, \"{ef.LuaFieldName}\");\n",
+        BindingType.Int or BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64
+            or BindingType.Size or BindingType.UIntPtr or BindingType.IntPtr =>
+            $"        lua_pushinteger(L, (lua_Integer){arrayAccessor}.{ef.CAccessor});\n" +
+            $"        lua_setfield(L, -2, \"{ef.LuaFieldName}\");\n",
+        _ => $"        lua_pushnil(L); /* unsupported event element type */\n" +
+             $"        lua_setfield(L, -2, \"{ef.LuaFieldName}\");\n"
+    };
+
+    /// <summary>
+    /// イベント要素の ValueStruct push
+    /// </summary>
+    private static string GenEventValueStructPush(string arrayAccessor, string cAccessor, string luaFieldName, List<BindingType.ValueStructField> fields)
+    {
+        var prefix = $"{arrayAccessor}.{cAccessor}";
+        var sb = "        lua_newtable(L);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"        lua_pushnumber(L, {prefix}.{acc}); lua_rawseti(L, -2, {fi});\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += "        lua_newtable(L);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"        lua_pushnumber(L, {prefix}.{acc}.{sub}); lua_rawseti(L, -2, {si});\n";
+                        si++;
+                    }
+                    sb += $"        lua_rawseti(L, -2, {fi});\n";
+                    break;
+            }
+            fi++;
+        }
+        sb += $"        lua_setfield(L, -2, \"{luaFieldName}\");\n";
         return sb;
     }
 

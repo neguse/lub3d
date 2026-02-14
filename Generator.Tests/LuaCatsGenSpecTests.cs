@@ -326,4 +326,38 @@ public class LuaCatsGenSpecTests
         var code = LuaCatsGen.Generate(spec);
         Assert.Contains("SoundInitFromFile fun(engine: miniaudio.Engine, filePath: string, flags?: integer): miniaudio.Sound", code);
     }
+
+    // ===== EventAdapter =====
+
+    [Fact]
+    public void Generate_EventAdapter_GeneratesTableReturnType()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [], [], [], [],
+            EventAdapters:
+            [
+                new EventAdapterBinding("world_get_contact_events", "b2World_GetContactEvents", "b2ContactEvents",
+                    [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId"))],
+                    []),
+            ]);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field world_get_contact_events fun(worldId: b2d.WorldId): table", code);
+    }
+
+    [Fact]
+    public void Generate_PostCallPatch_NoEffectOnLuaCats()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2DefaultWorldDef", "DefaultWorldDef", [],
+                new BindingType.Struct("b2WorldDef", "b2d.WorldDef", "b2d.WorldDef"), null,
+                PostCallPatches:
+                [
+                    new PostCallPatch("enqueueTask", "b2d_enqueue_task"),
+                ])],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field DefaultWorldDef fun(): b2d.WorldDef", code);
+        Assert.DoesNotContain("enqueueTask", code);
+    }
 }

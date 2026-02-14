@@ -1289,4 +1289,187 @@ public class CBindingGenSpecTests
         Assert.Contains("lua_pushnumber(L, _tmp.x)", code);
         Assert.Contains("return 1", code);
     }
+
+    // ===== EventAdapter =====
+
+    private static ModuleSpec SpecWithEventAdapter() => new(
+        "b2d", "b2", ["box2d.h"], null,
+        [new StructBinding("b2ShapeId", "ShapeId", "b2d.ShapeId", false,
+            [new FieldBinding("index1", "index1", new BindingType.Int())], null)],
+        [], [], [],
+        EventAdapters:
+        [
+            new EventAdapterBinding("world_get_contact_events", "b2World_GetContactEvents", "b2ContactEvents",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId"))],
+                [
+                    new EventArrayField("begin_events", "beginEvents", "beginCount",
+                    [
+                        new EventElementField("shape_id_a", "shapeIdA",
+                            new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+                        new EventElementField("shape_id_b", "shapeIdB",
+                            new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+                    ]),
+                    new EventArrayField("hit_events", "hitEvents", "hitCount",
+                    [
+                        new EventElementField("shape_id_a", "shapeIdA",
+                            new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+                        new EventElementField("point", "point",
+                            new BindingType.ValueStruct("b2Vec2", "number[]",
+                                [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")])),
+                        new EventElementField("approach_speed", "approachSpeed", new BindingType.Float()),
+                    ]),
+                ]),
+        ]);
+
+    [Fact]
+    public void EventAdapter_GeneratesFuncSignature()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("l_b2d_event_world_get_contact_events", code);
+        Assert.Contains("lua_State *L", code);
+    }
+
+    [Fact]
+    public void EventAdapter_DecodesInputParam()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("luaL_checkudata(L, 1, \"b2d.WorldId\")", code);
+    }
+
+    [Fact]
+    public void EventAdapter_CallsCFunction()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("b2ContactEvents _events = b2World_GetContactEvents(worldId)", code);
+    }
+
+    [Fact]
+    public void EventAdapter_CreatesOuterTable()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("lua_newtable(L)", code);
+    }
+
+    [Fact]
+    public void EventAdapter_GeneratesArrayLoop()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("_events.beginCount", code);
+        Assert.Contains("_events.hitCount", code);
+        Assert.Contains("for (int _i = 0; _i < _events.beginCount; _i++)", code);
+    }
+
+    [Fact]
+    public void EventAdapter_StructElementPush()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("lua_newuserdatauv(L, sizeof(b2ShapeId), 0)", code);
+        Assert.Contains("_events.beginEvents[_i].shapeIdA", code);
+        Assert.Contains("luaL_setmetatable(L, \"b2d.ShapeId\")", code);
+        Assert.Contains("lua_setfield(L, -2, \"shape_id_a\")", code);
+    }
+
+    [Fact]
+    public void EventAdapter_ValueStructPush()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("_events.hitEvents[_i].point.x", code);
+        Assert.Contains("_events.hitEvents[_i].point.y", code);
+        Assert.Contains("lua_setfield(L, -2, \"point\")", code);
+    }
+
+    [Fact]
+    public void EventAdapter_FloatPush()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("lua_pushnumber(L, _events.hitEvents[_i].approachSpeed)", code);
+        Assert.Contains("lua_setfield(L, -2, \"approach_speed\")", code);
+    }
+
+    [Fact]
+    public void EventAdapter_SetsFieldOnOuterTable()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("lua_setfield(L, -2, \"begin_events\")", code);
+        Assert.Contains("lua_setfield(L, -2, \"hit_events\")", code);
+    }
+
+    [Fact]
+    public void EventAdapter_LuaReg()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("{\"world_get_contact_events\", l_b2d_event_world_get_contact_events}", code);
+    }
+
+    [Fact]
+    public void EventAdapter_ReturnsOne()
+    {
+        var code = CBindingGen.Generate(SpecWithEventAdapter());
+        Assert.Contains("return 1;", code);
+    }
+
+    [Fact]
+    public void EventAdapter_BoolElementPush()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [], [], [], [],
+            EventAdapters:
+            [
+                new EventAdapterBinding("world_get_body_events", "b2World_GetBodyEvents", "b2BodyEvents",
+                    [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId"))],
+                    [
+                        new EventArrayField("move_events", "moveEvents", "moveCount",
+                        [
+                            new EventElementField("fell_asleep", "fellAsleep", new BindingType.Bool()),
+                        ]),
+                    ]),
+            ]);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("lua_pushboolean(L, _events.moveEvents[_i].fellAsleep)", code);
+        Assert.Contains("lua_setfield(L, -2, \"fell_asleep\")", code);
+    }
+
+    // ===== PostCallPatch =====
+
+    [Fact]
+    public void PostCallPatch_InsertsAssignment()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2WorldDef", "WorldDef", "b2d.WorldDef", false, [], null)],
+            [new FuncBinding("b2DefaultWorldDef", "DefaultWorldDef", [],
+                new BindingType.Struct("b2WorldDef", "b2d.WorldDef", "b2d.WorldDef"), null,
+                PostCallPatches:
+                [
+                    new PostCallPatch("enqueueTask", "(b2EnqueueTaskCallback*)b2d_enqueue_task"),
+                    new PostCallPatch("finishTask", "b2d_finish_task"),
+                ])],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("ud->enqueueTask = (b2EnqueueTaskCallback*)b2d_enqueue_task;", code);
+        Assert.Contains("ud->finishTask = b2d_finish_task;", code);
+    }
+
+    [Fact]
+    public void PostCallPatch_OrderBetweenCopyAndSetmetatable()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2WorldDef", "WorldDef", "b2d.WorldDef", false, [], null)],
+            [new FuncBinding("b2DefaultWorldDef", "DefaultWorldDef", [],
+                new BindingType.Struct("b2WorldDef", "b2d.WorldDef", "b2d.WorldDef"), null,
+                PostCallPatches:
+                [
+                    new PostCallPatch("enqueueTask", "(b2EnqueueTaskCallback*)b2d_enqueue_task"),
+                ])],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        // Search within the PostCallPatch function scope
+        var funcStart = code.IndexOf("l_b2DefaultWorldDef");
+        var copyIdx = code.IndexOf("*ud = result;", funcStart);
+        var patchIdx = code.IndexOf("ud->enqueueTask =", funcStart);
+        var metatableIdx = code.IndexOf("luaL_setmetatable", funcStart);
+        Assert.True(copyIdx < patchIdx, "*ud = result should come before patch");
+        Assert.True(patchIdx < metatableIdx, "patch should come before luaL_setmetatable");
+    }
 }
