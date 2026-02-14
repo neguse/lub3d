@@ -18,10 +18,10 @@ function map.new(world_id, registry)
     local bodies = {}
     local kills = {}
     local items = {}
-    local origItems = {}
+    local orig_items = {}
     local checkpoints = {}
     local texts = {}
-    local startPoint = nil
+    local start_point = nil
 
     for _, layer in ipairs(mapdata.layers) do
         if layer.name == "platform" then
@@ -31,44 +31,44 @@ function map.new(world_id, registry)
                     local offx, offy = rotated(obj.width / 2, -obj.height / 2, angle)
                     local cx, cy = obj.x + offx, -obj.y + offy
 
-                    local body_def = b2d.DefaultBodyDef()
+                    local body_def = b2d.default_body_def()
                     body_def.position = { cx, cy }
                     body_def.rotation = { math.cos(angle), math.sin(angle) }
-                    local body_id = b2d.CreateBody(world_id, body_def)
+                    local body_id = b2d.create_body(world_id, body_def)
 
-                    local shape_def = b2d.DefaultShapeDef()
-                    local box = b2d.MakeBox(obj.width / 2, obj.height / 2)
+                    local shape_def = b2d.default_shape_def()
+                    local box = b2d.make_box(obj.width / 2, obj.height / 2)
 
                     if obj.type == "kill" then
-                        shape_def.enableContactEvents = true
-                        local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
-                        local entity = { getType = function() return "K" end }
+                        shape_def.enable_contact_events = true
+                        local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
+                        local entity = { get_type = function() return "K" end }
                         registry[tostring(shape_id)] = entity
                         table.insert(kills,
                             { body_id = body_id, cx = cx, cy = cy, hw = obj.width / 2, hh = obj.height / 2, angle = angle })
                     elseif obj.type == "start" then
-                        shape_def.isSensor = true
-                        shape_def.enableSensorEvents = true
-                        local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
-                        local entity = { getType = function() return "S" end }
+                        shape_def.is_sensor = true
+                        shape_def.enable_sensor_events = true
+                        local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
+                        local entity = { get_type = function() return "S" end }
                         registry[tostring(shape_id)] = entity
                     elseif obj.type == "goal" then
-                        shape_def.isSensor = true
-                        shape_def.enableSensorEvents = true
-                        local shape_id = b2d.CreatePolygonShape(body_id, shape_def, box)
-                        local entity = { getType = function() return "G" end }
+                        shape_def.is_sensor = true
+                        shape_def.enable_sensor_events = true
+                        local shape_id = b2d.create_polygon_shape(body_id, shape_def, box)
+                        local entity = { get_type = function() return "G" end }
                         registry[tostring(shape_id)] = entity
                     else
                         -- normal platform wall (no entity needed, contact with nil entity = wall)
-                        shape_def.enableContactEvents = true
-                        b2d.CreatePolygonShape(body_id, shape_def, box)
+                        shape_def.enable_contact_events = true
+                        b2d.create_polygon_shape(body_id, shape_def, box)
                         table.insert(bodies,
                             { body_id = body_id, cx = cx, cy = cy, hw = obj.width / 2, hh = obj.height / 2, angle = angle })
                     end
                 elseif obj.shape == "point" and obj.type == "entry" then
-                    startPoint = { x = obj.x, y = -obj.y }
+                    start_point = { x = obj.x, y = -obj.y }
                 elseif obj.shape == "point" and (obj.type == "itemJump" or obj.type == "itemDash") then
-                    table.insert(origItems, obj)
+                    table.insert(orig_items, obj)
                 elseif obj.shape == "point" and obj.type == "checkpoint" then
                     table.insert(checkpoints, checkpointMod.new(world_id, obj.x, -obj.y, registry))
                 elseif obj.shape == "text" then
@@ -84,28 +84,28 @@ function map.new(world_id, registry)
         bodies = bodies,
         kills = kills,
         items = items,
-        origItems = origItems,
+        orig_items = orig_items,
         checkpoints = checkpoints,
         texts = texts,
-        startPoint = startPoint,
-        resetRequired = true,
+        start_point = start_point,
+        reset_required = true,
     }, map)
 end
 
-function map:getStartPoint()
-    return self.startPoint.x, self.startPoint.y
+function map:get_start_point()
+    return self.start_point.x, self.start_point.y
 end
 
 function map:update()
-    if self.resetRequired then
-        self.resetRequired = false
+    if self.reset_required then
+        self.reset_required = false
         -- destroy old items
         for _, it in ipairs(self.items) do
             it:destroy(self.registry)
         end
         self.items = {}
         -- create new items
-        for _, obj in ipairs(self.origItems) do
+        for _, obj in ipairs(self.orig_items) do
             local type = nil
             if obj.type == "itemJump" then
                 type = "J"
@@ -121,7 +121,7 @@ function map:update()
     -- remove consumed items
     local i = 1
     while i <= #self.items do
-        if self.items[i]:isConsumed() then
+        if self.items[i]:is_consumed() then
             self.items[i]:destroy(self.registry)
             table.remove(self.items, i)
         else
@@ -130,8 +130,8 @@ function map:update()
     end
 end
 
-function map:resetItems()
-    self.resetRequired = true
+function map:reset_items()
+    self.reset_required = true
 end
 
 local function draw_rotated_box(cx, cy, hw, hh, angle, r, g, b, mode)
@@ -145,21 +145,21 @@ local function draw_rotated_box(cx, cy, hw, hh, angle, r, g, b, mode)
         vy[i] = cy + dx[i] * sin_a + dy[i] * cos_a
     end
     if mode == "fill" then
-        gl.BeginQuads()
-        gl.C3f(r, g, b)
+        gl.begin_quads()
+        gl.c3f(r, g, b)
         for i = 1, 4 do
-            gl.V2f(vx[i], vy[i])
+            gl.v2f(vx[i], vy[i])
         end
-        gl.End()
+        gl["end"]()
     else
-        gl.BeginLines()
-        gl.C3f(r, g, b)
+        gl.begin_lines()
+        gl.c3f(r, g, b)
         for i = 1, 4 do
             local j = (i % 4) + 1
-            gl.V2f(vx[i], vy[i])
-            gl.V2f(vx[j], vy[j])
+            gl.v2f(vx[i], vy[i])
+            gl.v2f(vx[j], vy[j])
         end
-        gl.End()
+        gl["end"]()
     end
 end
 
@@ -189,11 +189,11 @@ function map:render()
     local text_ox = 0.5 * text_scale * text_sx
     local text_oy = -0.375 * text_scale
     for _, text in ipairs(self.texts) do
-        gl.PushMatrix()
-        gl.Translate(text.x + text_ox, -text.y + text_oy, 0)
-        gl.Scale(text_sx, 1, 1)
+        gl.push_matrix()
+        gl.translate(text.x + text_ox, -text.y + text_oy, 0)
+        gl.scale(text_sx, 1, 1)
         font.draw_text(text.text, 0, 0, text_scale, 1, 1, 1)
-        gl.PopMatrix()
+        gl.pop_matrix()
     end
 end
 

@@ -24,13 +24,13 @@ function M.init()
     if not ma or not audio_lib then
         return
     end
-    engine, vfs_ref = audio_lib.CreateEngine()
+    engine, vfs_ref = audio_lib.create_engine()
     if not engine then
         log.warn("Failed to init miniaudio engine")
         return
     end
-    engine:Start()
-    engine:SetVolume(0.5)
+    engine:start()
+    engine:set_volume(0.5)
 
     local files = {
         bgm = "bgm.wav",
@@ -46,7 +46,7 @@ function M.init()
     }
     for name, file in pairs(files) do
         local path = SOUND_PATH .. file
-        local ok, snd = pcall(ma.SoundInitFromFile, engine, path, 0)
+        local ok, snd = pcall(ma.sound_init_from_file, engine, path, 0)
         if ok and snd then
             sounds[name] = snd
             log.info("Loaded sound: " .. name)
@@ -56,13 +56,13 @@ function M.init()
     end
 
     if sounds.bgm then
-        sounds.bgm:SetLooping(true)
+        sounds.bgm:set_looping(true)
     end
     if sounds.friction then
-        sounds.friction:SetLooping(true)
+        sounds.friction:set_looping(true)
     end
     if sounds.walk then
-        sounds.walk:SetLooping(true)
+        sounds.walk:set_looping(true)
     end
 end
 
@@ -72,9 +72,9 @@ function M.play(name)
     if not snd then
         return
     end
-    snd:Stop()
-    snd:SeekToPcmFrame(0)
-    snd:Start()
+    snd:stop()
+    snd:seek_to_pcm_frame(0)
+    snd:start()
 end
 
 -- Start a looping sound (only if not already playing)
@@ -83,8 +83,8 @@ function M.start_loop(name)
     if not snd then
         return
     end
-    if not snd:IsPlaying() then
-        snd:Start()
+    if not snd:is_playing() then
+        snd:start()
     end
 end
 
@@ -94,8 +94,8 @@ function M.stop(name)
     if not snd then
         return
     end
-    if snd:IsPlaying() then
-        snd:Stop()
+    if snd:is_playing() then
+        snd:stop()
     end
 end
 
@@ -104,9 +104,9 @@ function M.play_bgm()
     if not snd then
         return
     end
-    snd:Stop()
-    snd:SeekToPcmFrame(0)
-    snd:Start()
+    snd:stop()
+    snd:seek_to_pcm_frame(0)
+    snd:start()
 end
 
 function M.stop_bgm()
@@ -114,12 +114,12 @@ function M.stop_bgm()
     if not snd then
         return
     end
-    snd:Stop()
+    snd:stop()
 end
 
 function M.cleanup()
     for _, snd in pairs(sounds) do
-        snd:Stop()
+        snd:stop()
     end
     sounds = {}
     engine = nil
