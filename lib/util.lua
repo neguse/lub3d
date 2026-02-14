@@ -8,6 +8,7 @@ if not _G._stm_initialized then
     _G._stm_initialized = true
 end
 
+---@class util
 local M = {}
 
 -- Profiling support: log slow operations immediately

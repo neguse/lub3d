@@ -11,6 +11,7 @@ if not bc7enc_ok then
     bc7enc = nil
 end
 
+---@class texture
 local M = {}
 
 -- Resolve path relative to script directory
