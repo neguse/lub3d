@@ -38,29 +38,29 @@ function LaneRenderer:draw_lanes(key_states)
         local alpha = key_states[lane] and 0.4 or 0.2
 
         -- Lane background
-        sgl.C4f(color[1], color[2], color[3], alpha)
-        sgl.BeginQuads()
-        sgl.V2f(x, top_y)
-        sgl.V2f(x + const.LANE_WIDTH, top_y)
-        sgl.V2f(x + const.LANE_WIDTH, const.JUDGMENT_LINE_Y)
-        sgl.V2f(x, const.JUDGMENT_LINE_Y)
-        sgl.End()
+        sgl.c4f(color[1], color[2], color[3], alpha)
+        sgl.begin_quads()
+        sgl.v2f(x, top_y)
+        sgl.v2f(x + const.LANE_WIDTH, top_y)
+        sgl.v2f(x + const.LANE_WIDTH, const.JUDGMENT_LINE_Y)
+        sgl.v2f(x, const.JUDGMENT_LINE_Y)
+        sgl["end"]()
 
         -- Lane border
-        sgl.C4f(0.5, 0.5, 0.5, 0.5)
-        sgl.BeginLineStrip()
-        sgl.V2f(x, top_y)
-        sgl.V2f(x, const.JUDGMENT_LINE_Y)
-        sgl.End()
+        sgl.c4f(0.5, 0.5, 0.5, 0.5)
+        sgl.begin_line_strip()
+        sgl.v2f(x, top_y)
+        sgl.v2f(x, const.JUDGMENT_LINE_Y)
+        sgl["end"]()
     end
 
     -- Right border of last lane
     local right_x = start_x + const.NUM_LANES * const.LANE_WIDTH
-    sgl.C4f(0.5, 0.5, 0.5, 0.5)
-    sgl.BeginLineStrip()
-    sgl.V2f(right_x, top_y)
-    sgl.V2f(right_x, const.JUDGMENT_LINE_Y)
-    sgl.End()
+    sgl.c4f(0.5, 0.5, 0.5, 0.5)
+    sgl.begin_line_strip()
+    sgl.v2f(right_x, top_y)
+    sgl.v2f(right_x, const.JUDGMENT_LINE_Y)
+    sgl["end"]()
 end
 
 --- Draw key beams (bright gradient pillars on pressed lanes)
@@ -81,18 +81,18 @@ function LaneRenderer:draw_key_beams(key_states)
             local g = math.min(1.0, color[2] + 0.3)
             local b = math.min(1.0, color[3] + 0.3)
 
-            sgl.BeginQuads()
+            sgl.begin_quads()
             -- Top two vertices: transparent
-            sgl.C4f(r, g, b, 0.0)
-            sgl.V2f(x, top_y)
-            sgl.C4f(r, g, b, 0.0)
-            sgl.V2f(x + const.LANE_WIDTH, top_y)
+            sgl.c4f(r, g, b, 0.0)
+            sgl.v2f(x, top_y)
+            sgl.c4f(r, g, b, 0.0)
+            sgl.v2f(x + const.LANE_WIDTH, top_y)
             -- Bottom two vertices: bright
-            sgl.C4f(r, g, b, 0.6)
-            sgl.V2f(x + const.LANE_WIDTH, bottom_y)
-            sgl.C4f(r, g, b, 0.6)
-            sgl.V2f(x, bottom_y)
-            sgl.End()
+            sgl.c4f(r, g, b, 0.6)
+            sgl.v2f(x + const.LANE_WIDTH, bottom_y)
+            sgl.c4f(r, g, b, 0.6)
+            sgl.v2f(x, bottom_y)
+            sgl["end"]()
         end
     end
 end
@@ -103,11 +103,11 @@ function LaneRenderer:draw_judgment_line()
     local total_width = const.NUM_LANES * const.LANE_WIDTH
     local start_x = (const.SCREEN_WIDTH - total_width) / 2
 
-    sgl.C4f(1.0, 1.0, 0.0, 1.0) -- Yellow
-    sgl.BeginLines()
-    sgl.V2f(start_x, const.JUDGMENT_LINE_Y)
-    sgl.V2f(start_x + total_width, const.JUDGMENT_LINE_Y)
-    sgl.End()
+    sgl.c4f(1.0, 1.0, 0.0, 1.0) -- Yellow
+    sgl.begin_lines()
+    sgl.v2f(start_x, const.JUDGMENT_LINE_Y)
+    sgl.v2f(start_x + total_width, const.JUDGMENT_LINE_Y)
+    sgl["end"]()
 end
 
 return LaneRenderer

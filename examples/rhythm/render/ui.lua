@@ -24,19 +24,19 @@ local shadow_offsets = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 ---@param text string
 ---@param color number[]
 local function outlined_text(text, color)
-    local pos = imgui.GetCursorPos()
+    local pos = imgui.get_cursor_pos()
     -- Shadow
-    imgui.PushStyleColor_X_Vec4(Col_Text, shadow_color)
+    imgui.push_style_color_x_vec4(Col_Text, shadow_color)
     for _, off in ipairs(shadow_offsets) do
-        imgui.SetCursorPos({ pos[1] + off[1], pos[2] + off[2] })
-        imgui.TextUnformatted(text)
+        imgui.set_cursor_pos({ pos[1] + off[1], pos[2] + off[2] })
+        imgui.text_unformatted(text)
     end
-    imgui.PopStyleColor(1)
+    imgui.pop_style_color(1)
     -- Foreground
-    imgui.SetCursorPos(pos)
-    imgui.PushStyleColor_X_Vec4(Col_Text, color)
-    imgui.TextUnformatted(text)
-    imgui.PopStyleColor(1)
+    imgui.set_cursor_pos(pos)
+    imgui.push_style_color_x_vec4(Col_Text, color)
+    imgui.text_unformatted(text)
+    imgui.pop_style_color(1)
 end
 
 ---@class UIRenderer
@@ -57,10 +57,10 @@ function UIRenderer:draw_combo(combo)
         return
     end
 
-    imgui.SetNextWindowPos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4 }, Cond_Always, { 0.5, 0.5 })
-    imgui.Begin("##hud_combo", nil, hud_flags)
+    imgui.set_next_window_pos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4 }, Cond_Always, { 0.5, 0.5 })
+    imgui.begin_window("##hud_combo", nil, hud_flags)
     outlined_text(string.format("COMBO: %d", combo), { 1.0, 1.0, 0.0, 1.0 })
-    imgui.End()
+    imgui.end_window()
 end
 
 --- Draw song info
@@ -68,19 +68,19 @@ end
 ---@param artist string
 ---@param bpm number
 function UIRenderer:draw_song_info(title, artist, bpm)
-    imgui.SetNextWindowPos({ 10, 10 }, Cond_Always)
-    imgui.Begin("##hud_song", nil, hud_flags)
+    imgui.set_next_window_pos({ 10, 10 }, Cond_Always)
+    imgui.begin_window("##hud_song", nil, hud_flags)
     outlined_text(title, { 0.78, 0.78, 0.78, 1.0 })
     outlined_text(artist, { 0.59, 0.59, 0.59, 1.0 })
     outlined_text(string.format("BPM: %.1f", bpm), { 0.39, 0.39, 0.39, 1.0 })
-    imgui.End()
+    imgui.end_window()
 end
 
 --- Draw state indicator
 ---@param state string
 function UIRenderer:draw_state(state)
-    imgui.SetNextWindowPos({ 10, const.SCREEN_HEIGHT - 40 }, Cond_Always)
-    imgui.Begin("##hud_state", nil, hud_flags)
+    imgui.set_next_window_pos({ 10, const.SCREEN_HEIGHT - 40 }, Cond_Always)
+    imgui.begin_window("##hud_state", nil, hud_flags)
 
     if state == "loading" then
         outlined_text("LOADING...", { 1.0, 1.0, 0.0, 1.0 })
@@ -90,7 +90,7 @@ function UIRenderer:draw_state(state)
         outlined_text("PAUSED", { 1.0, 0.5, 0.0, 1.0 })
     end
 
-    imgui.End()
+    imgui.end_window()
 end
 
 --- Draw timing debug info
@@ -99,8 +99,8 @@ end
 ---@param bpm number
 ---@param hispeed number|nil
 function UIRenderer:draw_debug(current_beat, current_time_us, bpm, hispeed)
-    imgui.SetNextWindowPos({ const.SCREEN_WIDTH - 200, 10 }, Cond_Always)
-    imgui.Begin("##hud_debug", nil, hud_flags)
+    imgui.set_next_window_pos({ const.SCREEN_WIDTH - 200, 10 }, Cond_Always)
+    imgui.begin_window("##hud_debug", nil, hud_flags)
 
     outlined_text(string.format("Beat: %.2f", current_beat), { 0.39, 0.39, 0.39, 1.0 })
     outlined_text(string.format("Time: %.2fs", current_time_us / 1000000), { 0.39, 0.39, 0.39, 1.0 })
@@ -110,7 +110,7 @@ function UIRenderer:draw_debug(current_beat, current_time_us, bpm, hispeed)
         outlined_text(string.format("HS: %.2f (1/2)", hispeed), { 0.0, 1.0, 1.0, 1.0 })
     end
 
-    imgui.End()
+    imgui.end_window()
 end
 
 --- Draw gauge bar
@@ -126,13 +126,13 @@ function UIRenderer:draw_gauge(gauge_value, gauge_type, sgl)
     local height = const.GAUGE_HEIGHT
 
     -- Background
-    sgl.BeginQuads()
-    sgl.C3f(0.2, 0.2, 0.2)
-    sgl.V2f(x, y)
-    sgl.V2f(x + width, y)
-    sgl.V2f(x + width, y + height)
-    sgl.V2f(x, y + height)
-    sgl.End()
+    sgl.begin_quads()
+    sgl.c3f(0.2, 0.2, 0.2)
+    sgl.v2f(x, y)
+    sgl.v2f(x + width, y)
+    sgl.v2f(x + width, y + height)
+    sgl.v2f(x, y + height)
+    sgl["end"]()
 
     -- Gauge fill (from bottom to top)
     local fill_height = height * (gauge_value / 100)
@@ -153,33 +153,33 @@ function UIRenderer:draw_gauge(gauge_value, gauge_type, sgl)
         end
     end
 
-    sgl.BeginQuads()
-    sgl.C3f(r, g, b)
-    sgl.V2f(x, fill_y)
-    sgl.V2f(x + width, fill_y)
-    sgl.V2f(x + width, y + height)
-    sgl.V2f(x, y + height)
-    sgl.End()
+    sgl.begin_quads()
+    sgl.c3f(r, g, b)
+    sgl.v2f(x, fill_y)
+    sgl.v2f(x + width, fill_y)
+    sgl.v2f(x + width, y + height)
+    sgl.v2f(x, y + height)
+    sgl["end"]()
 
     -- Clear threshold line (80% for GROOVE)
     if gauge_type == "groove" then
         local threshold_y = y + height * 0.2 -- 80% from bottom = 20% from top
-        sgl.BeginLines()
-        sgl.C3f(1.0, 1.0, 1.0)
-        sgl.V2f(x, threshold_y)
-        sgl.V2f(x + width, threshold_y)
-        sgl.End()
+        sgl.begin_lines()
+        sgl.c3f(1.0, 1.0, 1.0)
+        sgl.v2f(x, threshold_y)
+        sgl.v2f(x + width, threshold_y)
+        sgl["end"]()
     end
 
     -- Border
-    sgl.BeginLineStrip()
-    sgl.C3f(0.5, 0.5, 0.5)
-    sgl.V2f(x, y)
-    sgl.V2f(x + width, y)
-    sgl.V2f(x + width, y + height)
-    sgl.V2f(x, y + height)
-    sgl.V2f(x, y)
-    sgl.End()
+    sgl.begin_line_strip()
+    sgl.c3f(0.5, 0.5, 0.5)
+    sgl.v2f(x, y)
+    sgl.v2f(x + width, y)
+    sgl.v2f(x + width, y + height)
+    sgl.v2f(x, y + height)
+    sgl.v2f(x, y)
+    sgl["end"]()
 end
 
 --- Draw score and stats
@@ -187,8 +187,8 @@ end
 ---@param max_ex_score integer
 ---@param stats JudgeStats
 function UIRenderer:draw_score(ex_score, max_ex_score, stats)
-    imgui.SetNextWindowPos({ 10, 100 }, Cond_Always)
-    imgui.Begin("##hud_score", nil, hud_flags)
+    imgui.set_next_window_pos({ 10, 100 }, Cond_Always)
+    imgui.begin_window("##hud_score", nil, hud_flags)
 
     -- EX Score
     outlined_text(string.format("EX: %d / %d", ex_score, max_ex_score), { 1.0, 1.0, 1.0, 1.0 })
@@ -200,19 +200,19 @@ function UIRenderer:draw_score(ex_score, max_ex_score, stats)
     end
     outlined_text(string.format("%.2f%%", rate), { 0.78, 0.78, 0.78, 1.0 })
 
-    imgui.Spacing()
+    imgui.spacing()
 
     -- Judgment counts
     outlined_text(string.format("PG:%d G:%d", stats.pgreat, stats.great), { 1.0, 1.0, 0.39, 1.0 })
     outlined_text(string.format("GD:%d BD:%d", stats.good, stats.bad), { 0.39, 1.0, 0.39, 1.0 })
     outlined_text(string.format("PR:%d MS:%d", stats.empty_poor, stats.miss), { 1.0, 0.39, 0.39, 1.0 })
 
-    imgui.Spacing()
+    imgui.spacing()
 
     -- FAST/SLOW
     outlined_text(string.format("FAST:%d  SLOW:%d", stats.fast, stats.slow), { 0.39, 0.78, 1.0, 1.0 })
 
-    imgui.End()
+    imgui.end_window()
 end
 
 return UIRenderer

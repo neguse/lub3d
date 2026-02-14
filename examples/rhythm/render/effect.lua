@@ -23,19 +23,19 @@ local shadow_offsets = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 ---@param text string
 ---@param color number[] RGBA
 local function outlined_text(text, color)
-    local pos = imgui.GetCursorPos()
+    local pos = imgui.get_cursor_pos()
     -- Shadow
-    imgui.PushStyleColor_X_Vec4(Col_Text, { 0.0, 0.0, 0.0, color[4] })
+    imgui.push_style_color_x_vec4(Col_Text, { 0.0, 0.0, 0.0, color[4] })
     for _, off in ipairs(shadow_offsets) do
-        imgui.SetCursorPos({ pos[1] + off[1], pos[2] + off[2] })
-        imgui.TextUnformatted(text)
+        imgui.set_cursor_pos({ pos[1] + off[1], pos[2] + off[2] })
+        imgui.text_unformatted(text)
     end
-    imgui.PopStyleColor(1)
+    imgui.pop_style_color(1)
     -- Foreground
-    imgui.SetCursorPos(pos)
-    imgui.PushStyleColor_X_Vec4(Col_Text, color)
-    imgui.TextUnformatted(text)
-    imgui.PopStyleColor(1)
+    imgui.set_cursor_pos(pos)
+    imgui.push_style_color_x_vec4(Col_Text, color)
+    imgui.text_unformatted(text)
+    imgui.pop_style_color(1)
 end
 
 ---@class JudgmentEffect
@@ -125,8 +125,8 @@ function EffectRenderer:draw(current_time_us)
     local text = const.JUDGMENT_TEXT[display.judgment] or display.judgment
     local color = const.JUDGMENT_COLORS[display.judgment] or { 1, 1, 1, 1 }
 
-    imgui.SetNextWindowPos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.55 }, Cond_Always, { 0.5, 0.5 })
-    imgui.Begin("##hud_judgment", nil, hud_flags)
+    imgui.set_next_window_pos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.55 }, Cond_Always, { 0.5, 0.5 })
+    imgui.begin_window("##hud_judgment", nil, hud_flags)
     outlined_text(text, { color[1], color[2], color[3], alpha })
 
     -- Timing indicator (FAST/SLOW)
@@ -136,7 +136,7 @@ function EffectRenderer:draw(current_time_us)
         outlined_text(timing_text, { timing_color[1], timing_color[2], timing_color[3], alpha })
     end
 
-    imgui.End()
+    imgui.end_window()
 end
 
 --- Clear all effects
