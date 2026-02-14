@@ -7,14 +7,14 @@ local util = require("lib.util")
 local M = {}
 M.window_title = "bench_glm"
 
-local ITERATIONS = 100000
-local WARMUP = 1000
+local ITERATIONS <const> = 100000
+local WARMUP <const> = 1000
 
 local function bench(label, n, fn)
     for _ = 1, WARMUP do fn() end
-    local t0 = stm.Now()
+    local t0 = stm.now()
     for _ = 1, n do fn() end
-    local elapsed = stm.Ms(stm.Diff(stm.Now(), t0))
+    local elapsed = stm.ms(stm.diff(stm.now(), t0))
     local per_iter = elapsed / n * 1000
     return per_iter, elapsed
 end
@@ -51,7 +51,7 @@ local function pack_uniforms_c(glm, mvp, model, r, g, b, a)
 end
 
 function M:init()
-    stm.Setup()
+    stm.setup()
 
     -- Load both implementations
     -- Force-reload lib.glm as pure Lua by clearing the C module from package.loaded
@@ -63,7 +63,8 @@ function M:init()
     print(string.format("=== Lua vs C benchmark (%d iterations) ===\n", ITERATIONS))
 
     -- Setup test data for each implementation
-    local function setup(g)
+    -- Both use snake_case API
+    local function setup_lua(g)
         local pos = g.vec3(100, 0, 200)
         local size = g.vec3(30, 30, 30)
         local angle = 1.57
@@ -84,8 +85,29 @@ function M:init()
         }
     end
 
-    local dl = setup(glm_lua)
-    local dc = setup(glm_c)
+    local function setup_c(g)
+        local pos = g.vec3(100, 0, 200)
+        local size = g.vec3(30, 30, 30)
+        local angle = 1.57
+        local axis = g.vec3(0, 1, 0)
+        local proj = g.perspective(math.rad(45), 1.0, 1.0, 5000.0)
+        local view = g.lookat(g.vec3(0, 500, 500), g.vec3(0, 0, 0), g.vec3(0, 1, 0))
+        local model = g.translate(pos) * g.rotate(angle, axis) * g.scale(size)
+        local mvp = proj * view * model
+        return {
+            pos = pos,
+            size = size,
+            angle = angle,
+            axis = axis,
+            proj = proj,
+            view = view,
+            model = model,
+            mvp = mvp,
+        }
+    end
+
+    local dl = setup_lua(glm_lua)
+    local dc = setup_c(glm_c)
 
     collectgarbage("restart")
     collectgarbage("collect")

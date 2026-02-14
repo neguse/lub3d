@@ -41,12 +41,12 @@ function M:init()
     log.info("hakonotaiatari starting...")
 
     -- Initialize sokol.gfx (required for Lua entry point)
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
     -- Initialize sokol.gl
-    gl.Setup(gl.Desc({
+    gl.setup(gl.Desc({
         max_vertices = 65536,
         max_commands = 16384,
     }))
@@ -77,7 +77,7 @@ function M:init()
 end
 
 function M:frame()
-    local frame_dt = app.FrameDuration()
+    local frame_dt = app.frame_duration()
     local fixed_dt = const.DELTA_T -- 1/60 sec
 
     -- Update input (every frame)
@@ -173,7 +173,7 @@ function M:frame()
     end
 
     -- Setup orthographic projection for UI (includes loading wireframe pipeline)
-    -- Note: gl.Draw() is called once at the end to render both 3D and UI
+    -- Note: gl.draw() is called once at the end to render both 3D and UI
     renderer.setup_ui_projection()
 
     -- Render UI based on state
@@ -201,7 +201,7 @@ function M:event(ev)
     -- Handle global keys
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.Q then
-            app.Quit()
+            app.quit()
         elseif ev.key_code == app.Keycode.TAB then
             renderer.toggle_mode()
             log.info("Render mode: " .. (renderer.get_mode() == renderer.MODE_WIREFRAME and "WIREFRAME" or "SHADED"))
@@ -211,8 +211,8 @@ end
 
 function M:cleanup()
     audio.cleanup()
-    renderer.cleanup() -- gl.Shutdown() is called inside
-    gfx.Shutdown()
+    renderer.cleanup() -- gl.shutdown() is called inside
+    gfx.shutdown()
     log.info("hakonotaiatari cleanup complete")
 end
 

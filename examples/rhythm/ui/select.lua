@@ -3,19 +3,6 @@
 local imgui = require("imgui")
 local const = require("examples.rhythm.const")
 
--- ImGui constants (not exported by bindings)
-local WindowFlags_NoResize = 2
-local WindowFlags_NoMove = 4
-local WindowFlags_NoCollapse = 32
-local ChildFlags_Borders = 1
-local Cond_Always = 1
-
--- Style colors
-local Col_Header = 24
-local Col_HeaderHovered = 25
-local Col_HeaderActive = 26
-local Col_FrameBg = 7
-local Col_Border = 5
 
 ---@class SelectScreen
 ---@field songs SongEntry[] Available songs
@@ -74,33 +61,33 @@ end
 
 --- Draw the select screen
 function SelectScreen:draw()
-    local window_flags = WindowFlags_NoResize + WindowFlags_NoMove + WindowFlags_NoCollapse
+    local window_flags = imgui.WindowFlags.NO_RESIZE | imgui.WindowFlags.NO_MOVE | imgui.WindowFlags.NO_COLLAPSE
 
     -- Style: dark background with visible selection
-    imgui.PushStyleColor_X_Vec4(Col_Header, { 0.2, 0.4, 0.8, 1.0 })        -- Selected
-    imgui.PushStyleColor_X_Vec4(Col_HeaderHovered, { 0.3, 0.3, 0.5, 1.0 }) -- Hovered
-    imgui.PushStyleColor_X_Vec4(Col_HeaderActive, { 0.2, 0.4, 0.8, 1.0 })  -- Active
-    imgui.PushStyleColor_X_Vec4(Col_FrameBg, { 0.0, 0.0, 0.0, 1.0 })       -- Black background
-    imgui.PushStyleVar_X_Float(13, 1.0)                                    -- FrameBorderSize = 1
+    imgui.push_style_color_x_vec4(imgui.Col.HEADER, { 0.2, 0.4, 0.8, 1.0 })        -- Selected
+    imgui.push_style_color_x_vec4(imgui.Col.HEADER_HOVERED, { 0.3, 0.3, 0.5, 1.0 }) -- Hovered
+    imgui.push_style_color_x_vec4(imgui.Col.HEADER_ACTIVE, { 0.2, 0.4, 0.8, 1.0 })  -- Active
+    imgui.push_style_color_x_vec4(imgui.Col.FRAME_BG, { 0.0, 0.0, 0.0, 1.0 })       -- Black background
+    imgui.push_style_var_x_float(imgui.StyleVar.FRAME_BORDER_SIZE, 1.0)
 
     -- Full screen window
-    imgui.SetNextWindowPos({ 0, 0 }, Cond_Always, { 0, 0 })
-    imgui.SetNextWindowSize({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, Cond_Always)
+    imgui.set_next_window_pos({ 0, 0 }, imgui.Cond.ALWAYS, { 0, 0 })
+    imgui.set_next_window_size({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, imgui.Cond.ALWAYS)
 
-    if imgui.Begin("Song Select", nil, window_flags) then
+    if imgui.begin_window("Song Select", nil, window_flags) then
         -- Title
-        imgui.TextUnformatted("Select a song and press ENTER to play")
-        imgui.Separator()
+        imgui.text_unformatted("Select a song and press ENTER to play")
+        imgui.separator()
 
         -- Song count
-        imgui.TextUnformatted(string.format("Songs: %d", #self.songs))
-        imgui.Separator()
+        imgui.text_unformatted(string.format("Songs: %d", #self.songs))
+        imgui.separator()
 
         -- Left panel: Song list
         local list_width = const.SCREEN_WIDTH * 0.55
         local list_height = const.SCREEN_HEIGHT - 180
 
-        imgui.BeginChild_Str_Vec2_X_X("SongList", { list_width, list_height }, ChildFlags_Borders, 0)
+        imgui.begin_child_str_vec2_x_x("SongList", { list_width, list_height }, imgui.ChildFlags.BORDERS, imgui.WindowFlags.NONE)
 
         for i, song in ipairs(self.songs) do
             -- Use index in ID to avoid conflicts with duplicate titles
@@ -109,82 +96,82 @@ function SelectScreen:draw()
 
             -- Scroll to selected item if needed
             if is_selected and self.scroll_to_selected then
-                imgui.SetScrollHereY(0.5)
+                imgui.set_scroll_here_y(0.5)
                 self.scroll_to_selected = false
             end
 
-            local clicked = imgui.Selectable_Str_Bool_X_Vec2(display_text, is_selected, 0, { 0, 0 })
+            local clicked = imgui.selectable_str_bool_x_vec2(display_text, is_selected, imgui.SelectableFlags.NONE, { 0, 0 })
             if clicked then
                 self.selected_index = i
             end
 
             -- Double-click to select
-            if imgui.IsItemHovered(0) and imgui.IsMouseDoubleClicked(0) then
+            if imgui.is_item_hovered(imgui.HoveredFlags.NONE) and imgui.is_mouse_double_clicked(imgui.MouseButton.LEFT) then
                 self.selected_index = i
                 self:confirm()
             end
         end
 
-        imgui.EndChild()
+        imgui.end_child()
 
         -- Right panel: Song details
-        imgui.SameLine(0, 10)
+        imgui.same_line(0, 10)
 
         local detail_width = const.SCREEN_WIDTH - list_width - 30
-        imgui.BeginChild_Str_Vec2_X_X("SongDetail", { detail_width, list_height }, ChildFlags_Borders, 0)
+        imgui.begin_child_str_vec2_x_x("SongDetail", { detail_width, list_height }, imgui.ChildFlags.BORDERS, imgui.WindowFlags.NONE)
 
         local song = self.songs[self.selected_index]
         if song then
-            imgui.TextUnformatted("Title:")
-            imgui.TextUnformatted(song.title)
-            imgui.Spacing()
+            imgui.text_unformatted("Title:")
+            imgui.text_unformatted(song.title)
+            imgui.spacing()
 
-            imgui.TextUnformatted("Artist:")
-            imgui.TextUnformatted(song.artist)
-            imgui.Spacing()
+            imgui.text_unformatted("Artist:")
+            imgui.text_unformatted(song.artist)
+            imgui.spacing()
 
             if song.genre ~= "" then
-                imgui.TextUnformatted("Genre:")
-                imgui.TextUnformatted(song.genre)
-                imgui.Spacing()
+                imgui.text_unformatted("Genre:")
+                imgui.text_unformatted(song.genre)
+                imgui.spacing()
             end
 
-            imgui.Separator()
+            imgui.separator()
 
-            imgui.TextUnformatted(string.format("BPM: %.1f", song.bpm))
-            imgui.TextUnformatted(string.format("Level: %d", song.playlevel))
+            imgui.text_unformatted(string.format("BPM: %.1f", song.bpm))
+            imgui.text_unformatted(string.format("Level: %d", song.playlevel))
 
             if song.difficulty > 0 then
                 local diff_names = { "BEGINNER", "NORMAL", "HYPER", "ANOTHER", "INSANE" }
                 local diff_name = diff_names[song.difficulty] or string.format("DIFF %d", song.difficulty)
-                imgui.TextUnformatted(string.format("Difficulty: %s", diff_name))
+                imgui.text_unformatted(string.format("Difficulty: %s", diff_name))
             end
 
-            imgui.Separator()
-            imgui.Spacing()
+            imgui.separator()
+            imgui.spacing()
 
             -- File path (truncated)
-            imgui.TextUnformatted("Path:")
+            imgui.text_unformatted("Path:")
             local short_path = song.path
             if #short_path > 50 then
                 short_path = "..." .. short_path:sub(-47)
             end
-            imgui.TextUnformatted(short_path)
+            imgui.text_unformatted(short_path)
         else
-            imgui.TextUnformatted("No song selected")
+            imgui.text_unformatted("No song selected")
         end
 
-        imgui.EndChild()
+        imgui.end_child()
 
         -- Bottom: Instructions
-        imgui.Separator()
-        imgui.TextUnformatted("UP/DOWN: Select  |  ENTER: Play  |  ESC: Quit")
+        imgui.separator()
+        imgui.text_unformatted("UP/DOWN: Select  |  ENTER: Play  |  ESC: Quit")
     end
-    imgui.End()
+    imgui.end_window()
 
     -- Pop styles
-    imgui.PopStyleVar(1)
-    imgui.PopStyleColor(4)
+    imgui.pop_style_var(1)
+    imgui.pop_style_color(4)
 end
 
 --- Handle keyboard input

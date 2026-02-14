@@ -44,7 +44,7 @@ public class StbImageModule : IModule
 
             var retType = Resolve(CTypeParser.ParseReturnType(f.TypeStr));
             var parms = f.Params.Select(p => new ParamBinding(p.Name, Resolve(p.ParsedType))).ToList();
-            var luaName = Pipeline.ToPascalCase(Pipeline.StripPrefix(f.Name, Prefix));
+            var luaName = Pipeline.StripPrefix(f.Name, Prefix);
             funcs.Add(new FuncBinding(f.Name, luaName, parms, retType, GetLink(f, sourceLink)));
         }
 

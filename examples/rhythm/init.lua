@@ -49,8 +49,8 @@ local scroll_speed = const.DEFAULT_SCROLL_SPEED
 local result_data = nil
 
 -- BMS base path and cache
-local BMS_BASE_PATH = "D:/BMS"
-local BMS_CACHE_PATH = "bms_cache.lua"
+local BMS_BASE_PATH <const> = "D:/BMS"
+local BMS_CACHE_PATH <const> = "bms_cache.lua"
 
 --- Initialize game components for playing a song
 ---@param bms_path string Path to BMS file
@@ -98,7 +98,7 @@ local function init_game(bms_path)
         -- Could play a miss sound
     end
     playfield.on_judgment = function(result)
-        local current_time_us = math.floor(stm.Us(stm.Now()))
+        local current_time_us = math.floor(stm.us(stm.now()))
         effect_renderer:add_judgment(
             result.judgment,
             result.timing,
@@ -108,7 +108,7 @@ local function init_game(bms_path)
     end
 
     -- Start with lead time
-    start_time_us = math.floor(stm.Us(stm.Now()))
+    start_time_us = math.floor(stm.us(stm.now()))
     conductor:start(start_time_us, -const.LEAD_TIME_US)
     state:start()
 
@@ -160,27 +160,27 @@ end
 
 local function init()
     -- Initialize time
-    stm.Setup()
+    stm.setup()
 
     -- Initialize graphics
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
-        logger = { func = slog.Func },
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
+        logger = { func = slog.func },
     }))
 
     -- Initialize sokol-gl
-    sgl.Setup(sgl.Desc({
-        logger = { func = slog.Func },
+    sgl.setup(sgl.Desc({
+        logger = { func = slog.func },
     }))
 
     -- Initialize debug text
-    sdtx.Setup(sdtx.Desc({
-        fonts = { sdtx.FontKc854() },
-        logger = { func = slog.Func },
+    sdtx.setup(sdtx.Desc({
+        fonts = { sdtx.font_kc854() },
+        logger = { func = slog.func },
     }))
 
     -- Initialize ImGui with Japanese font
-    imgui.Setup({
+    imgui.setup({
         japanese_font = "deps/fonts/NotoSansJP-Regular.ttf",
         font_size = 18.0,
     })
@@ -241,7 +241,7 @@ local function init()
 end
 
 local function frame()
-    local current_time_us = math.floor(stm.Us(stm.Now()))
+    local current_time_us = math.floor(stm.us(stm.now()))
 
     -- Begin rendering
     local pass_action = gfx.PassAction({
@@ -249,13 +249,13 @@ local function frame()
             [0] = { load_action = gfx.LoadAction.CLEAR, clear_value = { 0.1, 0.1, 0.15, 1.0 } },
         },
     })
-    gfx.BeginPass(gfx.Pass({ action = pass_action, swapchain = glue.Swapchain() }))
+    gfx.begin_pass(gfx.Pass({ action = pass_action, swapchain = glue.swapchain() }))
 
     if app_state == "select" then
         -- Draw select screen with ImGui
-        imgui.NewFrame()
+        imgui.new_frame()
         select_screen:draw()
-        imgui.Render()
+        imgui.render()
     elseif app_state == "playing" then
         -- Update conductor
         if conductor and state:is(GameState.PLAYING) then
@@ -300,10 +300,10 @@ local function frame()
         end
 
         -- Setup sokol-gl
-        sgl.Defaults()
-        sgl.MatrixModeProjection()
-        sgl.Ortho(0, const.SCREEN_WIDTH, const.SCREEN_HEIGHT, 0, -1, 1)
-        sgl.MatrixModeModelview()
+        sgl.defaults()
+        sgl.matrix_mode_projection()
+        sgl.ortho(0, const.SCREEN_WIDTH, const.SCREEN_HEIGHT, 0, -1, 1)
+        sgl.matrix_mode_modelview()
 
         -- Draw lanes
         if lane_renderer and input_handler then
@@ -327,10 +327,10 @@ local function frame()
         end
 
         -- Draw sokol-gl
-        sgl.Draw()
+        sgl.draw()
 
         -- Draw HUD with ImGui
-        imgui.NewFrame()
+        imgui.new_frame()
 
         if chart and ui_renderer then
             ui_renderer:draw_song_info(chart.meta.title, chart.meta.artist, chart.meta.bpm)
@@ -361,33 +361,33 @@ local function frame()
             effect_renderer:draw(current_time_us)
         end
 
-        imgui.Render()
+        imgui.render()
     elseif app_state == "finished" then
         -- Draw result screen with ImGui
-        imgui.NewFrame()
+        imgui.new_frame()
 
         if result_data and result_renderer then
             result_renderer:draw(result_data)
         end
 
-        imgui.Render()
+        imgui.render()
     end
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 local function event(ev)
-    local current_time_us = math.floor(stm.Us(stm.Now()))
+    local current_time_us = math.floor(stm.us(stm.now()))
 
     -- Let ImGui handle events first in select mode
     if app_state == "select" then
-        imgui.HandleEvent(ev)
+        imgui.handle_event(ev)
 
         if ev.type == app.EventType.KEY_DOWN then
             -- ESC to quit
             if ev.key_code == app.Keycode.ESCAPE then
-                app.RequestQuit()
+                app.request_quit()
                 return
             end
 
@@ -426,7 +426,7 @@ local function event(ev)
     end
 
     if app_state == "finished" then
-        imgui.HandleEvent(ev)
+        imgui.handle_event(ev)
 
         if ev.type == app.EventType.KEY_DOWN then
             if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.ENTER then
@@ -442,10 +442,10 @@ local function cleanup()
     if audio_manager then
         audio_manager:shutdown()
     end
-    imgui.Shutdown()
-    sdtx.Shutdown()
-    sgl.Shutdown()
-    gfx.Shutdown()
+    imgui.shutdown()
+    sdtx.shutdown()
+    sgl.shutdown()
+    gfx.shutdown()
 end
 
 local M = {}

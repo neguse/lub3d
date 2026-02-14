@@ -25,19 +25,19 @@ local function draw_box(cx, cy, hw, hh, angle, r, g, b)
     -- 4 corners relative to center
     local dx = { -hw, hw, hw, -hw }
     local dy = { -hh, -hh, hh, hh }
-    gl.BeginQuads()
-    gl.C3f(r, g, b)
+    gl.begin_quads()
+    gl.c3f(r, g, b)
     for i = 1, 4 do
         local rx = dx[i] * cos_a - dy[i] * sin_a
         local ry = dx[i] * sin_a + dy[i] * cos_a
-        gl.V2f(cx + rx, cy + ry)
+        gl.v2f(cx + rx, cy + ry)
     end
-    gl.End()
+    gl["end"]()
 end
 
 function M:init()
-    gfx.Setup(gfx.Desc({ environment = glue.Environment() }))
-    gl.Setup(gl.Desc({}))
+    gfx.setup(gfx.Desc({ environment = glue.environment() }))
+    gl.setup(gl.Desc({}))
 
     -- Create world
     local world_def = b2d.default_world_def()
@@ -55,7 +55,7 @@ function M:init()
 
     -- Dynamic body
     body_def = b2d.default_body_def()
-    body_def.type = b2d.BodyType.DYNAMICBODY
+    body_def.type = b2d.BodyType.DYNAMIC_BODY
     body_def.position = { 0, 8 }
     body_id = b2d.create_body(world_id, body_def)
 
@@ -73,7 +73,7 @@ function M:frame()
     b2d.world_step(world_id, 1.0 / 60.0, 4)
 
     -- Render
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = {
                 gfx.ColorAttachmentAction({
@@ -82,12 +82,12 @@ function M:frame()
                 }),
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
-    gl.Defaults()
-    gl.MatrixModeProjection()
-    gl.Ortho(
+    gl.defaults()
+    gl.matrix_mode_projection()
+    gl.ortho(
         cam_x - cam_zoom, cam_x + cam_zoom,
         cam_y - cam_zoom * 0.75, cam_y + cam_zoom * 0.75,
         -1, 1
@@ -107,21 +107,21 @@ function M:frame()
         draw_box(pos[1], pos[2], 1, 1, angle, 0.5, 0.5, 0.5)
     end
 
-    gl.Draw()
-    gfx.EndPass()
-    gfx.Commit()
+    gl.draw()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
     b2d.destroy_world(world_id)
-    gl.Shutdown()
-    gfx.Shutdown()
+    gl.shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
-            app.Quit()
+            app.quit()
         end
     end
 end

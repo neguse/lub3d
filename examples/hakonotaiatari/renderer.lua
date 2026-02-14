@@ -5,7 +5,7 @@ local gfx = require("sokol.gfx")
 local gl = require("sokol.gl")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local glm = require("lib.glm")
 local log = require("lib.log")
@@ -190,7 +190,7 @@ local function pack_indices(indices)
 end
 
 -- Original game resolution (for gakugaku scaling)
-local ORIGINAL_RES = 240.0
+local ORIGINAL_RES <const> = 240.0
 
 -- Pack uniforms for shaded mode (mat4 + mat4 + vec4 + vec4 = 160 bytes)
 local function pack_uniforms(mvp, model, r, g, b, a)
@@ -203,8 +203,8 @@ local function pack_uniforms(mvp, model, r, g, b, a)
     data[36] = a or 1.0
     -- gakugaku_params: amount, time, screen_width, screen_height
     -- Scale gakugaku based on resolution (original was 240x240)
-    local screen_w = app.Widthf()
-    local screen_h = app.Heightf()
+    local screen_w = app.widthf()
+    local screen_h = app.heightf()
     local scale = math.min(screen_w, screen_h) / ORIGINAL_RES
     data[37] = gakugaku * scale
     data[38] = gakugaku_time
@@ -233,10 +233,10 @@ local cube_edges = {
 
 -- Initialize renderer
 function M.init()
-    -- Note: gl.Setup() is called in init.lua before this
+    -- Note: gl.setup() is called in init.lua before this
 
     -- Create wireframe pipeline for sokol.gl
-    wireframe_pipeline = gl.MakePipeline(gfx.PipelineDesc({
+    wireframe_pipeline = gl.make_pipeline(gfx.PipelineDesc({
         depth = {
             compare = gfx.CompareFunc.LESS_EQUAL,
             write_enabled = true,
@@ -245,7 +245,7 @@ function M.init()
     }))
 
     -- Compile shaded shader
-    shaded_shader = shaderMod.compile(shaded_shader_source, "hakotai_shaded", {
+    shaded_shader = shader_mod.compile(shaded_shader_source, "hakotai_shaded", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 160,
@@ -267,7 +267,7 @@ function M.init()
     end
 
     -- Create shaded pipeline
-    shaded_pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    shaded_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shaded_shader,
         layout = {
             attrs = {
@@ -284,20 +284,20 @@ function M.init()
         primitive_type = gfx.PrimitiveType.TRIANGLES,
     }))
 
-    if gfx.QueryPipelineState(shaded_pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.query_pipeline_state(shaded_pipeline) ~= gfx.ResourceState.VALID then
         log.error("Shaded pipeline creation failed!")
         return false
     end
 
     -- Create vertex buffer
     local vertices = make_cube_vertices()
-    shaded_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
+    shaded_vbuf = gfx.make_buffer(gfx.BufferDesc({
         data = gfx.Range(util.pack_floats(vertices))
     }))
 
     -- Create index buffer
     local indices = make_cube_indices()
-    shaded_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
+    shaded_ibuf = gfx.make_buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(pack_indices(indices))
     }))
@@ -308,7 +308,7 @@ end
 
 -- Cleanup renderer
 function M.cleanup()
-    gl.Shutdown()
+    gl.shutdown()
 end
 
 -- Set rendering mode
@@ -333,8 +333,8 @@ end
 
 -- Calculate square viewport centered in window (for 1:1 aspect ratio)
 local function calc_square_viewport()
-    local w = app.Widthf()
-    local h = app.Heightf()
+    local w = app.widthf()
+    local h = app.heightf()
     local size = math.min(w, h)
     local x = math.floor((w - size) / 2)
     local y = math.floor((h - size) / 2)
@@ -352,7 +352,7 @@ function M.begin_frame(clear_r, clear_g, clear_b)
     clear_g = clear_g or 0.0
     clear_b = clear_b or 0.05
 
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
@@ -363,18 +363,18 @@ function M.begin_frame(clear_r, clear_g, clear_b)
                 clear_value = 1.0
             }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
 
     -- Apply square viewport for 1:1 aspect ratio
     local vx, vy, vw, vh = calc_square_viewport()
-    gfx.ApplyViewport(vx, vy, vw, vh, true)
+    gfx.apply_viewport(vx, vy, vw, vh, true)
     -- Set scissor to full window (allow drawing outside viewport)
-    gfx.ApplyScissorRect(0, 0, math.floor(app.Widthf()), math.floor(app.Heightf()), true)
+    gfx.apply_scissor_rect(0, 0, math.floor(app.widthf()), math.floor(app.heightf()), true)
 
     if current_mode == M.MODE_SHADED and shaded_pipeline then
-        gfx.ApplyPipeline(shaded_pipeline)
-        gfx.ApplyBindings(gfx.Bindings({
+        gfx.apply_pipeline(shaded_pipeline)
+        gfx.apply_bindings(gfx.Bindings({
             vertex_buffers = { shaded_vbuf },
             index_buffer = shaded_ibuf
         }))
@@ -384,30 +384,30 @@ end
 -- End frame
 function M.end_frame()
     -- Always draw sokol.gl content (used for UI in both modes)
-    gl.Draw()
-    gfx.EndPass()
-    gfx.Commit()
+    gl.draw()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 -- Set camera using eye and lookat positions (works for both modes)
 function M.set_camera_lookat(eye, lookat, aspect)
     -- Always set up sokol.gl matrices (used for field, particles, UI in both modes)
-    gl.Defaults()
-    if wireframe_pipeline then gl.LoadPipeline(wireframe_pipeline) end
-    gl.MatrixModeProjection()
-    gl.Perspective(math.rad(45), aspect, 1.0, 5000.0)
-    gl.MatrixModeModelview()
-    gl.Lookat(eye.x, eye.y, eye.z, lookat.x, lookat.y, lookat.z, 0, 1, 0)
+    gl.defaults()
+    if wireframe_pipeline then gl.load_pipeline(wireframe_pipeline) end
+    gl.matrix_mode_projection()
+    gl.perspective(math.rad(45), aspect, 1.0, 5000.0)
+    gl.matrix_mode_modelview()
+    gl.lookat(eye.x, eye.y, eye.z, lookat.x, lookat.y, lookat.z, 0, 1, 0)
 end
 
 -- Set up 2D orthographic projection for UI rendering
 function M.setup_ui_projection()
-    gl.Defaults()
-    if wireframe_pipeline then gl.LoadPipeline(wireframe_pipeline) end
-    gl.MatrixModeProjection()
-    gl.Ortho(-1, 1, -1, 1, -1, 1)
-    gl.MatrixModeModelview()
-    gl.LoadIdentity()
+    gl.defaults()
+    if wireframe_pipeline then gl.load_pipeline(wireframe_pipeline) end
+    gl.matrix_mode_projection()
+    gl.ortho(-1, 1, -1, 1, -1, 1)
+    gl.matrix_mode_modelview()
+    gl.load_identity()
 end
 
 -- Draw a cube at given position with given size and color
@@ -448,14 +448,14 @@ function M.draw_cube_wireframe(pos, size, angle, r, g, b)
         world_verts[i] = { wx + dx, wy + dy, wz + dz }
     end
 
-    gl.BeginLines()
+    gl.begin_lines()
     for _, edge in ipairs(cube_edges) do
         local v1 = world_verts[edge[1]]
         local v2 = world_verts[edge[2]]
-        gl.V3fC3f(v1[1], v1[2], v1[3], r, g, b)
-        gl.V3fC3f(v2[1], v2[2], v2[3], r, g, b)
+        gl.v3f_c3f(v1[1], v1[2], v1[3], r, g, b)
+        gl.v3f_c3f(v2[1], v2[2], v2[3], r, g, b)
     end
-    gl.End()
+    gl["end"]()
 end
 
 -- Draw cube in shaded mode using sokol.gfx
@@ -463,28 +463,28 @@ function M.draw_cube_shaded(pos, size, angle, r, g, b, proj, view)
     local model = glm.translate(pos) * glm.rotate(angle, glm.vec3(0, 1, 0)) * glm.scale(size)
     local mvp = proj * view * model
 
-    gfx.ApplyUniforms(0, gfx.Range(pack_uniforms(mvp, model, r, g, b, 1.0)))
-    gfx.Draw(0, 36, 1)
+    gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, r, g, b, 1.0)))
+    gfx.draw(0, 36, 1)
 end
 
 -- Draw a line between two points (uses sokol.gl in both modes)
 function M.draw_line(p1, p2, r, g, b)
     local dx1, dy1, dz1 = get_gakugaku_offset(p1.x, p1.y, p1.z)
     local dx2, dy2, dz2 = get_gakugaku_offset(p2.x, p2.y, p2.z)
-    gl.BeginLines()
-    gl.V3fC3f(p1.x + dx1, p1.y + dy1, p1.z + dz1, r, g, b)
-    gl.V3fC3f(p2.x + dx2, p2.y + dy2, p2.z + dz2, r, g, b)
-    gl.End()
+    gl.begin_lines()
+    gl.v3f_c3f(p1.x + dx1, p1.y + dy1, p1.z + dz1, r, g, b)
+    gl.v3f_c3f(p2.x + dx2, p2.y + dy2, p2.z + dz2, r, g, b)
+    gl["end"]()
 end
 
 -- Draw a point/particle
 function M.draw_point(pos, size, r, g, b)
     if current_mode == M.MODE_WIREFRAME then
         local dx, dy, dz = get_gakugaku_offset(pos.x, pos.y, pos.z)
-        gl.PointSize(size)
-        gl.BeginPoints()
-        gl.V3fC3f(pos.x + dx, pos.y + dy, pos.z + dz, r, g, b)
-        gl.End()
+        gl.point_size(size)
+        gl.begin_points()
+        gl.v3f_c3f(pos.x + dx, pos.y + dy, pos.z + dz, r, g, b)
+        gl["end"]()
     else
         -- Draw as small cube
         local s = size * 0.5

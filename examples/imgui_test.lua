@@ -17,64 +17,64 @@ M.window_title = "Lub3d - ImGui Test"
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
-    imgui.Setup()
+    imgui.setup()
 end
 
 function M:frame()
-    imgui.NewFrame()
+    imgui.new_frame()
 
     -- Main debug window
-    if imgui.Begin("Debug Menu") then
-        imgui.TextUnformatted("Lub3d ImGui Test")
-        imgui.Separator()
+    if imgui.begin_window("Debug Menu") then
+        imgui.text_unformatted("Lub3d ImGui Test")
+        imgui.separator()
 
-        local clicked, new_val = imgui.Checkbox("Enable Feature", checkbox_val)
+        local clicked, new_val = imgui.checkbox("Enable Feature", checkbox_val)
         if clicked then checkbox_val = new_val end
 
-        local changed, new_slider = imgui.SliderFloat("Value", slider_val, 0.0, 1.0)
+        local changed, new_slider = imgui.slider_float("Value", slider_val, 0.0, 1.0)
         if changed then slider_val = new_slider end
 
-        local col_changed, new_col = imgui.ColorEdit3("Color", color)
+        local col_changed, new_col = imgui.color_edit3("Color", color)
         if col_changed then color = new_col end
 
-        imgui.Separator()
-        if imgui.Button("Show Demo Window") then
+        imgui.separator()
+        if imgui.button("Show Demo Window") then
             show_demo = not show_demo
         end
     end
-    imgui.End()
+    imgui.end_window()
 
     if show_demo then
-        local open = imgui.ShowDemoWindow(show_demo)
+        local open = imgui.show_demo_window(show_demo)
         show_demo = open
     end
 
     -- Render
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = color[1], g = color[2], b = color[3], a = 1.0 }
             } }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
-    imgui.Render()
-    gfx.EndPass()
-    gfx.Commit()
+    imgui.render()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:event(ev)
-    imgui.HandleEvent(ev)
+    imgui.handle_event(ev)
 end
 
 function M:cleanup()
-    imgui.Shutdown()
-    gfx.Shutdown()
+    imgui.shutdown()
+    gfx.shutdown()
 end
 
 return M

@@ -4,7 +4,7 @@ local log = require("lib.log")
 
 -- Initialize sokol_time (once)
 if not _G._stm_initialized then
-    stm.Setup()
+    stm.setup()
     _G._stm_initialized = true
 end
 
@@ -23,7 +23,7 @@ M.profile = {
 function M.profile_begin(category, name)
     if not M.profile.enabled then return end
     local key = category .. ":" .. name
-    M.profile.pending[key] = stm.Now()
+    M.profile.pending[key] = stm.now()
 end
 
 --- End a profiling measurement, log if slow
@@ -35,7 +35,7 @@ function M.profile_end(category, name)
     local start = M.profile.pending[key]
     if not start then return end
 
-    local elapsed_ms = stm.Ms(stm.Since(start))
+    local elapsed_ms = stm.ms(stm.since(start))
     M.profile.pending[key] = nil
 
     if elapsed_ms >= M.profile.threshold_ms then
@@ -56,7 +56,7 @@ end
 
 -- Helper to pack vertex data as floats (handles large arrays)
 function M.pack_floats(floats)
-    local CHUNK_SIZE = 200 -- Lua unpack limit is around 200-1000
+    local CHUNK_SIZE <const> = 200 -- Lua unpack limit is around 200-1000
     local result = {}
     for i = 1, #floats, CHUNK_SIZE do
         local chunk_end = math.min(i + CHUNK_SIZE - 1, #floats)
@@ -71,7 +71,7 @@ end
 
 -- Helper to pack index data as u32 (handles large arrays)
 function M.pack_u32(ints)
-    local CHUNK_SIZE = 200
+    local CHUNK_SIZE <const> = 200
     local result = {}
     for i = 1, #ints, CHUNK_SIZE do
         local chunk_end = math.min(i + CHUNK_SIZE - 1, #ints)

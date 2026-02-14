@@ -4,15 +4,15 @@ local slog = require("sokol.log")
 
 -- Log levels: 0=panic, 1=error, 2=warn, 3=info
 local function log_info(msg)
-    slog.Func("audio", 3, 0, msg, 0, "manager.lua", nil)
+    slog.func("audio", 3, 0, msg, 0, "manager.lua", nil)
 end
 
 local function log_warn(msg)
-    slog.Func("audio", 2, 0, msg, 0, "manager.lua", nil)
+    slog.func("audio", 2, 0, msg, 0, "manager.lua", nil)
 end
 
 local function log_err(msg)
-    slog.Func("audio", 1, 0, msg, 0, "manager.lua", nil)
+    slog.func("audio", 1, 0, msg, 0, "manager.lua", nil)
 end
 
 ---@class AudioManager
@@ -38,15 +38,15 @@ end
 function AudioManager:init()
     local ok, ma = pcall(require, "miniaudio")
     if ok and ma then
-        local engine = ma.EngineInit()
+        local engine = ma.engine_init()
         if engine then
-            engine:Start()
+            engine:start()
             self.engine_initialized = true
             self.engine = engine
             self._ma = ma
             return true
         else
-            return false, "EngineInit failed"
+            return false, "engine_init failed"
         end
     end
 
@@ -59,7 +59,7 @@ end
 --- Shutdown the audio engine
 function AudioManager:shutdown()
     if self.engine then
-        self.engine:Stop()
+        self.engine:stop()
     end
     self.sounds = {}
     self.engine = nil
@@ -82,7 +82,7 @@ end
 local function try_load_sound(ma, engine, path)
     -- Try original path first
     if file_exists(path) then
-        local ok, sound = pcall(ma.SoundInitFromFile, engine, path, 0)
+        local ok, sound = pcall(ma.sound_init_from_file, engine, path, 0)
         if ok and sound then
             return sound
         end
@@ -96,7 +96,7 @@ local function try_load_sound(ma, engine, path)
             local alt_path = base .. ext
             local exists = file_exists(alt_path)
             if exists then
-                local ok, sound = pcall(ma.SoundInitFromFile, engine, alt_path, 0)
+                local ok, sound = pcall(ma.sound_init_from_file, engine, alt_path, 0)
                 if ok and sound then
                     return sound
                 else
@@ -151,8 +151,8 @@ function AudioManager:play(wav_id)
     -- Reset and start the sound
     if self._ma then
         pcall(function()
-            sound:SeekToPcmFrame(0)
-            sound:Start()
+            sound:seek_to_pcm_frame(0)
+            sound:start()
         end)
     end
 end
@@ -175,7 +175,7 @@ function AudioManager:stop_all()
         for _, sound in pairs(self.sounds) do
             if not sound.dummy then
                 pcall(function()
-                    sound:Stop()
+                    sound:stop()
                 end)
             end
         end

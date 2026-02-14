@@ -114,7 +114,7 @@ public class OpaqueTypeGenTests
     {
         var code = CBindingGen.Generate(OpaqueSpec());
         Assert.Contains("luaopen_miniaudio", code);
-        Assert.Contains("{\"EngineInit\", l_ma_engine_new}", code);
+        Assert.Contains("{\"engine_init\", l_ma_engine_new}", code);
     }
 
     [Fact]
@@ -170,7 +170,7 @@ public class OpaqueTypeGenTests
     public void Lua_ContainsConstructorInModule()
     {
         var code = LuaCatsGen.Generate(OpaqueSpec());
-        Assert.Contains("---@field EngineInit fun(config?: any): miniaudio.Engine", code);
+        Assert.Contains("---@field engine_init fun(config?: any): miniaudio.Engine", code);
     }
 
     [Fact]

@@ -11,30 +11,30 @@ local ma = require("miniaudio")
 
 -- === Constants ===
 
-local SCREEN_W = 200
-local SCREEN_H = 300
-local BOARD_W = 8
-local BOARD_H = 16
-local STONE_W = 16
-local STONE_H = 16
-local PICK_MAX = 6
-local RESERVE_NUM = 6
-local JAMMER_TURN = 5
-local WAIT_ERASE_FRAME = 15
-local NUMBER_W = 16
-local NUMBER_H = 32
-local ALPHA_W = 16
-local ALPHA_H = 16
-local ORIGIN_X = 10
-local ORIGIN_Y = -10 + SCREEN_H - STONE_H * BOARD_H
+local SCREEN_W <const> = 200
+local SCREEN_H <const> = 300
+local BOARD_W <const> = 8
+local BOARD_H <const> = 16
+local STONE_W <const> = 16
+local STONE_H <const> = 16
+local PICK_MAX <const> = 6
+local RESERVE_NUM <const> = 6
+local JAMMER_TURN <const> = 5
+local WAIT_ERASE_FRAME <const> = 15
+local NUMBER_W <const> = 16
+local NUMBER_H <const> = 32
+local ALPHA_W <const> = 16
+local ALPHA_H <const> = 16
+local ORIGIN_X <const> = 10
+local ORIGIN_Y <const> = -10 + SCREEN_H - STONE_H * BOARD_H
 
 -- Special number tile indices
-local NUM_CROSS = 10
-local NUM_EQUAL = 11
-local NUM_PERIOD = 12
-local NUM_E = 13
-local NUM_N = 14
-local NUM_D = 15
+local NUM_CROSS <const> = 10
+local NUM_EQUAL <const> = 11
+local NUM_PERIOD <const> = 12
+local NUM_E <const> = 13
+local NUM_N <const> = 14
+local NUM_D <const> = 15
 
 -- Color enum
 local Color = {
@@ -103,7 +103,7 @@ end
 
 -- === Module ===
 
-local TICK_DT = 1 / 30
+local TICK_DT <const> = 1 / 30
 
 local M = {}
 M.width = 400
@@ -423,22 +423,22 @@ end
 function M:audio_init()
     self.audio = {}
     self.audio.engine, self.audio.vfs = audio_lib.create_engine()
-    self.audio.engine:Start()
-    self.audio.engine:SetVolume(0.4)
+    self.audio.engine:start()
+    self.audio.engine:set_volume(0.4)
 
-    self.audio.bgm = ma.SoundInitFromFile(self.audio.engine, "examples/cna/assets/bgm.ogg", 0)
-    self.audio.bgm:SetLooping(true)
+    self.audio.bgm = ma.sound_init_from_file(self.audio.engine, "examples/cna/assets/bgm.ogg", 0)
+    self.audio.bgm:set_looping(true)
 
-    self.audio.bgm_off = ma.SoundInitFromFile(self.audio.engine, "examples/cna/assets/bgm_off.ogg", 0)
-    self.audio.bgm_off:SetLooping(true)
+    self.audio.bgm_off = ma.sound_init_from_file(self.audio.engine, "examples/cna/assets/bgm_off.ogg", 0)
+    self.audio.bgm_off:set_looping(true)
 
     self.audio.sfx = {}
     for i = 1, 4 do
-        self.audio.sfx[i] = ma.SoundInitFromFile(self.audio.engine, "examples/cna/assets/S" .. i .. ".ogg", 0)
+        self.audio.sfx[i] = ma.sound_init_from_file(self.audio.engine, "examples/cna/assets/S" .. i .. ".ogg", 0)
     end
 
     if self.audio.bgm_off then
-        self.audio.bgm_off:Start()
+        self.audio.bgm_off:start()
     end
 end
 
@@ -447,15 +447,15 @@ function M:audio_play_music(on)
         return
     end
     if on then
-        local frame = self.audio.bgm_off:GetTimeInPcmFrames()
-        self.audio.bgm:SeekToPcmFrame(frame)
-        self.audio.bgm:Start()
-        self.audio.bgm_off:Stop()
+        local frame = self.audio.bgm_off:get_time_in_pcm_frames()
+        self.audio.bgm:seek_to_pcm_frame(frame)
+        self.audio.bgm:start()
+        self.audio.bgm_off:stop()
     else
-        local frame = self.audio.bgm:GetTimeInPcmFrames()
-        self.audio.bgm_off:SeekToPcmFrame(frame)
-        self.audio.bgm_off:Start()
-        self.audio.bgm:Stop()
+        local frame = self.audio.bgm:get_time_in_pcm_frames()
+        self.audio.bgm_off:seek_to_pcm_frame(frame)
+        self.audio.bgm_off:start()
+        self.audio.bgm:stop()
     end
 end
 
@@ -465,8 +465,8 @@ function M:audio_play_sfx(idx)
     end
     local s = self.audio.sfx[idx]
     if s then
-        s:SeekToPcmFrame(0)
-        s:Start()
+        s:seek_to_pcm_frame(0)
+        s:start()
     end
 end
 
@@ -698,8 +698,8 @@ end
 -- === Callbacks ===
 
 function M:init()
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
     self.tex_result = texture.load("examples/cna/assets/texture.png", {
@@ -733,14 +733,14 @@ function M:frame()
         return
     end
 
-    local frame_dt = app.FrameDuration()
+    local frame_dt = app.frame_duration()
     self.time_acc = (self.time_acc or 0) + frame_dt
     while self.time_acc >= TICK_DT do
         self.time_acc = self.time_acc - TICK_DT
         self:game_update()
     end
 
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = {
                 gfx.ColorAttachmentAction({
@@ -749,7 +749,7 @@ function M:frame()
                 }),
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
     self:render_board()
@@ -767,13 +767,13 @@ function M:frame()
 
     sprite.flush(self.batch)
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:event(ev)
-    local scale_x = SCREEN_W / app.Widthf()
-    local scale_y = SCREEN_H / app.Heightf()
+    local scale_x = SCREEN_W / app.widthf()
+    local scale_y = SCREEN_H / app.heightf()
 
     if ev.type == app.EventType.MOUSE_MOVE then
         self.game.mouse_x = ev.mouse_x * scale_x
@@ -784,7 +784,7 @@ function M:event(ev)
         self.game.clicked = true
     elseif ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.Q or ev.key_code == app.Keycode.ESCAPE then
-            app.Quit()
+            app.quit()
         end
     end
 end
@@ -802,7 +802,7 @@ function M:cleanup()
         self.tex_result.smp:destroy()
         self.tex_result = nil
     end
-    gfx.Shutdown()
+    gfx.shutdown()
     log.info("cut'n'align cleanup")
 end
 

@@ -40,26 +40,26 @@ local imgui_pass = {
             action = gfx.PassAction({
                 colors = { { load_action = gfx.LoadAction.LOAD } },
             }),
-            swapchain = glue.Swapchain(),
+            swapchain = glue.swapchain(),
         })
     end,
     execute = function()
-        notify.draw(app.Width(), app.Height())
-        imgui.Render()
+        notify.draw(app.width(), app.height())
+        imgui.render()
     end,
 }
 
 -- Update UI (called before pipeline.execute)
 local function update_ui()
-    if imgui.Begin("Rendering") then
-        imgui.TextUnformatted("Modular Rendering Pipeline")
-        imgui.Separator()
-        imgui.TextUnformatted(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
-        imgui.TextUnformatted("WASD: Move, Mouse: Look (right-click to capture)")
-        imgui.Separator()
+    if imgui.begin_window("Rendering") then
+        imgui.text_unformatted("Modular Rendering Pipeline")
+        imgui.separator()
+        imgui.text_unformatted(string.format("Camera: %.1f, %.1f, %.1f", camera.pos.x, camera.pos.y, camera.pos.z))
+        imgui.text_unformatted("WASD: Move, Mouse: Look (right-click to capture)")
+        imgui.separator()
 
         -- Global ambient
-        local achanged, new_ambient = imgui.ColorEdit3(
+        local achanged, new_ambient = imgui.color_edit3(
             "Global Ambient",
             { light.light_model_ambient.x, light.light_model_ambient.y, light.light_model_ambient.z }
         )
@@ -67,97 +67,97 @@ local function update_ui()
             light.light_model_ambient = glm.vec4(new_ambient[1], new_ambient[2], new_ambient[3], 1.0)
         end
 
-        imgui.TextUnformatted(string.format("Active Lights: %d / %d", #light.sources, light.NUMBER_OF_LIGHTS))
+        imgui.text_unformatted(string.format("Active Lights: %d / %d", #light.sources, light.NUMBER_OF_LIGHTS))
 
         -- Blinn-Phong toggle
-        local bp_changed, bp_new = imgui.Checkbox("Blinn-Phong", light.blinn_phong_enabled)
+        local bp_changed, bp_new = imgui.checkbox("Blinn-Phong", light.blinn_phong_enabled)
         if bp_changed then
             light.blinn_phong_enabled = bp_new
         end
 
-        local fr_changed, fr_new = imgui.Checkbox("Fresnel", light.fresnel_enabled)
+        local fr_changed, fr_new = imgui.checkbox("Fresnel", light.fresnel_enabled)
         if fr_changed then
             light.fresnel_enabled = fr_new
         end
 
         if light.fresnel_enabled then
-            imgui.SameLine()
-            local fp_changed, fp = imgui.SliderFloat("Max Power", light.max_fresnel_power, 0.1, 10.0)
+            imgui.same_line()
+            local fp_changed, fp = imgui.slider_float("Max Power", light.max_fresnel_power, 0.1, 10.0)
             if fp_changed then
                 light.max_fresnel_power = fp
             end
         end
 
-        local rl_changed, rl_new = imgui.Checkbox("Rim Light", light.rim_light_enabled)
+        local rl_changed, rl_new = imgui.checkbox("Rim Light", light.rim_light_enabled)
         if rl_changed then
             light.rim_light_enabled = rl_new
         end
 
         -- Debug mode
-        if imgui.TreeNode_Str("Debug") then
+        if imgui.tree_node_str("Debug") then
             local debug_labels = { "Off", "Fresnel", "Normal", "Specular Map" }
             for i, label in ipairs(debug_labels) do
-                if imgui.RadioButton_Str_Bool(label, light.debug_mode == i - 1) then
+                if imgui.radio_button_str_bool(label, light.debug_mode == i - 1) then
                     light.debug_mode = i - 1
                 end
             end
-            imgui.TreePop()
+            imgui.tree_pop()
         end
 
         -- Animation controls
-        if imgui.TreeNode_Str("Day/Night Cycle") then
-            local anim_changed, anim_new = imgui.Checkbox("Animate", light.animate_enabled)
+        if imgui.tree_node_str("Day/Night Cycle") then
+            local anim_changed, anim_new = imgui.checkbox("Animate", light.animate_enabled)
             if anim_changed then
                 light.animate_enabled = anim_new
             end
 
-            local pitch_changed, pitch = imgui.SliderFloat("Sun Angle", light.sun_pitch, 0, 360)
+            local pitch_changed, pitch = imgui.slider_float("Sun Angle", light.sun_pitch, 0, 360)
             if pitch_changed then
                 light.sun_pitch = pitch
                 light.animate(0)
             end
 
-            local speed_changed, speed = imgui.SliderFloat("Speed", light.animation_speed, 0, 100)
+            local speed_changed, speed = imgui.slider_float("Speed", light.animation_speed, 0, 100)
             if speed_changed then
                 light.animation_speed = speed
             end
 
-            if imgui.Button("Midday") then
+            if imgui.button("Midday") then
                 light.set_time("midday")
             end
-            imgui.SameLine()
-            if imgui.Button("Midnight") then
+            imgui.same_line()
+            if imgui.button("Midnight") then
                 light.set_time("midnight")
             end
 
-            imgui.TreePop()
+            imgui.tree_pop()
         end
 
         -- Edit each light
         for i, src in ipairs(light.sources) do
-            if imgui.TreeNode_Str("Light " .. i) then
+            if imgui.tree_node_str("Light " .. i) then
                 local is_directional = src.position.w == 0
                 local is_spot = src.spot_params.y > -1.0
 
                 if is_directional then
-                    imgui.TextUnformatted("Type: Directional")
+                    imgui.text_unformatted("Type: Directional")
                     -- Direction (stored negated in position.xyz)
                     local dchanged, new_dir =
-                        imgui.InputFloat3("Direction", { -src.position.x, -src.position.y, -src.position.z })
+                        imgui.input_float3("Direction", { -src.position.x, -src.position.y, -src.position.z })
                     if dchanged then
                         local dir = glm.vec3(new_dir[1], new_dir[2], new_dir[3]):normalize()
                         src.position = glm.vec4(-dir.x, -dir.y, -dir.z, 0)
                     end
                 else
-                    imgui.TextUnformatted(is_spot and "Type: Spotlight" or "Type: Point")
+                    imgui.text_unformatted(is_spot and "Type: Spotlight" or "Type: Point")
                     local pchanged, new_pos =
-                        imgui.InputFloat3("Position", { src.position.x, src.position.y, src.position.z })
+                        imgui.input_float3("Position", { src.position.x, src.position.y, src.position.z })
                     if pchanged then
                         src.position = glm.vec4(new_pos[1], new_pos[2], new_pos[3], src.position.w)
                     end
 
                     if is_spot then
-                        local sdchanged, new_spot_dir = imgui.InputFloat3(
+                        local sdchanged, new_spot_dir = imgui.input_float3(
                             "Spot Dir",
                             { src.spot_direction.x, src.spot_direction.y, src.spot_direction.z }
                         )
@@ -166,7 +166,7 @@ local function update_ui()
                             src.spot_direction = glm.vec4(dir.x, dir.y, dir.z, src.spot_direction.w)
                         end
 
-                        local expchanged, exp = imgui.SliderFloat("Exponent", src.spot_direction.w, 0, 20)
+                        local expchanged, exp = imgui.slider_float("Exponent", src.spot_direction.w, 0, 20)
                         if expchanged then
                             src.spot_direction =
                                 glm.vec4(src.spot_direction.x, src.spot_direction.y, src.spot_direction.z, exp)
@@ -175,25 +175,25 @@ local function update_ui()
 
                     -- Attenuation
                     local atchanged, new_atten =
-                        imgui.InputFloat3("Atten (c,l,q)", { src.attenuation.x, src.attenuation.y, src.attenuation.z })
+                        imgui.input_float3("Atten (c,l,q)", { src.attenuation.x, src.attenuation.y, src.attenuation.z })
                     if atchanged then
                         src.attenuation = glm.vec4(new_atten[1], new_atten[2], new_atten[3], 0)
                     end
                 end
 
                 -- Color (diffuse)
-                local cchanged, new_color = imgui.ColorEdit3("Color", { src.diffuse.x, src.diffuse.y, src.diffuse.z })
+                local cchanged, new_color = imgui.color_edit3("Color", { src.diffuse.x, src.diffuse.y, src.diffuse.z })
                 if cchanged then
                     src.color = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
                     src.diffuse = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
                     src.specular = glm.vec4(new_color[1], new_color[2], new_color[3], 1.0)
                 end
 
-                imgui.TreePop()
+                imgui.tree_pop()
             end
         end
     end
-    imgui.End()
+    imgui.end_window()
 end
 
 local function load_model()
@@ -366,7 +366,7 @@ local function load_model()
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
-                data = { mip_levels = { white } },
+                data = { mip_levels = { gfx.Range(white) } },
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
@@ -382,7 +382,7 @@ local function load_model()
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
-                data = { mip_levels = { flat } },
+                data = { mip_levels = { gfx.Range(flat) } },
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
@@ -398,7 +398,7 @@ local function load_model()
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
-                data = { mip_levels = { spec } },
+                data = { mip_levels = { gfx.Range(spec) } },
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
@@ -444,17 +444,17 @@ end
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
     log.info("Rendering Pipeline init")
-    imgui.Setup()
+    imgui.setup()
     notify.setup()
 
     ctx.init()
 
-    local width, height = app.Width(), app.Height()
+    local width, height = app.width(), app.height()
     ctx.ensure_size(width, height)
 
     -- Register passes
@@ -466,7 +466,7 @@ function M:init()
 end
 
 function M:frame()
-    local width, height = app.Width(), app.Height()
+    local width, height = app.width(), app.height()
     ctx.ensure_size(width, height)
 
     -- Camera update
@@ -475,11 +475,11 @@ function M:frame()
     local proj = camera.projection_matrix(width, height)
     local model_mat = glm.mat4()
 
-    -- Animate lights (uses app.FrameDuration for delta time)
-    local dt = app.FrameDuration()
+    -- Animate lights (uses app.frame_duration for delta time)
+    local dt = app.frame_duration()
     light.animate(dt)
 
-    imgui.NewFrame()
+    imgui.new_frame()
     update_ui()
 
     -- Reset outputs
@@ -499,7 +499,7 @@ function M:frame()
 end
 
 function M:cleanup()
-    imgui.Shutdown()
+    imgui.shutdown()
     notify.shutdown()
 
     -- Destroy pipeline and passes
@@ -534,11 +534,11 @@ function M:cleanup()
     default_specular = nil
 
     log.info("cleanup")
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
-    if imgui.HandleEvent(ev) then
+    if imgui.handle_event(ev) then
         return
     end
 
@@ -547,7 +547,7 @@ function M:event(ev)
     end
 
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.ESCAPE then
-        app.RequestQuit()
+        app.request_quit()
     end
 end
 

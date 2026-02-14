@@ -421,7 +421,7 @@ public static class CBindingGen
         foreach (var ot in spec.OpaqueTypes)
         {
             if (ot.InitFunc != null)
-                regEntries.Add(($"{ot.PascalName}Init", $"l_{ot.CName}_new"));
+                regEntries.Add((Pipeline.StripPrefix(ot.InitFunc, spec.Prefix), $"l_{ot.CName}_new"));
         }
 
         // Extra lua regs (before functions for consistent ordering)

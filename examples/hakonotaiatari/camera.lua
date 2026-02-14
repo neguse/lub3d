@@ -108,8 +108,8 @@ end
 -- Get projection matrix
 function Camera:projection(fov)
     fov = fov or 45
-    local w = app.Widthf()
-    local h = app.Heightf()
+    local w = app.widthf()
+    local h = app.heightf()
     local aspect = w / h
     return glm.perspective(glm.radians(fov), aspect, 1.0, 5000.0)
 end

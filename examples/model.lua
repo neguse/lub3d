@@ -4,7 +4,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local texture = require("lib.texture")
 local util = require("lib.util")
 local glm = require("lib.glm")
@@ -224,16 +224,16 @@ end
 -- Create a default 1x1 texture (returns view, sampler)
 local function create_default_texture(r, g, b)
     local pixels = string.char(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), 255)
-    local img = gfx.MakeImage(gfx.ImageDesc({
+    local img = gfx.make_image(gfx.ImageDesc({
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
-        data = { mip_levels = { pixels } },
+        data = { mip_levels = { gfx.Range(pixels) } },
     }))
-    local view = gfx.MakeView(gfx.ViewDesc({
+    local view = gfx.make_view(gfx.ViewDesc({
         texture = { image = img },
     }))
-    local smp = gfx.MakeSampler(gfx.SamplerDesc({
+    local smp = gfx.make_sampler(gfx.SamplerDesc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
     }))
@@ -245,8 +245,8 @@ local default_normal_view, default_normal_smp
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
     log.info("Model loading example init")
@@ -323,7 +323,7 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 3 },
         },
     }
-    shader = shaderMod.compile_full(shader_source, "model", shader_desc)
+    shader = shader_mod.compile_full(shader_source, "model", shader_desc)
 
     if not shader then
         log.error("Failed to compile shader")
@@ -331,7 +331,7 @@ function M:init()
     end
 
     -- Create pipeline
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -368,7 +368,7 @@ function M:init()
             local verts_with_tangents = add_tangents(mesh.vertices)
 
             if #verts_with_tangents > 0 then
-                local vbuf = gfx.MakeBuffer(gfx.BufferDesc({
+                local vbuf = gfx.make_buffer(gfx.BufferDesc({
                     data = gfx.Range(util.pack_floats(verts_with_tangents)),
                 }))
 
@@ -458,8 +458,8 @@ function M:frame()
     end
 
     -- Matrices
-    local w = app.Width()
-    local h = app.Height()
+    local w = app.width()
+    local h = app.height()
     local aspect = w / h
 
     local proj = glm.perspective(math.rad(60), aspect, 0.1, 500)
@@ -469,7 +469,7 @@ function M:frame()
     local model = glm.mat4() -- identity
 
     -- Begin pass
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = {
                 {
@@ -482,16 +482,16 @@ function M:frame()
                 clear_value = 1.0,
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
-    gfx.ApplyPipeline(pipeline)
+    gfx.apply_pipeline(pipeline)
 
     local mvp = proj * view * model
 
     -- Draw all meshes
     for _, mesh in ipairs(meshes) do
-        gfx.ApplyBindings(gfx.Bindings({
+        gfx.apply_bindings(gfx.Bindings({
             vertex_buffers = { mesh.vbuf },
             views = { mesh.diffuse_view, mesh.normal_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp },
@@ -523,12 +523,12 @@ function M:frame()
                 mat.shininess or 32,
             })
 
-        gfx.ApplyUniforms(0, gfx.Range(uniforms))
-        gfx.Draw(0, mesh.vertex_count, 1)
+        gfx.apply_uniforms(0, gfx.Range(uniforms))
+        gfx.draw(0, mesh.vertex_count, 1)
     end
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 local event_logged = false
@@ -543,8 +543,8 @@ function M:event(ev)
         log.info("KEY_DOWN: " .. tostring(key))
         if key == app.Keycode.ESCAPE then
             mouse_captured = false
-            app.ShowMouse(true)
-            app.LockMouse(false)
+            app.show_mouse(true)
+            app.lock_mouse(false)
         elseif key == app.Keycode.W then
             keys_down["W"] = true
         elseif key == app.Keycode.S then
@@ -583,8 +583,8 @@ function M:event(ev)
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
-        app.ShowMouse(false)
-        app.LockMouse(true)
+        app.show_mouse(false)
+        app.lock_mouse(true)
     elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
             local dx = ev.mouse_dx
@@ -606,7 +606,7 @@ function M:cleanup()
     textures_cache = {}
 
     log.info("Model cleanup")
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 return M

@@ -37,7 +37,7 @@ function M.end_frame()
     dash_pressed = false
 end
 
-function M.getAxis()
+function M.get_axis()
     local x, y = 0, 0
     if keys_down[app.Keycode.LEFT] then x = x - 1 end
     if keys_down[app.Keycode.RIGHT] then x = x + 1 end
@@ -50,7 +50,7 @@ function M.getAxis()
     return x, y
 end
 
-function M.getJump()
+function M.get_jump()
     if jump_pressed then
         jump_pressed = false
         return true
@@ -58,9 +58,9 @@ function M.getJump()
     return false
 end
 
-function M.getDash()
+function M.get_dash()
     if dash_pressed then
-        local ix = M.getAxis()
+        local ix = M.get_axis()
         if math.abs(ix) > 0.02 then
             dash_pressed = false
             return true

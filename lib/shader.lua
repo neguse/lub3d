@@ -137,7 +137,7 @@ end
 
 -- Get shader language for current backend
 function M.get_lang()
-    local backend = gfx.QueryBackend()
+    local backend = gfx.query_backend()
     if backend == gfx.Backend.D3D11 then
         return "hlsl5"
     elseif
@@ -208,7 +208,7 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
     )
 
     -- Create shader using generated bindings
-    local backend = gfx.QueryBackend()
+    local backend = gfx.query_backend()
     local is_source = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3 or backend == gfx.Backend.WGPU)
 
     local vs_data, fs_data
@@ -250,8 +250,8 @@ function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_
             }
     end
 
-    local shd = gfx.MakeShader(gfx.ShaderDesc(desc_table))
-    if gfx.QueryShaderState(shd) ~= gfx.ResourceState.VALID then
+    local shd = gfx.make_shader(gfx.ShaderDesc(desc_table))
+    if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
         log.error("Failed to create shader")
         return nil
     end
@@ -307,7 +307,7 @@ function M.compile_full(source, program_name, shader_desc)
         .. tostring(result.fs_source and #result.fs_source or "nil")
     )
 
-    local backend = gfx.QueryBackend()
+    local backend = gfx.query_backend()
     local is_source = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3 or backend == gfx.Backend.WGPU)
 
     local vs_data, fs_data
@@ -346,8 +346,8 @@ function M.compile_full(source, program_name, shader_desc)
         desc_table.attrs = shader_desc.attrs
     end
 
-    local shd = gfx.MakeShader(gfx.ShaderDesc(desc_table))
-    if gfx.QueryShaderState(shd) ~= gfx.ResourceState.VALID then
+    local shd = gfx.make_shader(gfx.ShaderDesc(desc_table))
+    if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
         log.error("Failed to create shader")
         return nil
     end

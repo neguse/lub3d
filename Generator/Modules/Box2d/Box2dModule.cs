@@ -503,7 +503,7 @@ public class Box2dModule : IModule
     // ===== 名前変換 =====
 
     /// <summary>
-    /// Box2D 関数名 → Lua 名
+    /// Box2D 関数名 → Lua 名 (snake_case)
     /// b2CreateWorld → create_world
     /// b2World_Step → world_step
     /// b2Body_GetPosition → body_get_position
@@ -513,41 +513,18 @@ public class Box2dModule : IModule
     private static string ToLuaFuncName(string cName)
     {
         var stripped = Pipeline.StripPrefix(cName, "b2");
-        return ToSnakeCase(stripped);
-    }
-
-    /// <summary>PascalCase / CamelCase → snake_case (underscore preserving)</summary>
-    private static string ToSnakeCase(string s)
-    {
-        var result = new System.Text.StringBuilder();
-        for (var i = 0; i < s.Length; i++)
-        {
-            var c = s[i];
-            if (c == '_')
-            {
-                result.Append('_');
-                continue;
-            }
-            if (char.IsUpper(c) && i > 0 && s[i - 1] != '_')
-            {
-                // Don't add underscore between consecutive capitals (e.g., "AABB" → "aabb")
-                if (char.IsLower(s[i - 1]) || (i + 1 < s.Length && char.IsLower(s[i + 1])))
-                    result.Append('_');
-            }
-            result.Append(char.ToLower(c));
-        }
-        return result.ToString();
+        return Pipeline.ToSnakeCase(stripped);
     }
 
     /// <summary>Box2D enum item name → Lua name (strip common prefix)</summary>
     private static string B2EnumItemName(string itemName, string enumName)
     {
-        // b2_staticBody → STATICBODY, b2_dynamicBody → DYNAMICBODY
+        // b2_staticBody → STATIC_BODY, b2_dynamicBody → DYNAMIC_BODY
         var stripped = Pipeline.StripPrefix(itemName, "b2_");
-        return stripped.ToUpper();
+        return Pipeline.ToUpperSnakeCase(stripped);
     }
 
-    private static string MapFieldName(string name) => name;
+    private static string MapFieldName(string name) => Pipeline.ToSnakeCase(name);
 
     /// <summary>Top-level functions (not inline math)</summary>
     private static bool IsTopLevelFunc(string name) =>
@@ -598,7 +575,7 @@ public class Box2dModule : IModule
             return 1;
         }
 
-        /* Contact events → {begin={...}, end_={...}, hit={...}} */
+        /* Contact events → {begin_events={...}, end_events={...}, hit_events={...}} */
         static int l_b2d_world_get_contact_events(lua_State *L) {
             b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
             b2ContactEvents events = b2World_GetContactEvents(worldId);
@@ -612,43 +589,43 @@ public class Box2dModule : IModule
                 b2ShapeId* sidA = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sidA = events.beginEvents[i].shapeIdA;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shapeIdA");
+                lua_setfield(L, -2, "shape_id_a");
                 b2ShapeId* sidB = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sidB = events.beginEvents[i].shapeIdB;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shapeIdB");
+                lua_setfield(L, -2, "shape_id_b");
                 lua_rawseti(L, -2, i + 1);
             }
-            lua_setfield(L, -2, "begin");
+            lua_setfield(L, -2, "begin_events");
 
-            /* end_ (avoid Lua keyword) */
+            /* endEvents */
             lua_newtable(L);
             for (int i = 0; i < events.endCount; i++) {
                 lua_newtable(L);
                 b2ShapeId* sidA = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sidA = events.endEvents[i].shapeIdA;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shapeIdA");
+                lua_setfield(L, -2, "shape_id_a");
                 b2ShapeId* sidB = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sidB = events.endEvents[i].shapeIdB;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shapeIdB");
+                lua_setfield(L, -2, "shape_id_b");
                 lua_rawseti(L, -2, i + 1);
             }
-            lua_setfield(L, -2, "end_");
+            lua_setfield(L, -2, "end_events");
 
-            /* hit */
+            /* hitEvents */
             lua_newtable(L);
             for (int i = 0; i < events.hitCount; i++) {
                 lua_newtable(L);
                 b2ShapeId* sidA = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sidA = events.hitEvents[i].shapeIdA;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shapeIdA");
+                lua_setfield(L, -2, "shape_id_a");
                 b2ShapeId* sidB = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sidB = events.hitEvents[i].shapeIdB;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shapeIdB");
+                lua_setfield(L, -2, "shape_id_b");
                 lua_newtable(L);
                 lua_pushnumber(L, events.hitEvents[i].point.x); lua_rawseti(L, -2, 1);
                 lua_pushnumber(L, events.hitEvents[i].point.y); lua_rawseti(L, -2, 2);
@@ -658,15 +635,15 @@ public class Box2dModule : IModule
                 lua_pushnumber(L, events.hitEvents[i].normal.y); lua_rawseti(L, -2, 2);
                 lua_setfield(L, -2, "normal");
                 lua_pushnumber(L, events.hitEvents[i].approachSpeed);
-                lua_setfield(L, -2, "approachSpeed");
+                lua_setfield(L, -2, "approach_speed");
                 lua_rawseti(L, -2, i + 1);
             }
-            lua_setfield(L, -2, "hit");
+            lua_setfield(L, -2, "hit_events");
 
             return 1;
         }
 
-        /* Sensor events → {begin={...}, end_={...}} */
+        /* Sensor events → {begin_events={...}, end_events={...}} */
         static int l_b2d_world_get_sensor_events(lua_State *L) {
             b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
             b2SensorEvents events = b2World_GetSensorEvents(worldId);
@@ -679,14 +656,14 @@ public class Box2dModule : IModule
                 b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sid = events.beginEvents[i].sensorShapeId;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "sensorShapeId");
+                lua_setfield(L, -2, "sensor_shape_id");
                 sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sid = events.beginEvents[i].visitorShapeId;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "visitorShapeId");
+                lua_setfield(L, -2, "visitor_shape_id");
                 lua_rawseti(L, -2, i + 1);
             }
-            lua_setfield(L, -2, "begin");
+            lua_setfield(L, -2, "begin_events");
 
             lua_newtable(L);
             for (int i = 0; i < events.endCount; i++) {
@@ -694,19 +671,19 @@ public class Box2dModule : IModule
                 b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sid = events.endEvents[i].sensorShapeId;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "sensorShapeId");
+                lua_setfield(L, -2, "sensor_shape_id");
                 sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
                 *sid = events.endEvents[i].visitorShapeId;
                 luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "visitorShapeId");
+                lua_setfield(L, -2, "visitor_shape_id");
                 lua_rawseti(L, -2, i + 1);
             }
-            lua_setfield(L, -2, "end_");
+            lua_setfield(L, -2, "end_events");
 
             return 1;
         }
 
-        /* Body events → {move={...}} */
+        /* Body events → {move_events={...}} */
         static int l_b2d_world_get_body_events(lua_State *L) {
             b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
             b2BodyEvents events = b2World_GetBodyEvents(worldId);
@@ -729,12 +706,12 @@ public class Box2dModule : IModule
                 b2BodyId* bid = (b2BodyId*)lua_newuserdatauv(L, sizeof(b2BodyId), 0);
                 *bid = events.moveEvents[i].bodyId;
                 luaL_setmetatable(L, "b2d.BodyId");
-                lua_setfield(L, -2, "bodyId");
+                lua_setfield(L, -2, "body_id");
                 lua_pushboolean(L, events.moveEvents[i].fellAsleep);
-                lua_setfield(L, -2, "fellAsleep");
+                lua_setfield(L, -2, "fell_asleep");
                 lua_rawseti(L, -2, i + 1);
             }
-            lua_setfield(L, -2, "move");
+            lua_setfield(L, -2, "move_events");
 
             return 1;
         }
@@ -791,7 +768,7 @@ public class Box2dModule : IModule
             b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
             *sid = result.shapeId;
             luaL_setmetatable(L, "b2d.ShapeId");
-            lua_setfield(L, -2, "shapeId");
+            lua_setfield(L, -2, "shape_id");
             lua_newtable(L);
             lua_pushnumber(L, result.point.x); lua_rawseti(L, -2, 1);
             lua_pushnumber(L, result.point.y); lua_rawseti(L, -2, 2);

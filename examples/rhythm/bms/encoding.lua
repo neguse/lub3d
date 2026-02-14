@@ -12,7 +12,7 @@ end
 
 -- Common Shift_JIS to UTF-8 mappings (subset for BMS files)
 -- Full conversion would require a complete mapping table
-local SJIS_TO_UTF8 = {
+local SJIS_TO_UTF8 <const> = {
     -- Half-width katakana (0xA1-0xDF)
     [0xA1] = "\xEF\xBD\xA1", -- ｡
     [0xA2] = "\xEF\xBD\xA2", -- ｢

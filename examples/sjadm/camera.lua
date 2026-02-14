@@ -16,21 +16,21 @@ function camera.new()
 end
 
 function camera:push()
-    gl.PushMatrix()
-    local w = app.Widthf()
-    local h = app.Heightf()
+    gl.push_matrix()
+    local w = app.widthf()
+    local h = app.heightf()
     -- screen center
-    gl.Translate(w / 2, h / 2, 0)
+    gl.translate(w / 2, h / 2, 0)
     -- camera zoom
-    gl.Scale(self.s, self.s, 1)
+    gl.scale(self.s, self.s, 1)
     -- camera pan (y inverted for screen coords)
-    gl.Translate(-self.x, self.y, 0)
+    gl.translate(-self.x, self.y, 0)
     -- flip Y so physics Y-up becomes screen Y-down
-    gl.Scale(1, -1, 1)
+    gl.scale(1, -1, 1)
 end
 
 function camera:pop()
-    gl.PopMatrix()
+    gl.pop_matrix()
 end
 
 function camera:update(dt)

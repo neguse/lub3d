@@ -29,8 +29,8 @@ local colors = {
 ---Initialize debugtext (call once in init)
 function M.setup()
     if initialized then return end
-    sdtx.Setup(sdtx.Desc({
-        fonts = { sdtx.FontOric() },
+    sdtx.setup(sdtx.Desc({
+        fonts = { sdtx.font_oric() },
     }))
     initialized = true
 end
@@ -38,7 +38,7 @@ end
 ---Shutdown debugtext
 function M.shutdown()
     if not initialized then return end
-    sdtx.Shutdown()
+    sdtx.shutdown()
     initialized = false
 end
 
@@ -76,8 +76,8 @@ function M.draw(width, height)
     local now = os.clock()
     local y = 1.0                      -- Start from top
 
-    sdtx.Canvas(width / 4, height / 4) -- smaller text (more chars = smaller font)
-    sdtx.Origin(0, 0)
+    sdtx.canvas(width / 4, height / 4) -- smaller text (more chars = smaller font)
+    sdtx.origin(0, 0)
 
     local visible = 0
     for i, n in ipairs(notifications) do
@@ -95,14 +95,14 @@ function M.draw(width, height)
             end
 
             local c = colors[n.level] or colors.info
-            sdtx.Color4f(c[1], c[2], c[3], alpha)
-            sdtx.Pos(1, y)
-            sdtx.Puts(n.text)
+            sdtx.color4f(c[1], c[2], c[3], alpha)
+            sdtx.pos(1, y)
+            sdtx.puts(n.text)
             y = y + 1
         end
     end
 
-    sdtx.Draw()
+    sdtx.draw()
 
     -- Cleanup old notifications
     for i = #notifications, 1, -1 do

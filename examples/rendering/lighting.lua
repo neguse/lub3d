@@ -351,7 +351,7 @@ function M.get_pass_desc(ctx)
         action = gfx.PassAction({
             colors = { { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 } } },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     })
 end
 
@@ -359,8 +359,8 @@ end
 ---@param ctx rendering.Context
 ---@param frame_data {light_uniforms: string}
 function M.execute(ctx, frame_data)
-    gfx.ApplyPipeline(M.resources.pipeline.handle)
-    gfx.ApplyBindings(gfx.Bindings({
+    gfx.apply_pipeline(M.resources.pipeline.handle)
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { ctx.quad_vbuf.handle },
         views = {
             ctx.outputs.gbuf_position.handle,
@@ -376,8 +376,8 @@ function M.execute(ctx, frame_data)
         },
     }))
 
-    gfx.ApplyUniforms(0, gfx.Range(frame_data.light_uniforms))
-    gfx.Draw(0, 6, 1)
+    gfx.apply_uniforms(0, gfx.Range(frame_data.light_uniforms))
+    gfx.draw(0, 6, 1)
 end
 
 return M

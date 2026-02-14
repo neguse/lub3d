@@ -110,8 +110,8 @@ function M.screen_to_world(proj, view, cam_eye)
     local world_pos = cam_eye + ray_dir * t
 
     -- Clamp to field boundaries
-    local x = glm.clamp(world_pos.x, -const.FIELD_Lf, const.FIELD_Lf)
-    local z = glm.clamp(world_pos.z, -const.FIELD_Lf, const.FIELD_Lf)
+    local x = glm.clamp(world_pos.x, -const.FIELD_LF, const.FIELD_LF)
+    local z = glm.clamp(world_pos.z, -const.FIELD_LF, const.FIELD_LF)
 
     return glm.vec2(x, z)
 end

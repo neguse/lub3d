@@ -12,7 +12,7 @@ local M = {}
 ---@field tex gpu.View Texture view for sampling
 ---@field width integer
 ---@field height integer
----@field format integer PixelFormat
+---@field format sokol.gfx.PixelFormat
 ---@field destroy fun(self: render_target.ColorTarget)
 
 ---@class render_target.DepthTarget
@@ -20,13 +20,13 @@ local M = {}
 ---@field attach gpu.View Attachment view for rendering
 ---@field width integer
 ---@field height integer
----@field format integer PixelFormat
+---@field format sokol.gfx.PixelFormat
 ---@field destroy fun(self: render_target.DepthTarget)
 
 ---Create a color render target
 ---@param w integer Width
 ---@param h integer Height
----@param format integer? PixelFormat (default: RGBA8)
+---@param format sokol.gfx.PixelFormat? (default: RGBA8)
 ---@return render_target.ColorTarget
 function M.color(w, h, format)
     format = format or gfx.PixelFormat.RGBA8
@@ -64,7 +64,7 @@ end
 ---Create a depth render target
 ---@param w integer Width
 ---@param h integer Height
----@param format integer? PixelFormat (default: DEPTH)
+---@param format sokol.gfx.PixelFormat? (default: DEPTH)
 ---@return render_target.DepthTarget
 function M.depth(w, h, format)
     format = format or gfx.PixelFormat.DEPTH

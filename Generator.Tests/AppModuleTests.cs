@@ -182,7 +182,7 @@ public class AppModuleTests
         var code = _app.GenerateLua(reg, PrefixToModule);
         Assert.Contains("---@meta", code);
         Assert.Contains("---@class sokol.app.Desc", code);
-        Assert.Contains("---@enum sokol.app.EventType", code);
+        Assert.Contains("---@class sokol.app.EventType", code);
     }
 
     [Fact]

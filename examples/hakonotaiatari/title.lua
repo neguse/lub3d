@@ -9,7 +9,7 @@ local renderer = require("examples.hakonotaiatari.renderer")
 local M = {}
 
 -- Subtitles (English versions)
-local SUBTITLES = {
+local SUBTITLES <const> = {
     "-DASH AND CRASH-",
     "-BOX BATTLE BEGIN-",
     "-CUBE COMBAT-",

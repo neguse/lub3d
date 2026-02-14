@@ -7,7 +7,7 @@ local M = {}
 --- @return miniaudio.Engine engine
 --- @return lightuserdata? vfs vfs は GC 防止のため呼び出し元で保持すること
 function M.create_engine()
-    local vfs = ma.VfsNew({
+    local vfs = ma.vfs_new({
         onOpen = function(path)
             local data = fs.read(path)
             if not data then
@@ -26,8 +26,8 @@ function M.create_engine()
         onClose = function(handle) end,
     })
 
-    local config = ma.EngineConfig({ pResourceManagerVFS = vfs })
-    return ma.EngineInit(config), vfs
+    local config = ma.EngineConfig({ p_resource_manager_vfs = vfs })
+    return ma.engine_init(config), vfs
 end
 
 return M

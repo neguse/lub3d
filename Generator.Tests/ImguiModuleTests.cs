@@ -270,10 +270,10 @@ public class ImguiModuleTests
     {
         var reg = TypeRegistry.FromJson(ImguiJson);
         var code = _imgui.GenerateLua(reg, PrefixToModule);
-        Assert.Contains("Setup", code);
-        Assert.Contains("Render", code);
-        Assert.Contains("Shutdown", code);
-        Assert.Contains("HandleEvent", code);
+        Assert.Contains("setup", code);
+        Assert.Contains("render", code);
+        Assert.Contains("shutdown", code);
+        Assert.Contains("handle_event", code);
     }
 
     [Fact]

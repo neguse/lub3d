@@ -20,6 +20,7 @@ public abstract class SokolModule : IModule
         DefaultResolveType(t, moduleName, prefix, prefixToModule);
     protected virtual string? ExtraCCode(TypeRegistry reg) => null;
     protected virtual IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs => [];
+    protected virtual IEnumerable<FuncBinding> ExtraLuaFuncs => [];
 
     // ===== BuildSpec =====
 
@@ -65,7 +66,7 @@ public abstract class SokolModule : IModule
         {
             if (Ignores.Contains(f.Name)) continue;
             if (!ShouldGenerateFunc(f)) continue;
-            var luaName = Pipeline.ToPascalCase(Pipeline.StripPrefix(f.Name, Prefix));
+            var luaName = Pipeline.StripPrefix(f.Name, Prefix);
             var parms = f.Params.Select(p => new ParamBinding(
                 p.Name,
                 Resolve(p.ParsedType)
@@ -107,7 +108,8 @@ public abstract class SokolModule : IModule
             ModuleName, Prefix, includes,
             ExtraCCode(reg),
             structs, funcs, enums,
-            ExtraLuaRegs.ToList());
+            ExtraLuaRegs.ToList(),
+            ExtraLuaFuncs: ExtraLuaFuncs.ToList());
     }
 
     // ===== IModule 実装 =====

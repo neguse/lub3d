@@ -3,7 +3,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local licenses = require("lub3d.licenses")
 
@@ -47,8 +47,8 @@ M.window_title = "Lub3d - Triangle"
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
     -- Log license information
@@ -57,13 +57,13 @@ function M:init()
         log.log(string.format("  %s (%s)", lib.name, lib.type))
     end
 
-    shader = shaderMod.compile(shader_source, "triangle")
+    shader = shader_mod.compile(shader_source, "triangle")
     if not shader then
         log.log("Shader compilation failed!")
         return
     end
 
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -74,13 +74,13 @@ function M:init()
         primitive_type = gfx.PrimitiveType.TRIANGLES,
     }))
 
-    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.query_pipeline_state(pipeline) ~= gfx.ResourceState.VALID then
         log.log("Pipeline creation failed!")
         return
     end
 
     -- Stream buffer for animated vertices
-    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
+    vbuf = gfx.make_buffer(gfx.BufferDesc({
         size = 18 * 4, -- 18 floats
         usage = { vertex_buffer = true, stream_update = true }
     }))
@@ -106,32 +106,32 @@ function M:frame()
         table.insert(vertices, b)
         table.insert(vertices, 1.0)
     end
-    gfx.UpdateBuffer(vbuf, gfx.Range(util.pack_floats(vertices)))
+    gfx.update_buffer(vbuf, gfx.Range(util.pack_floats(vertices)))
 
     -- Render
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.2, a = 1.0 }
             } }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
-    gfx.ApplyPipeline(pipeline)
-    gfx.ApplyBindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
-    gfx.Draw(0, 3, 1)
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.apply_pipeline(pipeline)
+    gfx.apply_bindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
+    gfx.draw(0, 3, 1)
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
-        app.Quit()
+        app.quit()
     end
 end
 

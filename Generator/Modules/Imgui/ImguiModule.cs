@@ -12,6 +12,16 @@ public class ImguiModule : IModule
     public string ModuleName => "imgui";
     public string Prefix => "";
 
+    /// <summary>
+    /// Lua 予約語回避のためのリネームマップ
+    /// "End" → "end_window" (end は Lua 予約語)、対称性のため "Begin" も "begin_window"
+    /// </summary>
+    private static readonly Dictionary<string, string> FunctionRenames = new()
+    {
+        ["Begin"] = "begin_window",
+        ["End"] = "end_window",
+    };
+
     private static readonly HashSet<string> SkipFunctions =
     [
         "GetIO", "GetPlatformIO", "GetStyle", "GetDrawData",
@@ -65,7 +75,7 @@ public class ImguiModule : IModule
             if (IsVararg(f)) continue;
             if (HasUnsupportedParam(f)) continue;
 
-            var luaName = f.Name;
+            var luaName = FunctionRenames.GetValueOrDefault(f.Name, Pipeline.ToSnakeCase(f.Name));
             if (nameCounts[f.Name] > 1)
             {
                 luaName = MakeOverloadName(f);
@@ -92,6 +102,20 @@ public class ImguiModule : IModule
 
         var enumBindings = enums.Select(ConvertEnum).ToList();
 
+        // sokol_imgui 統合関数 (imgui_sokol.cpp で手書き登録)
+        var extraLuaFuncs = new List<FuncBinding>
+        {
+            new("l_imgui_setup", "setup",
+                [new ParamBinding("opts", new BindingType.Custom("table", "table", "", "", "", ""), IsOptional: true)],
+                new BindingType.Void(), null),
+            new("l_imgui_shutdown", "shutdown", [], new BindingType.Void(), null),
+            new("l_imgui_new_frame", "new_frame", [], new BindingType.Void(), null),
+            new("l_imgui_render", "render", [], new BindingType.Void(), null),
+            new("l_imgui_handle_event", "handle_event",
+                [new ParamBinding("ev", new BindingType.VoidPtr())],
+                new BindingType.Bool(), null),
+        };
+
         return new ModuleSpec(
             ModuleName, "",
             ["imgui.h"], null,
@@ -100,7 +124,8 @@ public class ImguiModule : IModule
             enumBindings,
             [],
             IsCpp: true,
-            EntryPoint: "luaopen_imgui_gen");
+            EntryPoint: "luaopen_imgui_gen",
+            ExtraLuaFuncs: extraLuaFuncs);
     }
 
     public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
@@ -261,8 +286,9 @@ public class ImguiModule : IModule
 
     private static string MakeOverloadName(Funcs f)
     {
-        var suffixes = f.Params.Select(p => TypeToSuffix(p.TypeStr.Trim()));
-        return $"{f.Name}_{string.Join("_", suffixes)}";
+        var baseName = FunctionRenames.GetValueOrDefault(f.Name, Pipeline.ToSnakeCase(f.Name));
+        var suffixes = f.Params.Select(p => TypeToSuffix(p.TypeStr.Trim()).ToLower());
+        return $"{baseName}_{string.Join("_", suffixes)}";
     }
 
     private static string TypeToSuffix(string typeStr) => typeStr switch
@@ -291,7 +317,7 @@ public class ImguiModule : IModule
                 int? val = i.Value != null && int.TryParse(i.Value, out var v) ? v : null;
                 var resolvedVal = val ?? next;
                 next = resolvedVal + 1;
-                var itemName = StripEnumItemPrefix(i.Name, e.Name);
+                var itemName = Pipeline.ToUpperSnakeCase(StripEnumItemPrefix(i.Name, e.Name));
                 return new EnumItemBinding(itemName, i.Name, resolvedVal);
             }).ToList();
 

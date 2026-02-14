@@ -56,17 +56,17 @@ function M.execute(ctx, frame_data)
         end
 
         if desc then
-            gfx.BeginPass(desc)
+            gfx.begin_pass(desc)
             local ok, err = pcall(pass.execute, ctx, frame_data)
             if not ok then
                 log.warn("[" .. pass.name .. "] execute error: " .. tostring(err))
             end
-            gfx.EndPass()
+            gfx.end_pass()
         end
 
         ::continue::
     end
-    gfx.Commit()
+    gfx.commit()
 end
 
 ---Destroy all passes and clear the pipeline

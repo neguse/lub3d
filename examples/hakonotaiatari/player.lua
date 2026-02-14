@@ -176,9 +176,9 @@ function Player:update(dt, target_pos, camera, audio)
         if self.stat ~= const.P_ST_DEAD then
             local la = self.pos + pcs(dvl * 0.05, dva)
             camera:set_lookat(glm.vec3(
-                glm.clamp(la.x, -const.FIELD_Lf, const.FIELD_Lf),
+                glm.clamp(la.x, -const.FIELD_LF, const.FIELD_LF),
                 0,
-                glm.clamp(la.y, -const.FIELD_Lf, const.FIELD_Lf)
+                glm.clamp(la.y, -const.FIELD_LF, const.FIELD_LF)
             ))
         else
             camera:set_lookat(glm.vec3(self.pos.x, 0, self.pos.y))

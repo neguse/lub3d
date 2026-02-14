@@ -60,25 +60,25 @@ M.height = 480
 M.window_title = "miniaudio test"
 
 function M:init()
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
-    gl.Setup(gl.Desc({}))
+    gl.setup(gl.Desc({}))
 
     -- Generate test WAV
     generate_wav(wav_path, 440, 2.0)
 
     -- Init engine & play sound
-    engine = ma.EngineInit()
-    engine:Start()
-    engine:SetVolume(0.5)
-    print("engine channels: " .. engine:GetChannels())
-    print("engine sample rate: " .. engine:GetSampleRate())
+    engine = ma.engine_init()
+    engine:start()
+    engine:set_volume(0.5)
+    print("engine channels: " .. engine:get_channels())
+    print("engine sample rate: " .. engine:get_sample_rate())
 
-    sound = ma.SoundInitFromFile(engine, wav_path, 0)
-    sound:SetLooping(true)
-    sound:SetVolume(0.8)
-    sound:Start()
+    sound = ma.sound_init_from_file(engine, wav_path, 0)
+    sound:set_looping(true)
+    sound:set_volume(0.8)
+    sound:start()
 
     print("miniaudio: playing sine wave (440Hz)")
 end
@@ -90,10 +90,10 @@ function M:frame()
     -- Oscillate volume
     local vol = 0.3 + 0.5 * (math.sin(t * 0.5) + 1) / 2
     if sound then
-        sound:SetVolume(vol)
+        sound:set_volume(vol)
     end
 
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = {
                 gfx.ColorAttachmentAction({
@@ -102,26 +102,26 @@ function M:frame()
                 }),
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
     -- Draw volume indicator
-    gl.Defaults()
-    gl.MatrixModeProjection()
-    gl.Ortho(-1, 1, -1, 1, -1, 1)
+    gl.defaults()
+    gl.matrix_mode_projection()
+    gl.ortho(-1, 1, -1, 1, -1, 1)
 
     -- Volume bar
     local bar_w = vol * 1.5
-    gl.BeginQuads()
-    gl.V2fC3f(-0.75, -0.1, 0.2, 0.8, 0.3)
-    gl.V2fC3f(-0.75, 0.1, 0.2, 0.8, 0.3)
-    gl.V2fC3f(-0.75 + bar_w, 0.1, 0.3, 1.0, 0.4)
-    gl.V2fC3f(-0.75 + bar_w, -0.1, 0.3, 1.0, 0.4)
-    gl.End()
+    gl.begin_quads()
+    gl.v2f_c3f(-0.75, -0.1, 0.2, 0.8, 0.3)
+    gl.v2f_c3f(-0.75, 0.1, 0.2, 0.8, 0.3)
+    gl.v2f_c3f(-0.75 + bar_w, 0.1, 0.3, 1.0, 0.4)
+    gl.v2f_c3f(-0.75 + bar_w, -0.1, 0.3, 1.0, 0.4)
+    gl["end"]()
 
-    gl.Draw()
-    gfx.EndPass()
-    gfx.Commit()
+    gl.draw()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
@@ -129,15 +129,15 @@ function M:cleanup()
     sound = nil
     engine = nil
     collectgarbage()
-    gl.Shutdown()
-    gfx.Shutdown()
+    gl.shutdown()
+    gfx.shutdown()
     os.remove(wav_path)
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
-            app.Quit()
+            app.quit()
         end
     end
 end

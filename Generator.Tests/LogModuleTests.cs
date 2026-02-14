@@ -60,7 +60,7 @@ public class LogModuleTests
         var reg = TypeRegistry.FromJson(LogJson);
         var code = _log.GenerateC(reg, PrefixToModule);
         Assert.Contains("sokol_log_funcs[]", code);
-        Assert.Contains("{\"Func\", l_slog_func}", code);
+        Assert.Contains("{\"func\", l_slog_func}", code);
     }
 
     [Fact]
@@ -77,7 +77,7 @@ public class LogModuleTests
         var reg = TypeRegistry.FromJson(LogJson);
         var code = _log.GenerateLua(reg, PrefixToModule);
         Assert.Contains("---@meta", code);
-        Assert.Contains("---@class sokol.log", code);
+        Assert.Contains("---@class sokol_log_module", code);
     }
 
     [Fact]
@@ -85,7 +85,7 @@ public class LogModuleTests
     {
         var reg = TypeRegistry.FromJson(LogJson);
         var code = _log.GenerateLua(reg, PrefixToModule);
-        Assert.Contains("Func", code);
+        Assert.Contains("func", code);
         Assert.Contains("tag: string", code);
         Assert.Contains("log_level: integer", code);
         Assert.Contains("message: string", code);

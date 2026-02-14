@@ -29,7 +29,7 @@ local JudgeEngine = {}
 JudgeEngine.__index = JudgeEngine
 
 -- #RANK multipliers
-local RANK_MULTIPLIER = {
+local RANK_MULTIPLIER <const> = {
     [0] = 0.5,  -- VERY HARD
     [1] = 0.75, -- HARD
     [2] = 1.0,  -- NORMAL

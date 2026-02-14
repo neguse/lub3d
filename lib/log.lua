@@ -4,15 +4,15 @@ local slog = require("sokol.log")
 local M = {}
 
 function M.info(msg)
-    slog.Func("lua", 3, 0, msg, 0, "", nil)
+    slog.func("lua", 3, 0, msg, 0, "", nil)
 end
 
 function M.warn(msg)
-    slog.Func("lua", 2, 0, msg, 0, "", nil)
+    slog.func("lua", 2, 0, msg, 0, "", nil)
 end
 
 function M.error(msg)
-    slog.Func("lua", 1, 0, msg, 0, "", nil)
+    slog.func("lua", 1, 0, msg, 0, "", nil)
 end
 
 --- Convert a table or pairs-iterable userdata to a short string

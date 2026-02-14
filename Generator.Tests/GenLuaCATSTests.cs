@@ -77,9 +77,9 @@ public class GenLuaCATSTests
     public void EnumDef_ContainsValues()
     {
         var code = LuaCatsGen.Generate(MakeTestSpec());
-        Assert.Contains("---@enum app.EventType", code);
-        Assert.Contains("INVALID = 0", code);
-        Assert.Contains("KEY_DOWN = 1", code);
+        Assert.Contains("---@class app.EventType", code);
+        Assert.Contains("---@field INVALID app.EventType", code);
+        Assert.Contains("---@field KEY_DOWN app.EventType", code);
     }
 
     [Fact]

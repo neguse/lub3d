@@ -73,10 +73,10 @@ public class LuaCatsGenSpecTests
     public void Generate_ContainsEnumDef()
     {
         var code = LuaCatsGen.Generate(MinimalSpec());
-        Assert.Contains("---@enum sokol.test.Mode", code);
-        Assert.Contains("M.Mode = {", code);
-        Assert.Contains("DEFAULT = 0", code);
-        Assert.Contains("FAST = 5", code);
+        Assert.Contains("---@class sokol.test.Mode", code);
+        Assert.Contains("---@field Mode sokol.test.Mode", code);
+        Assert.Contains("---@field DEFAULT sokol.test.Mode", code);
+        Assert.Contains("---@field FAST sokol.test.Mode", code);
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class LuaCatsGenSpecTests
             [], [], [], []);
         var code = LuaCatsGen.Generate(spec);
         Assert.Contains("---@meta", code);
-        Assert.Contains("---@class sokol.empty", code);
+        Assert.Contains("---@class sokol_empty_module", code);
         Assert.Contains("return M", code);
     }
 

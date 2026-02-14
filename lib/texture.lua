@@ -72,10 +72,10 @@ function M.load(filename, opts)
         width = data.w,
         height = data.h,
         pixel_format = gfx.PixelFormat.RGBA8,
-        data = { mip_levels = { data.pixels } },
+        data = { mip_levels = { gfx.Range(data.pixels) } },
     }))
 
-    if gfx.QueryImageState(img.handle) ~= gfx.ResourceState.VALID then
+    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create image"
     end
 
@@ -166,10 +166,10 @@ function M.load_bc7(filename, opts)
         width = w,
         height = h,
         pixel_format = pixel_format,
-        data = { mip_levels = { compressed } },
+        data = { mip_levels = { gfx.Range(compressed) } },
     }))
 
-    if gfx.QueryImageState(img.handle) ~= gfx.ResourceState.VALID then
+    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create BC7 image"
     end
 

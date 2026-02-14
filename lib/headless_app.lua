@@ -9,11 +9,11 @@ M._height = 480
 M._sample_count = 1
 M._frame_count = 0
 
--- Callbacks stored from Desc
+-- Callbacks stored from desc
 local callbacks = {}
 
 -- app.Desc() compatible constructor
-function M.Desc(desc)
+M.Desc = function(desc)
     callbacks = desc or {}
     if desc.width then M._width = desc.width end
     if desc.height then M._height = desc.height end
@@ -21,10 +21,10 @@ function M.Desc(desc)
     return desc
 end
 
--- app.Run() compatible function
-function M.Run(desc)
+-- app.run() compatible function
+function M.run(desc)
     local stm = require("sokol.time")
-    stm.Setup()
+    stm.setup()
 
     local init_fn = callbacks.init_cb or callbacks.init
     local frame_fn = callbacks.frame_cb or callbacks.frame
@@ -43,28 +43,28 @@ function M.Run(desc)
     if cleanup_fn then cleanup_fn() end
 end
 
--- app.Width() / app.Height() compatible functions
-function M.Width() return M._width end
+-- app.width() / app.height() compatible functions
+function M.width() return M._width end
 
-function M.Height() return M._height end
+function M.height() return M._height end
 
-function M.Widthf() return M._width end
+function M.widthf() return M._width end
 
-function M.Heightf() return M._height end
+function M.heightf() return M._height end
 
-function M.SampleCount() return M._sample_count end
+function M.sample_count() return M._sample_count end
 
-function M.FrameDuration() return 1 / 60 end
+function M.frame_duration() return 1 / 60 end
 
-function M.FrameCount() return M._frame_count end
+function M.frame_count() return M._frame_count end
 
-function M.DpiScale() return 1.0 end
+function M.dpi_scale() return 1.0 end
 
-function M.HighDpi() return false end
+function M.high_dpi() return false end
 
-function M.Isvalid() return true end
+function M.isvalid() return true end
 
-function M.IsFullscreen() return false end
+function M.is_fullscreen() return false end
 
 -- PixelFormat enum (same values as sokol.gfx)
 M.PixelFormat = {
@@ -78,9 +78,9 @@ M.PixelFormat = {
     DEPTH_STENCIL = 7,
 }
 
-function M.ColorFormat() return M.PixelFormat.RGBA8 end
+function M.color_format() return M.PixelFormat.RGBA8 end
 
-function M.DepthFormat() return M.PixelFormat.DEPTH_STENCIL end
+function M.depth_format() return M.PixelFormat.DEPTH_STENCIL end
 
 -- EventType enum
 M.EventType = {
@@ -268,106 +268,83 @@ M.MouseCursor = {
     NUM = 27,
 }
 
--- Struct constructors (just return the table)
-function M.Touchpoint(t) return t or {} end
-
-function M.Event(t) return t or {} end
-
-function M.Range(t) return t or {} end
-
-function M.ImageDesc(t) return t or {} end
-
-function M.IconDesc(t) return t or {} end
-
-function M.Allocator(t) return t or {} end
-
-function M.EnvironmentDefaults(t) return t or {} end
-
-function M.MetalEnvironment(t) return t or {} end
-
-function M.D3d11Environment(t) return t or {} end
-
-function M.WgpuEnvironment(t) return t or {} end
-
-function M.VulkanEnvironment(t) return t or {} end
-
-function M.Environment(t) return t or {} end
-
-function M.MetalSwapchain(t) return t or {} end
-
-function M.D3d11Swapchain(t) return t or {} end
-
-function M.WgpuSwapchain(t) return t or {} end
-
-function M.VulkanSwapchain(t) return t or {} end
-
-function M.GlSwapchain(t) return t or {} end
-
-function M.Swapchain(t) return t or {} end
-
-function M.Logger(t) return t or {} end
-
-function M.GlDesc(t) return t or {} end
-
-function M.Win32Desc(t) return t or {} end
-
-function M.Html5Desc(t) return t or {} end
-
-function M.IosDesc(t) return t or {} end
-
-function M.Html5FetchResponse(t) return t or {} end
-
-function M.Html5FetchRequest(t) return t or {} end
+-- Struct constructors (PascalCase, matching C registration)
+-- Use M.X = function() syntax so lint checks TableFieldDefineName (allows PascalCase)
+M.Touchpoint = function(t) return t or {} end
+M.Event = function(t) return t or {} end
+M.Range = function(t) return t or {} end
+M.ImageDesc = function(t) return t or {} end
+M.IconDesc = function(t) return t or {} end
+M.Allocator = function(t) return t or {} end
+M.EnvironmentDefaults = function(t) return t or {} end
+M.MetalEnvironment = function(t) return t or {} end
+M.D3d11Environment = function(t) return t or {} end
+M.WgpuEnvironment = function(t) return t or {} end
+M.VulkanEnvironment = function(t) return t or {} end
+M.Environment = function(t) return t or {} end
+M.MetalSwapchain = function(t) return t or {} end
+M.D3d11Swapchain = function(t) return t or {} end
+M.WgpuSwapchain = function(t) return t or {} end
+M.VulkanSwapchain = function(t) return t or {} end
+M.GlSwapchain = function(t) return t or {} end
+M.Swapchain = function(t) return t or {} end
+M.Logger = function(t) return t or {} end
+M.GlDesc = function(t) return t or {} end
+M.Win32Desc = function(t) return t or {} end
+M.Html5Desc = function(t) return t or {} end
+M.IosDesc = function(t) return t or {} end
+M.Html5FetchResponse = function(t) return t or {} end
+M.Html5FetchRequest = function(t) return t or {} end
 
 -- Stub functions (no-op in headless mode)
-function M.Quit() end
+function M.quit() end
 
-function M.RequestQuit() end
+function M.request_quit() end
 
-function M.CancelQuit() end
+function M.cancel_quit() end
 
-function M.ConsumeEvent() end
+function M.consume_event() end
 
-function M.ShowMouse(show) end
+function M.show_mouse(show) end
 
-function M.LockMouse(lock) end
+function M.lock_mouse(lock) end
 
-function M.MouseShown() return true end
+function M.mouse_shown() return true end
 
-function M.MouseLocked() return false end
+function M.mouse_locked() return false end
 
-function M.SetMouseCursor(cursor) end
+function M.set_mouse_cursor(cursor) end
 
-function M.GetMouseCursor() return M.MouseCursor.DEFAULT end
+function M.get_mouse_cursor() return M.MouseCursor.DEFAULT end
 
-function M.BindMouseCursorImage(cursor, desc) return cursor end
+function M.bind_mouse_cursor_image(cursor, desc) return cursor end
 
-function M.UnbindMouseCursorImage(cursor) end
+function M.unbind_mouse_cursor_image(cursor) end
 
-function M.ShowKeyboard(show) end
+function M.show_keyboard(show) end
 
-function M.KeyboardShown() return false end
+function M.keyboard_shown() return false end
 
-function M.ToggleFullscreen() end
+function M.toggle_fullscreen() end
 
-function M.Userdata() return nil end
+function M.userdata() return nil end
 
-function M.QueryDesc() return callbacks end
+function M.query_desc() return callbacks end
 
-function M.SetClipboardString(str) end
+function M.set_clipboard_string(str) end
 
-function M.GetClipboardString() return "" end
+function M.get_clipboard_string() return "" end
 
-function M.SetWindowTitle(str) end
+function M.set_window_title(str) end
 
-function M.SetIcon(icon_desc) end
+function M.set_icon(icon_desc) end
 
-function M.GetNumDroppedFiles() return 0 end
+function M.get_num_dropped_files() return 0 end
 
-function M.GetDroppedFilePath(index) return "" end
+function M.get_dropped_file_path(index) return "" end
 
 -- Environment/Swapchain functions (return dummy values)
-function M.GetEnvironment()
+function M.get_environment()
     return {
         defaults = {
             color_format = M.PixelFormat.RGBA8,
@@ -377,7 +354,7 @@ function M.GetEnvironment()
     }
 end
 
-function M.GetSwapchain()
+function M.get_swapchain()
     return {
         width = M._width,
         height = M._height,
@@ -388,34 +365,34 @@ function M.GetSwapchain()
 end
 
 -- Platform-specific stubs (return nil)
-function M.EglGetDisplay() return nil end
+function M.egl_get_display() return nil end
 
-function M.EglGetContext() return nil end
+function M.egl_get_context() return nil end
 
-function M.Html5AskLeaveSite(ask) end
+function M.html5_ask_leave_site(ask) end
 
-function M.Html5GetDroppedFileSize(index) return 0 end
+function M.html5_get_dropped_file_size(index) return 0 end
 
-function M.Html5FetchDroppedFile(request) end
+function M.html5_fetch_dropped_file(request) end
 
-function M.MacosGetWindow() return nil end
+function M.macos_get_window() return nil end
 
-function M.IosGetWindow() return nil end
+function M.ios_get_window() return nil end
 
-function M.D3d11GetSwapChain() return nil end
+function M.d3d11_get_swap_chain() return nil end
 
-function M.Win32GetHwnd() return nil end
+function M.win32_get_hwnd() return nil end
 
-function M.GlGetMajorVersion() return 0 end
+function M.gl_get_major_version() return 0 end
 
-function M.GlGetMinorVersion() return 0 end
+function M.gl_get_minor_version() return 0 end
 
-function M.GlIsGles() return false end
+function M.gl_is_gles() return false end
 
-function M.X11GetWindow() return nil end
+function M.x11_get_window() return nil end
 
-function M.X11GetDisplay() return nil end
+function M.x11_get_display() return nil end
 
-function M.AndroidGetNativeActivity() return nil end
+function M.android_get_native_activity() return nil end
 
 return M

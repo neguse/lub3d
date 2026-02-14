@@ -15,7 +15,7 @@ TimingMap.__index = TimingMap
 ---@field bpm number|nil BPM value (for type="bpm")
 ---@field stop_us integer|nil stop duration in μs (for type="stop")
 
-local US_PER_MINUTE = 60000000 -- 60 seconds in microseconds
+local US_PER_MINUTE <const> = 60000000 -- 60 seconds in microseconds
 
 --- Create a new TimingMap from BPM changes and stops
 ---@param initial_bpm number starting BPM

@@ -225,20 +225,20 @@ function M.execute(ctx, frame_data)
     local proj_matrix = frame_data.proj
     local model_matrix = frame_data.model
 
-    gfx.ApplyPipeline(M.resources.pipeline.handle)
+    gfx.apply_pipeline(M.resources.pipeline.handle)
 
     local mvp = proj_matrix * view_matrix * model_matrix
     local vs_uniforms = mvp:pack() .. model_matrix:pack() .. view_matrix:pack()
 
     for _, mesh in ipairs(meshes) do
-        gfx.ApplyBindings(gfx.Bindings({
+        gfx.apply_bindings(gfx.Bindings({
             vertex_buffers = { mesh.vbuf.handle },
             index_buffer = mesh.ibuf.handle,
             views = { mesh.diffuse_view, mesh.normal_view, mesh.specular_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp, mesh.specular_smp },
         }))
-        gfx.ApplyUniforms(0, gfx.Range(vs_uniforms))
-        gfx.Draw(0, mesh.num_indices, 1)
+        gfx.apply_uniforms(0, gfx.Range(vs_uniforms))
+        gfx.draw(0, mesh.num_indices, 1)
     end
 
     -- Set outputs for downstream passes

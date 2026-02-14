@@ -1068,7 +1068,7 @@ int luaopen_lib_glm(lua_State *L) {
     static const luaL_Reg mat4_methods[] = {
         {"pack", l_mat4_pack}, {"unpack", l_mat4_unpack},
         {"inverse", l_mat4_inverse}, {"transpose", l_mat4_transpose},
-        {"toMat3", l_mat4_toMat3}, {"normalMatrix", l_mat4_normalMatrix},
+        {"to_mat3", l_mat4_toMat3}, {"normal_matrix", l_mat4_normalMatrix},
         {NULL, NULL}
     };
     static const luaL_Reg mat4_meta[] = {
@@ -1082,7 +1082,7 @@ int luaopen_lib_glm(lua_State *L) {
     static const luaL_Reg quat_methods[] = {
         {"length", l_quat_length}, {"normalize", l_quat_normalize},
         {"conjugate", l_quat_conjugate}, {"inverse", l_quat_inverse},
-        {"toMat4", l_quat_toMat4},
+        {"to_mat4", l_quat_toMat4},
         {NULL, NULL}
     };
     static const luaL_Reg quat_meta[] = {
@@ -1098,13 +1098,13 @@ int luaopen_lib_glm(lua_State *L) {
         {"vec2", l_vec2_new}, {"vec3", l_vec3_new},
         {"vec4", l_vec4_new}, {"mat3", l_mat3_new}, {"mat4", l_mat4_new},
         {"quat", l_quat_new},
-        {"quatAxisAngle", l_glm_quatAxisAngle},
-        {"quatEuler", l_glm_quatEuler},
+        {"quat_axis_angle", l_glm_quatAxisAngle},
+        {"quat_euler", l_glm_quatEuler},
         {"slerp", l_glm_slerp},
         {"identity", l_glm_identity},
         {"translate", l_glm_translate}, {"rotate", l_glm_rotate},
-        {"rotateX", l_glm_rotateX}, {"rotateY", l_glm_rotateY},
-        {"rotateZ", l_glm_rotateZ}, {"scale", l_glm_scale},
+        {"rotate_x", l_glm_rotateX}, {"rotate_y", l_glm_rotateY},
+        {"rotate_z", l_glm_rotateZ}, {"scale", l_glm_scale},
         {"perspective", l_glm_perspective}, {"ortho", l_glm_ortho},
         {"lookat", l_glm_lookat},
         {"radians", l_glm_radians}, {"degrees", l_glm_degrees},

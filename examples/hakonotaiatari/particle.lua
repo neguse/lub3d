@@ -8,7 +8,7 @@ local M = {}
 
 -- Particle pool
 local particles = {}
-local MAX_PARTICLES = 2000
+local MAX_PARTICLES <const> = 2000
 
 -- Particle structure
 local function new_particle()
@@ -104,8 +104,8 @@ end
 
 -- Render all particles as small crosses
 function M.render()
-    local SIZE = 2.0
-    gl.BeginLines()
+    local SIZE <const> = 2.0
+    gl.begin_lines()
     for i = 1, MAX_PARTICLES do
         local p = particles[i]
         if p.alive then
@@ -115,15 +115,15 @@ function M.render()
             local cr, cg, cb = r * alpha, g * alpha, b * alpha
             local x, y, z = p.pos.x, p.pos.y, p.pos.z
             -- Draw cross
-            gl.V3fC3f(x - SIZE, y, z, cr, cg, cb)
-            gl.V3fC3f(x + SIZE, y, z, cr, cg, cb)
-            gl.V3fC3f(x, y - SIZE, z, cr, cg, cb)
-            gl.V3fC3f(x, y + SIZE, z, cr, cg, cb)
-            gl.V3fC3f(x, y, z - SIZE, cr, cg, cb)
-            gl.V3fC3f(x, y, z + SIZE, cr, cg, cb)
+            gl.v3f_c3f(x - SIZE, y, z, cr, cg, cb)
+            gl.v3f_c3f(x + SIZE, y, z, cr, cg, cb)
+            gl.v3f_c3f(x, y - SIZE, z, cr, cg, cb)
+            gl.v3f_c3f(x, y + SIZE, z, cr, cg, cb)
+            gl.v3f_c3f(x, y, z - SIZE, cr, cg, cb)
+            gl.v3f_c3f(x, y, z + SIZE, cr, cg, cb)
         end
     end
-    gl.End()
+    gl["end"]()
 end
 
 -- Clear all particles

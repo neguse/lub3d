@@ -3,22 +3,22 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local glm = require("lib.glm")
 
 -- Game constants
-local FIELD_WIDTH = 10
-local FIELD_HEIGHT = 12
-local BLOCK_ROWS = 5
-local BLOCK_COLS = 8
-local BLOCK_WIDTH = 1.0
-local BLOCK_HEIGHT = 0.4
-local BLOCK_DEPTH = 0.5
-local PADDLE_WIDTH = 2.0
-local PADDLE_HEIGHT = 0.3
-local PADDLE_DEPTH = 0.5
-local BALL_SIZE = 0.3
+local FIELD_WIDTH <const> = 10
+local FIELD_HEIGHT <const> = 12
+local BLOCK_ROWS <const> = 5
+local BLOCK_COLS <const> = 8
+local BLOCK_WIDTH <const> = 1.0
+local BLOCK_HEIGHT <const> = 0.4
+local BLOCK_DEPTH <const> = 0.5
+local PADDLE_WIDTH <const> = 2.0
+local PADDLE_HEIGHT <const> = 0.3
+local PADDLE_DEPTH <const> = 0.5
+local BALL_SIZE <const> = 0.3
 
 -- Game state
 local paddle_x = 0
@@ -276,8 +276,8 @@ local function draw_cube(proj, view, pos, scale, color)
     local model = glm.translate(pos) * glm.scale(scale)
     local mvp = proj * view * model
 
-    gfx.ApplyUniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
-    gfx.Draw(0, 36, 1)
+    gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, color)))
+    gfx.draw(0, 36, 1)
 end
 
 local M = {}
@@ -289,12 +289,12 @@ function M:init()
     log.info("3D Block Breaker starting...")
 
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.Desc({
+        environment = glue.environment(),
     }))
 
     -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
-    shader = shaderMod.compile(shader_source, "breakout", {
+    shader = shader_mod.compile(shader_source, "breakout", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 144,
@@ -314,7 +314,7 @@ function M:init()
         return
     end
 
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.PipelineDesc({
         shader = shader,
         layout = {
             attrs = {
@@ -331,19 +331,19 @@ function M:init()
         primitive_type = gfx.PrimitiveType.TRIANGLES,
     }))
 
-    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.query_pipeline_state(pipeline) ~= gfx.ResourceState.VALID then
         log.error("Pipeline creation failed!")
         return
     end
 
     -- Create static cube vertex buffer (6 faces * 4 vertices * 6 floats = 144 floats)
     local vertices = make_cube_vertices()
-    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
+    vbuf = gfx.make_buffer(gfx.BufferDesc({
         data = gfx.Range(util.pack_floats(vertices))
     }))
 
     local indices = make_cube_indices()
-    ibuf = gfx.MakeBuffer(gfx.BufferDesc({
+    ibuf = gfx.make_buffer(gfx.BufferDesc({
         usage = { index_buffer = true },
         data = gfx.Range(pack_indices(indices))
     }))
@@ -373,7 +373,7 @@ function M:frame()
     update_game_logic(dt)
 
     -- Camera setup
-    local aspect = app.Widthf() / app.Heightf()
+    local aspect = app.widthf() / app.heightf()
     local proj = glm.perspective(glm.radians(45), aspect, 0.1, 100.0)
     local view = glm.lookat(
         glm.vec3(0, -5, 18),
@@ -382,7 +382,7 @@ function M:frame()
     )
 
     -- Begin render pass
-    gfx.BeginPass(gfx.Pass({
+    gfx.begin_pass(gfx.Pass({
         action = gfx.PassAction({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
@@ -393,11 +393,11 @@ function M:frame()
                 clear_value = 1.0
             }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
 
-    gfx.ApplyPipeline(pipeline)
-    gfx.ApplyBindings(gfx.Bindings({
+    gfx.apply_pipeline(pipeline)
+    gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { vbuf },
         index_buffer = ibuf
     }))
@@ -426,19 +426,19 @@ function M:frame()
         end
     end
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         keys_down[ev.key_code] = true
         if ev.key_code == app.Keycode.Q then
-            app.Quit()
+            app.quit()
         end
         if ev.key_code == app.Keycode.R then
             -- Reset game

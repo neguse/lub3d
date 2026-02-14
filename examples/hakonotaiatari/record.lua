@@ -10,7 +10,7 @@ local M = {}
 
 -- High score table (in-memory only, session-based)
 local high_scores = {}
-local MAX_HIGH_SCORES = 5
+local MAX_HIGH_SCORES <const> = 5
 
 -- Current game result
 local current_score = 0

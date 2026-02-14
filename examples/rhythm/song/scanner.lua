@@ -18,7 +18,7 @@ local parser = require("examples.rhythm.bms.parser")
 local SongScanner = {}
 SongScanner.__index = SongScanner
 
-local BMS_EXTENSIONS = {
+local BMS_EXTENSIONS <const> = {
     [".bms"] = true,
     [".bml"] = true,
     [".pms"] = true,

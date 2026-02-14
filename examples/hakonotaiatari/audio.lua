@@ -5,7 +5,7 @@ local log = require("lib.log")
 
 local M = {}
 
-local ma        --- @type miniaudio?
+local ma        --- @type miniaudio_module?
 local audio_lib --- @type table?
 do
     local ok, mod = pcall(require, "miniaudio")
@@ -23,7 +23,7 @@ local sounds = {} -- index -> ma_sound
 local bgm_index = nil
 
 -- Sound file mapping (matches original app.cc order)
-local SOUND_FILES = {
+local SOUND_FILES <const> = {
     [0] = "hakotai.wav",      -- Title SE
     [1] = "ne4.wav",          -- BGM1
     [2] = "sakura.wav",       -- BGM2
@@ -43,7 +43,7 @@ local SOUND_FILES = {
 
 local initialized = false
 
-local SOUND_PATH = "examples/hakonotaiatari/assets/sounds/"
+local SOUND_PATH <const> = "examples/hakonotaiatari/assets/sounds/"
 
 -- Initialize audio system
 function M.init()
@@ -59,13 +59,13 @@ function M.init()
         initialized = false
         return false
     end
-    engine:Start()
-    engine:SetVolume(0.5)
+    engine:start()
+    engine:set_volume(0.5)
 
     local loaded_count = 0
     for index, filename in pairs(SOUND_FILES) do
         local path = SOUND_PATH .. filename
-        local ok, snd = pcall(ma.SoundInitFromFile, engine, path, 0)
+        local ok, snd = pcall(ma.sound_init_from_file, engine, path, 0)
         if ok and snd then
             sounds[index] = snd
             log.info(string.format("Loaded sound %d: %s", index, filename))
@@ -89,7 +89,7 @@ end
 -- Cleanup audio system
 function M.cleanup()
     for _, snd in pairs(sounds) do
-        snd:Stop()
+        snd:stop()
     end
     sounds = {}
     bgm_index = nil
@@ -111,12 +111,12 @@ function M.play(index, volume)
     if not snd then
         return
     end
-    snd:Stop()
-    snd:SeekToPcmFrame(0)
+    snd:stop()
+    snd:seek_to_pcm_frame(0)
     if volume then
-        snd:SetVolume(volume)
+        snd:set_volume(volume)
     end
-    snd:Start()
+    snd:start()
 end
 
 -- Play BGM (looping)
@@ -130,8 +130,8 @@ function M.play_bgm(index)
 
     -- Stop previous BGM
     if bgm_index and sounds[bgm_index] then
-        sounds[bgm_index]:Stop()
-        sounds[bgm_index]:SetLooping(false)
+        sounds[bgm_index]:stop()
+        sounds[bgm_index]:set_looping(false)
     end
 
     local snd = sounds[index]
@@ -139,17 +139,17 @@ function M.play_bgm(index)
         return
     end
     bgm_index = index
-    snd:SetLooping(true)
-    snd:Stop()
-    snd:SeekToPcmFrame(0)
-    snd:Start()
+    snd:set_looping(true)
+    snd:stop()
+    snd:seek_to_pcm_frame(0)
+    snd:start()
 end
 
 -- Stop BGM
 function M.stop_bgm()
     if bgm_index and sounds[bgm_index] then
-        sounds[bgm_index]:Stop()
-        sounds[bgm_index]:SetLooping(false)
+        sounds[bgm_index]:stop()
+        sounds[bgm_index]:set_looping(false)
     end
     bgm_index = nil
 end
@@ -158,7 +158,7 @@ end
 function M.stop_all()
     M.stop_bgm()
     for _, snd in pairs(sounds) do
-        snd:Stop()
+        snd:stop()
     end
 end
 

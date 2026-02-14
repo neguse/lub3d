@@ -13,20 +13,20 @@ local imgui = {}
 
 ---Setup imgui with sokol integration
 ---@param opts? imgui.SetupOpts
-function imgui.Setup(opts) end
+function imgui.setup(opts) end
 
 ---Shutdown imgui
-function imgui.Shutdown() end
+function imgui.shutdown() end
 
 ---Begin a new imgui frame
-function imgui.NewFrame() end
+function imgui.new_frame() end
 
 ---Render imgui draw data
-function imgui.Render() end
+function imgui.render() end
 
 ---Handle a sokol app event
 ---@param event table sokol_app event
 ---@return boolean handled Whether the event was handled by imgui
-function imgui.HandleEvent(event) end
+function imgui.handle_event(event) end
 
 return imgui

@@ -9,8 +9,8 @@ local renderer = require("examples.hakonotaiatari.renderer")
 local M = {}
 
 -- Field color (gray)
-local FIELD_COLOR = 0xff606060
-local GRID_DIVISIONS = 10
+local FIELD_COLOR <const> = 0xff606060
+local GRID_DIVISIONS <const> = 10
 
 -- Initialize field
 function M.init()
@@ -20,7 +20,7 @@ end
 -- Render the field
 function M.render()
     local r, g, b = const.argb_to_rgb(FIELD_COLOR)
-    local L = const.FIELD_Lf
+    local L <const> = const.FIELD_LF
 
     -- Draw grid lines on XZ plane (y = 0)
     for i = 0, GRID_DIVISIONS do
@@ -44,7 +44,7 @@ end
 -- Render field for title screen (with rotation)
 function M.render_title(angle)
     local r, g, b = const.argb_to_rgb(FIELD_COLOR)
-    local L = const.FIELD_Lf * 0.5
+    local L <const> = const.FIELD_LF * 0.5
 
     -- Draw smaller grid for title
     local divisions = 5

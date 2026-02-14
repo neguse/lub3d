@@ -485,17 +485,17 @@ function mat3:inverse()
     if math.abs(det) < 1e-10 then
         return glm.mat3()
     end
-    local invDet = 1.0 / det
+    local inv_det = 1.0 / det
     return glm.mat3(
-        (m[5] * m[9] - m[8] * m[6]) * invDet,
-        (m[3] * m[8] - m[2] * m[9]) * invDet,
-        (m[2] * m[6] - m[3] * m[5]) * invDet,
-        (m[6] * m[7] - m[4] * m[9]) * invDet,
-        (m[1] * m[9] - m[3] * m[7]) * invDet,
-        (m[3] * m[4] - m[1] * m[6]) * invDet,
-        (m[4] * m[8] - m[5] * m[7]) * invDet,
-        (m[2] * m[7] - m[1] * m[8]) * invDet,
-        (m[1] * m[5] - m[2] * m[4]) * invDet
+        (m[5] * m[9] - m[8] * m[6]) * inv_det,
+        (m[3] * m[8] - m[2] * m[9]) * inv_det,
+        (m[2] * m[6] - m[3] * m[5]) * inv_det,
+        (m[6] * m[7] - m[4] * m[9]) * inv_det,
+        (m[1] * m[9] - m[3] * m[7]) * inv_det,
+        (m[3] * m[4] - m[1] * m[6]) * inv_det,
+        (m[4] * m[8] - m[5] * m[7]) * inv_det,
+        (m[2] * m[7] - m[1] * m[8]) * inv_det,
+        (m[1] * m[5] - m[2] * m[4]) * inv_det
     )
 end
 
@@ -621,7 +621,7 @@ end
 
 ---Extract upper-left 3x3 matrix
 ---@return mat3
-function mat4:toMat3()
+function mat4:to_mat3()
     local m = self
     return glm.mat3(
         m[1], m[2], m[3],
@@ -632,8 +632,8 @@ end
 
 ---Get normal matrix (inverse transpose of upper-left 3x3)
 ---@return mat3
-function mat4:normalMatrix()
-    return self:toMat3():inverse():transpose()
+function mat4:normal_matrix()
+    return self:to_mat3():inverse():transpose()
 end
 
 ---Calculate the inverse of the matrix
@@ -683,12 +683,12 @@ function mat4:inverse()
         return glm.mat4() -- Return identity if singular
     end
 
-    local invDet = 1.0 / det
+    local inv_det = 1.0 / det
     return glm.mat4(
-        c00 * invDet, c10 * invDet, c20 * invDet, c30 * invDet,
-        c01 * invDet, c11 * invDet, c21 * invDet, c31 * invDet,
-        c02 * invDet, c12 * invDet, c22 * invDet, c32 * invDet,
-        c03 * invDet, c13 * invDet, c23 * invDet, c33 * invDet
+        c00 * inv_det, c10 * inv_det, c20 * inv_det, c30 * inv_det,
+        c01 * inv_det, c11 * inv_det, c21 * inv_det, c31 * inv_det,
+        c02 * inv_det, c12 * inv_det, c22 * inv_det, c32 * inv_det,
+        c03 * inv_det, c13 * inv_det, c23 * inv_det, c33 * inv_det
     )
 end
 
@@ -722,7 +722,7 @@ end
 ---@param axis vec3 Rotation axis (will be normalized)
 ---@param angle number Angle in radians
 ---@return quat
-function glm.quatAxisAngle(axis, angle)
+function glm.quat_axis_angle(axis, angle)
     local half = angle * 0.5
     local s = math.sin(half)
     local n = axis:normalize()
@@ -734,7 +734,7 @@ end
 ---@param yaw number Rotation around Y axis in radians
 ---@param roll number Rotation around Z axis in radians
 ---@return quat
-function glm.quatEuler(pitch, yaw, roll)
+function glm.quat_euler(pitch, yaw, roll)
     local hp = pitch * 0.5
     local hy = yaw * 0.5
     local hr = roll * 0.5
@@ -836,7 +836,7 @@ end
 
 ---Convert quaternion to rotation matrix
 ---@return mat4
-function quat:toMat4()
+function quat:to_mat4()
     local x, y, z, w = self.x, self.y, self.z, self.w
     local x2 = x + x
     local y2 = y + y
@@ -956,7 +956,7 @@ end
 ---Create a rotation matrix around the X axis
 ---@param angle number Angle in radians
 ---@return mat4
-function glm.rotateX(angle)
+function glm.rotate_x(angle)
     local c = math.cos(angle)
     local s = math.sin(angle)
     return glm.mat4(
@@ -970,7 +970,7 @@ end
 ---Create a rotation matrix around the Y axis
 ---@param angle number Angle in radians
 ---@return mat4
-function glm.rotateY(angle)
+function glm.rotate_y(angle)
     local c = math.cos(angle)
     local s = math.sin(angle)
     return glm.mat4(
@@ -984,7 +984,7 @@ end
 ---Create a rotation matrix around the Z axis
 ---@param angle number Angle in radians
 ---@return mat4
-function glm.rotateZ(angle)
+function glm.rotate_z(angle)
     local c = math.cos(angle)
     local s = math.sin(angle)
     return glm.mat4(
