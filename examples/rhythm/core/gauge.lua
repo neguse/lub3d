@@ -11,7 +11,7 @@ local GaugeEngine = {}
 GaugeEngine.__index = GaugeEngine
 
 -- Gauge type configurations
-local GAUGE_CONFIG = {
+local GAUGE_CONFIG <const> = {
     groove = {
         initial = 20,
         floor = 2,

@@ -4,7 +4,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local imgui = require("imgui")
 
 -- Triangle color (adjustable via ImGui)
@@ -103,7 +103,7 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
         },
     }
-    shader = shaderMod.compile_full(shader_source, "simple", shader_desc)
+    shader = shader_mod.compile_full(shader_source, "simple", shader_desc)
     if not shader then
         log.error("Failed to compile shader")
         return

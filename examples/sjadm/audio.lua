@@ -18,7 +18,7 @@ local engine = nil
 local vfs_ref = nil
 local sounds = {}
 
-local SOUND_PATH = "examples/sjadm/assets/sounds/"
+local SOUND_PATH <const> = "examples/sjadm/assets/sounds/"
 
 function M.init()
     if not ma or not audio_lib then

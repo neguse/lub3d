@@ -8,7 +8,7 @@ local M = {}
 
 -- Particle pool
 local particles = {}
-local MAX_PARTICLES = 2000
+local MAX_PARTICLES <const> = 2000
 
 -- Particle structure
 local function new_particle()
@@ -104,7 +104,7 @@ end
 
 -- Render all particles as small crosses
 function M.render()
-    local SIZE = 2.0
+    local SIZE <const> = 2.0
     gl.begin_lines()
     for i = 1, MAX_PARTICLES do
         local p = particles[i]

@@ -3,22 +3,22 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local glm = require("lib.glm")
 
 -- Game constants
-local FIELD_WIDTH = 10
-local FIELD_HEIGHT = 12
-local BLOCK_ROWS = 5
-local BLOCK_COLS = 8
-local BLOCK_WIDTH = 1.0
-local BLOCK_HEIGHT = 0.4
-local BLOCK_DEPTH = 0.5
-local PADDLE_WIDTH = 2.0
-local PADDLE_HEIGHT = 0.3
-local PADDLE_DEPTH = 0.5
-local BALL_SIZE = 0.3
+local FIELD_WIDTH <const> = 10
+local FIELD_HEIGHT <const> = 12
+local BLOCK_ROWS <const> = 5
+local BLOCK_COLS <const> = 8
+local BLOCK_WIDTH <const> = 1.0
+local BLOCK_HEIGHT <const> = 0.4
+local BLOCK_DEPTH <const> = 0.5
+local PADDLE_WIDTH <const> = 2.0
+local PADDLE_HEIGHT <const> = 0.3
+local PADDLE_DEPTH <const> = 0.5
+local BALL_SIZE <const> = 0.3
 
 -- Game state
 local paddle_x = 0
@@ -294,7 +294,7 @@ function M:init()
     }))
 
     -- Compile shader with uniform block (2 mat4 + 1 vec4 = 144 bytes)
-    shader = shaderMod.compile(shader_source, "breakout", {
+    shader = shader_mod.compile(shader_source, "breakout", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 144,

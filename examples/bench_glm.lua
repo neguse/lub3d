@@ -9,8 +9,8 @@ local util = require("lib.util")
 local M = {}
 M.window_title = "bench_glm"
 
-local ITERATIONS = 100000
-local WARMUP = 1000
+local ITERATIONS <const> = 100000
+local WARMUP <const> = 1000
 
 local function bench(label, n, fn)
     for _ = 1, WARMUP do fn() end
@@ -46,8 +46,8 @@ end
 
 -- pack_uniforms for C userdata glm (uses mat4:pack())
 local function pack_uniforms_c(glm, mvp, model, r, g, b, a)
-    local mvp_bin = mvp:Pack()
-    local model_bin = model:Pack()
+    local mvp_bin = mvp:pack()
+    local model_bin = model:pack()
     local extra = string.pack("ffffffff", r, g, b, a or 1.0, 0, 0, 800, 800)
     return mvp_bin .. model_bin .. extra
 end

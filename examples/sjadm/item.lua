@@ -4,8 +4,8 @@ local gl = require("sokol.gl")
 local item = {}
 item.__index = item
 
-local RADIUS = 50
-local SEGMENTS = 16
+local RADIUS <const> = 50
+local SEGMENTS <const> = 16
 
 function item.new(world_id, x, y, type, registry)
     local body_def = b2d.default_body_def()

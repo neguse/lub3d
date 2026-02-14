@@ -105,20 +105,20 @@ end
 
 ---Get the length of the vector
 ---@return number
-function vec2:Length()
+function vec2:length()
     return math.sqrt(self.x * self.x + self.y * self.y)
 end
 
 ---Get the squared length of the vector
 ---@return number
-function vec2:Length2()
+function vec2:length2()
     return self.x * self.x + self.y * self.y
 end
 
 ---Get the normalized vector
 ---@return vec2
-function vec2:Normalize()
-    local len = self:Length()
+function vec2:normalize()
+    local len = self:length()
     if len > 0 then
         return glm.vec2(self.x / len, self.y / len)
     end
@@ -128,7 +128,7 @@ end
 ---Dot product
 ---@param other vec2
 ---@return number
-function vec2:Dot(other)
+function vec2:dot(other)
     return self.x * other.x + self.y * other.y
 end
 
@@ -226,20 +226,20 @@ end
 
 ---Get the length of the vector
 ---@return number
-function vec3:Length()
+function vec3:length()
     return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
 end
 
 ---Get the squared length of the vector
 ---@return number
-function vec3:Length2()
+function vec3:length2()
     return self.x * self.x + self.y * self.y + self.z * self.z
 end
 
 ---Get the normalized vector
 ---@return vec3
-function vec3:Normalize()
-    local len = self:Length()
+function vec3:normalize()
+    local len = self:length()
     if len > 0 then
         return glm.vec3(self.x / len, self.y / len, self.z / len)
     end
@@ -249,14 +249,14 @@ end
 ---Dot product
 ---@param other vec3
 ---@return number
-function vec3:Dot(other)
+function vec3:dot(other)
     return self.x * other.x + self.y * other.y + self.z * other.z
 end
 
 ---Cross product
 ---@param other vec3
 ---@return vec3
-function vec3:Cross(other)
+function vec3:cross(other)
     return glm.vec3(
         self.y * other.z - self.z * other.y,
         self.z * other.x - self.x * other.z,
@@ -359,20 +359,20 @@ end
 
 ---Get the length of the vector
 ---@return number
-function vec4:Length()
+function vec4:length()
     return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
 end
 
 ---Get the squared length of the vector
 ---@return number
-function vec4:Length2()
+function vec4:length2()
     return self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
 end
 
 ---Get the normalized vector
 ---@return vec4
-function vec4:Normalize()
-    local len = self:Length()
+function vec4:normalize()
+    local len = self:length()
     if len > 0 then
         return glm.vec4(self.x / len, self.y / len, self.z / len, self.w / len)
     end
@@ -382,7 +382,7 @@ end
 ---Dot product
 ---@param other vec4
 ---@return number
-function vec4:Dot(other)
+function vec4:dot(other)
     return self.x * other.x + self.y * other.y + self.z * other.z + self.w * other.w
 end
 
@@ -460,13 +460,13 @@ end
 
 ---Pack mat3 to binary string for uniforms
 ---@return string
-function mat3:Pack()
+function mat3:pack()
     return string.pack(string.rep("f", 9), table.unpack(self))
 end
 
 ---Transpose the matrix
 ---@return mat3
-function mat3:Transpose()
+function mat3:transpose()
     local m = self
     return glm.mat3(
         m[1], m[4], m[7],
@@ -477,7 +477,7 @@ end
 
 ---Calculate the inverse of the matrix
 ---@return mat3
-function mat3:Inverse()
+function mat3:inverse()
     local m = self
     local det = m[1] * (m[5] * m[9] - m[8] * m[6])
         - m[4] * (m[2] * m[9] - m[8] * m[3])
@@ -485,17 +485,17 @@ function mat3:Inverse()
     if math.abs(det) < 1e-10 then
         return glm.mat3()
     end
-    local invDet = 1.0 / det
+    local inv_det = 1.0 / det
     return glm.mat3(
-        (m[5] * m[9] - m[8] * m[6]) * invDet,
-        (m[3] * m[8] - m[2] * m[9]) * invDet,
-        (m[2] * m[6] - m[3] * m[5]) * invDet,
-        (m[6] * m[7] - m[4] * m[9]) * invDet,
-        (m[1] * m[9] - m[3] * m[7]) * invDet,
-        (m[3] * m[4] - m[1] * m[6]) * invDet,
-        (m[4] * m[8] - m[5] * m[7]) * invDet,
-        (m[2] * m[7] - m[1] * m[8]) * invDet,
-        (m[1] * m[5] - m[2] * m[4]) * invDet
+        (m[5] * m[9] - m[8] * m[6]) * inv_det,
+        (m[3] * m[8] - m[2] * m[9]) * inv_det,
+        (m[2] * m[6] - m[3] * m[5]) * inv_det,
+        (m[6] * m[7] - m[4] * m[9]) * inv_det,
+        (m[1] * m[9] - m[3] * m[7]) * inv_det,
+        (m[3] * m[4] - m[1] * m[6]) * inv_det,
+        (m[4] * m[8] - m[5] * m[7]) * inv_det,
+        (m[2] * m[7] - m[1] * m[8]) * inv_det,
+        (m[1] * m[5] - m[2] * m[4]) * inv_det
     )
 end
 
@@ -593,13 +593,13 @@ end
 
 ---Pack mat4 to binary string for uniforms
 ---@return string
-function mat4:Pack()
+function mat4:pack()
     return string.pack(string.rep("f", 16), table.unpack(self))
 end
 
 ---Unpack to table of floats
 ---@return number[]
-function mat4:Unpack()
+function mat4:unpack()
     local t = {}
     for i = 1, 16 do
         t[i] = self[i]
@@ -609,7 +609,7 @@ end
 
 ---Transpose the matrix
 ---@return mat4
-function mat4:Transpose()
+function mat4:transpose()
     local m = self
     return glm.mat4(
         m[1], m[5], m[9], m[13],
@@ -621,7 +621,7 @@ end
 
 ---Extract upper-left 3x3 matrix
 ---@return mat3
-function mat4:ToMat3()
+function mat4:to_mat3()
     local m = self
     return glm.mat3(
         m[1], m[2], m[3],
@@ -632,13 +632,13 @@ end
 
 ---Get normal matrix (inverse transpose of upper-left 3x3)
 ---@return mat3
-function mat4:NormalMatrix()
-    return self:ToMat3():Inverse():Transpose()
+function mat4:normal_matrix()
+    return self:to_mat3():inverse():transpose()
 end
 
 ---Calculate the inverse of the matrix
 ---@return mat4
-function mat4:Inverse()
+function mat4:inverse()
     local m = self
     -- Calculate cofactors
     local c00 = m[6] * m[11] * m[16] - m[6] * m[12] * m[15] - m[10] * m[7] * m[16] + m[10] * m[8] * m[15] +
@@ -683,12 +683,12 @@ function mat4:Inverse()
         return glm.mat4() -- Return identity if singular
     end
 
-    local invDet = 1.0 / det
+    local inv_det = 1.0 / det
     return glm.mat4(
-        c00 * invDet, c10 * invDet, c20 * invDet, c30 * invDet,
-        c01 * invDet, c11 * invDet, c21 * invDet, c31 * invDet,
-        c02 * invDet, c12 * invDet, c22 * invDet, c32 * invDet,
-        c03 * invDet, c13 * invDet, c23 * invDet, c33 * invDet
+        c00 * inv_det, c10 * inv_det, c20 * inv_det, c30 * inv_det,
+        c01 * inv_det, c11 * inv_det, c21 * inv_det, c31 * inv_det,
+        c02 * inv_det, c12 * inv_det, c22 * inv_det, c32 * inv_det,
+        c03 * inv_det, c13 * inv_det, c23 * inv_det, c33 * inv_det
     )
 end
 
@@ -725,7 +725,7 @@ end
 function glm.quat_axis_angle(axis, angle)
     local half = angle * 0.5
     local s = math.sin(half)
-    local n = axis:Normalize()
+    local n = axis:normalize()
     return setmetatable({ x = n.x * s, y = n.y * s, z = n.z * s, w = math.cos(half) }, quat)
 end
 
@@ -802,14 +802,14 @@ end
 
 ---Get the length of the quaternion
 ---@return number
-function quat:Length()
+function quat:length()
     return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w)
 end
 
 ---Get the normalized quaternion
 ---@return quat
-function quat:Normalize()
-    local len = self:Length()
+function quat:normalize()
+    local len = self:length()
     if len > 0 then
         local inv = 1 / len
         return setmetatable({ x = self.x * inv, y = self.y * inv, z = self.z * inv, w = self.w * inv }, quat)
@@ -819,13 +819,13 @@ end
 
 ---Get the conjugate of the quaternion
 ---@return quat
-function quat:Conjugate()
+function quat:conjugate()
     return setmetatable({ x = -self.x, y = -self.y, z = -self.z, w = self.w }, quat)
 end
 
 ---Get the inverse of the quaternion
 ---@return quat
-function quat:Inverse()
+function quat:inverse()
     local len2 = self.x * self.x + self.y * self.y + self.z * self.z + self.w * self.w
     if len2 > 0 then
         local inv = 1 / len2
@@ -836,7 +836,7 @@ end
 
 ---Convert quaternion to rotation matrix
 ---@return mat4
-function quat:ToMat4()
+function quat:to_mat4()
     local x, y, z, w = self.x, self.y, self.z, self.w
     local x2 = x + x
     local y2 = y + y
@@ -942,7 +942,7 @@ function glm.rotate(angle, axis)
     local c = math.cos(angle)
     local s = math.sin(angle)
     local t = 1 - c
-    local n = axis:Normalize()
+    local n = axis:normalize()
     local x, y, z = n.x, n.y, n.z
 
     return glm.mat4(
@@ -1037,15 +1037,15 @@ end
 ---@param up vec3 Up vector
 ---@return mat4
 function glm.lookat(eye, center, up)
-    local f = (center - eye):Normalize()
-    local s = f:Cross(up):Normalize()
-    local u = s:Cross(f)
+    local f = (center - eye):normalize()
+    local s = f:cross(up):normalize()
+    local u = s:cross(f)
 
     return glm.mat4(
         s.x, u.x, -f.x, 0,
         s.y, u.y, -f.y, 0,
         s.z, u.z, -f.z, 0,
-        -s:Dot(eye), -u:Dot(eye), f:Dot(eye), 1
+        -s:dot(eye), -u:dot(eye), f:dot(eye), 1
     )
 end
 
@@ -1092,7 +1092,7 @@ end
 ---@param v vec_base
 ---@return number
 function glm.length(v)
-    return v:Length()
+    return v:length()
 end
 
 ---Normalize a vector
@@ -1101,7 +1101,7 @@ end
 ---@overload fun(v: vec3): vec3
 ---@overload fun(v: vec4): vec4
 function glm.normalize(v)
-    return v:Normalize()
+    return v:normalize()
 end
 
 ---Dot product of two vectors
@@ -1109,7 +1109,7 @@ end
 ---@param b vec_base
 ---@return number
 function glm.dot(a, b)
-    return a:Dot(b)
+    return a:dot(b)
 end
 
 ---Cross product of two vec3
@@ -1117,7 +1117,7 @@ end
 ---@param b vec3
 ---@return vec3
 function glm.cross(a, b)
-    return a:Cross(b)
+    return a:cross(b)
 end
 
 return glm

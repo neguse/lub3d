@@ -1,8 +1,8 @@
 local b2d = require("b2d")
 local gl = require("sokol.gl")
 local font = require("examples.hakonotaiatari.font")
-local itemMod = require("examples.sjadm.item")
-local checkpointMod = require("examples.sjadm.checkpoint")
+local item_mod = require("examples.sjadm.item")
+local checkpoint_mod = require("examples.sjadm.checkpoint")
 local mapdata = require("examples.sjadm.mapdata")
 
 local map = {}
@@ -70,7 +70,7 @@ function map.new(world_id, registry)
                 elseif obj.shape == "point" and (obj.type == "itemJump" or obj.type == "itemDash") then
                     table.insert(orig_items, obj)
                 elseif obj.shape == "point" and obj.type == "checkpoint" then
-                    table.insert(checkpoints, checkpointMod.new(world_id, obj.x, -obj.y, registry))
+                    table.insert(checkpoints, checkpoint_mod.new(world_id, obj.x, -obj.y, registry))
                 elseif obj.shape == "text" then
                     table.insert(texts, obj)
                 end
@@ -113,7 +113,7 @@ function map:update()
                 type = "D"
             end
             if type then
-                table.insert(self.items, itemMod.new(self.world_id, obj.x, -obj.y, type, self.registry))
+                table.insert(self.items, item_mod.new(self.world_id, obj.x, -obj.y, type, self.registry))
             end
         end
     end

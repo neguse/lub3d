@@ -4,16 +4,16 @@
 local gfx = require("sokol.gfx")
 local glue = require("sokol.glue")
 local gpu = require("lib.gpu")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local log = require("lib.log")
 
 local M = {}
 
-local MAX_QUADS = 4096
-local VERTS_PER_QUAD = 4
-local INDICES_PER_QUAD = 6
-local FLOATS_PER_VERT = 8 -- x, y, u, v, r, g, b, a
+local MAX_QUADS <const> = 4096
+local VERTS_PER_QUAD <const> = 4
+local INDICES_PER_QUAD <const> = 6
+local FLOATS_PER_VERT <const> = 8 -- x, y, u, v, r, g, b, a
 
 local shader_source = [[
 @vs vs
@@ -102,7 +102,7 @@ local function ensure_shared_resources()
         return
     end
 
-    local shd = shaderMod.compile_full(shader_source, "sprite", {
+    local shd = shader_mod.compile_full(shader_source, "sprite", {
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.VERTEX,

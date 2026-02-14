@@ -4,18 +4,18 @@ local imgui = require("imgui")
 local const = require("examples.rhythm.const")
 
 -- ImGui constants (not exported by bindings)
-local WindowFlags_NoResize = 2
-local WindowFlags_NoMove = 4
-local WindowFlags_NoCollapse = 32
-local ChildFlags_Borders = 1
-local Cond_Always = 1
+local WINDOW_FLAGS_NO_RESIZE <const> = 2
+local WINDOW_FLAGS_NO_MOVE <const> = 4
+local WINDOW_FLAGS_NO_COLLAPSE <const> = 32
+local CHILD_FLAGS_BORDERS <const> = 1
+local COND_ALWAYS <const> = 1
 
 -- Style colors
-local Col_Header = 24
-local Col_HeaderHovered = 25
-local Col_HeaderActive = 26
-local Col_FrameBg = 7
-local Col_Border = 5
+local COL_HEADER <const> = 24
+local COL_HEADER_HOVERED <const> = 25
+local COL_HEADER_ACTIVE <const> = 26
+local COL_FRAME_BG <const> = 7
+local COL_BORDER <const> = 5
 
 ---@class SelectScreen
 ---@field songs SongEntry[] Available songs
@@ -74,18 +74,18 @@ end
 
 --- Draw the select screen
 function SelectScreen:draw()
-    local window_flags = WindowFlags_NoResize + WindowFlags_NoMove + WindowFlags_NoCollapse
+    local window_flags = WINDOW_FLAGS_NO_RESIZE + WINDOW_FLAGS_NO_MOVE + WINDOW_FLAGS_NO_COLLAPSE
 
     -- Style: dark background with visible selection
-    imgui.push_style_color_x_vec4(Col_Header, { 0.2, 0.4, 0.8, 1.0 })        -- Selected
-    imgui.push_style_color_x_vec4(Col_HeaderHovered, { 0.3, 0.3, 0.5, 1.0 }) -- Hovered
-    imgui.push_style_color_x_vec4(Col_HeaderActive, { 0.2, 0.4, 0.8, 1.0 })  -- Active
-    imgui.push_style_color_x_vec4(Col_FrameBg, { 0.0, 0.0, 0.0, 1.0 })       -- Black background
+    imgui.push_style_color_x_vec4(COL_HEADER, { 0.2, 0.4, 0.8, 1.0 })        -- Selected
+    imgui.push_style_color_x_vec4(COL_HEADER_HOVERED, { 0.3, 0.3, 0.5, 1.0 }) -- Hovered
+    imgui.push_style_color_x_vec4(COL_HEADER_ACTIVE, { 0.2, 0.4, 0.8, 1.0 })  -- Active
+    imgui.push_style_color_x_vec4(COL_FRAME_BG, { 0.0, 0.0, 0.0, 1.0 })       -- Black background
     imgui.push_style_var_x_float(13, 1.0)                                    -- FrameBorderSize = 1
 
     -- Full screen window
-    imgui.set_next_window_pos({ 0, 0 }, Cond_Always, { 0, 0 })
-    imgui.set_next_window_size({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, Cond_Always)
+    imgui.set_next_window_pos({ 0, 0 }, COND_ALWAYS, { 0, 0 })
+    imgui.set_next_window_size({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, COND_ALWAYS)
 
     if imgui.begin_window("Song Select", nil, window_flags) then
         -- Title
@@ -100,7 +100,7 @@ function SelectScreen:draw()
         local list_width = const.SCREEN_WIDTH * 0.55
         local list_height = const.SCREEN_HEIGHT - 180
 
-        imgui.begin_child_str_vec2_x_x("SongList", { list_width, list_height }, ChildFlags_Borders, 0)
+        imgui.begin_child_str_vec2_x_x("SongList", { list_width, list_height }, CHILD_FLAGS_BORDERS, 0)
 
         for i, song in ipairs(self.songs) do
             -- Use index in ID to avoid conflicts with duplicate titles
@@ -131,7 +131,7 @@ function SelectScreen:draw()
         imgui.same_line(0, 10)
 
         local detail_width = const.SCREEN_WIDTH - list_width - 30
-        imgui.begin_child_str_vec2_x_x("SongDetail", { detail_width, list_height }, ChildFlags_Borders, 0)
+        imgui.begin_child_str_vec2_x_x("SongDetail", { detail_width, list_height }, CHILD_FLAGS_BORDERS, 0)
 
         local song = self.songs[self.selected_index]
         if song then

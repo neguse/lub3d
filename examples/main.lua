@@ -3,7 +3,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local licenses = require("lub3d.licenses")
 
@@ -57,7 +57,7 @@ function M:init()
         log.log(string.format("  %s (%s)", lib.name, lib.type))
     end
 
-    shader = shaderMod.Compile(shader_source, "triangle")
+    shader = shader_mod.compile(shader_source, "triangle")
     if not shader then
         log.log("Shader compilation failed!")
         return

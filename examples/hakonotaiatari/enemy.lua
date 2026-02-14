@@ -456,8 +456,8 @@ function EnemyGenerator:create_level(level)
                 table.insert(self.commands,
                     {
                         type = "spawn_normal",
-                        pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
-                            rand_range_mid(0, const.FIELD_Lf)),
+                        pos = glm.vec2(rand_range_mid(0, const.FIELD_LF),
+                            rand_range_mid(0, const.FIELD_LF)),
                         count = 5,
                         life = 1,
                         velo_max = const.E_NORMAL_V,
@@ -484,8 +484,8 @@ function EnemyGenerator:create_level(level)
             table.insert(self.commands,
                 {
                     type = "spawn_normal",
-                    pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
-                        rand_range_mid(0, const.FIELD_Lf)),
+                    pos = glm.vec2(rand_range_mid(0, const.FIELD_LF),
+                        rand_range_mid(0, const.FIELD_LF)),
                     count = math.min(1 + level // 8, 3),
                     life = 1,
                     velo_max = const
@@ -501,8 +501,8 @@ function EnemyGenerator:create_level(level)
             table.insert(self.commands,
                 {
                     type = "spawn_normal",
-                    pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf),
-                        rand_range_mid(0, const.FIELD_Lf)),
+                    pos = glm.vec2(rand_range_mid(0, const.FIELD_LF),
+                        rand_range_mid(0, const.FIELD_LF)),
                     count = 1,
                     life = 2,
                     velo_max = const.E_NORMAL_V * 0.8,
@@ -515,8 +515,8 @@ function EnemyGenerator:create_level(level)
                 table.insert(self.commands,
                     {
                         type = "spawn_normal",
-                        pos = glm.vec2(rand_range_mid(0, const.FIELD_Lf * 2),
-                            rand_range_mid(0, const.FIELD_Lf * 2)),
+                        pos = glm.vec2(rand_range_mid(0, const.FIELD_LF * 2),
+                            rand_range_mid(0, const.FIELD_LF * 2)),
                         count = 3,
                         life = 1,
                         velo_max = const.E_NORMAL_V,

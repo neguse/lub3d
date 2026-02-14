@@ -4,7 +4,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local glm = require("lib.glm")
 
@@ -263,7 +263,7 @@ function M:init()
 
     -- Compile shader
     -- Single uniform block: 2 mat4 + 6 vec4 = 128 + 96 = 224 bytes
-    shader = shaderMod.compile(shader_source, "lighting", {
+    shader = shader_mod.compile(shader_source, "lighting", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 224,

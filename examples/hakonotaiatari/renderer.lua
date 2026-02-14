@@ -5,7 +5,7 @@ local gfx = require("sokol.gfx")
 local gl = require("sokol.gl")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 local glm = require("lib.glm")
 local log = require("lib.log")
@@ -190,7 +190,7 @@ local function pack_indices(indices)
 end
 
 -- Original game resolution (for gakugaku scaling)
-local ORIGINAL_RES = 240.0
+local ORIGINAL_RES <const> = 240.0
 
 -- Pack uniforms for shaded mode (mat4 + mat4 + vec4 + vec4 = 160 bytes)
 local function pack_uniforms(mvp, model, r, g, b, a)
@@ -245,7 +245,7 @@ function M.init()
     }))
 
     -- Compile shaded shader
-    shaded_shader = shaderMod.compile(shaded_shader_source, "hakotai_shaded", {
+    shaded_shader = shader_mod.compile(shaded_shader_source, "hakotai_shaded", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 160,

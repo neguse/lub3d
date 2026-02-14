@@ -1,7 +1,7 @@
 --- Tests for TimingMap module
 local TimingMap = require("examples.rhythm.core.timing_map")
 
-local US_PER_MINUTE = 60000000
+local US_PER_MINUTE <const> = 60000000
 
 -- Helper: approximately equal for floating point
 local function approx_eq(a, b, eps)

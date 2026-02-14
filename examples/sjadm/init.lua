@@ -12,8 +12,8 @@ local log = require("lib.log")
 local input = require("examples.sjadm.input")
 local Camera = require("examples.sjadm.camera")
 local audio = require("examples.sjadm.audio")
-local mapMod = require("examples.sjadm.map")
-local playerMod = require("examples.sjadm.player")
+local map_mod = require("examples.sjadm.map")
+local player_mod = require("examples.sjadm.player")
 
 local M = {}
 M.width = 800
@@ -141,8 +141,8 @@ function M:init()
     input.init()
     cam = Camera.new()
     audio.init()
-    map = mapMod.new(world_id, registry)
-    pl = playerMod.new(world_id, input, cam, map, registry)
+    map = map_mod.new(world_id, registry)
+    pl = player_mod.new(world_id, input, cam, map, registry)
 
     -- Set start point and spawn
     pl:set_respawn_point(map:get_start_point())

@@ -4,8 +4,8 @@ local gl = require("sokol.gl")
 local checkpoint = {}
 checkpoint.__index = checkpoint
 
-local RADIUS = 150
-local SEGMENTS = 24
+local RADIUS <const> = 150
+local SEGMENTS <const> = 24
 
 function checkpoint.new(world_id, x, y, registry)
     local body_def = b2d.default_body_def()

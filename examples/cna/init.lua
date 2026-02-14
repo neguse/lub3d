@@ -11,30 +11,30 @@ local ma = require("miniaudio")
 
 -- === Constants ===
 
-local SCREEN_W = 200
-local SCREEN_H = 300
-local BOARD_W = 8
-local BOARD_H = 16
-local STONE_W = 16
-local STONE_H = 16
-local PICK_MAX = 6
-local RESERVE_NUM = 6
-local JAMMER_TURN = 5
-local WAIT_ERASE_FRAME = 15
-local NUMBER_W = 16
-local NUMBER_H = 32
-local ALPHA_W = 16
-local ALPHA_H = 16
-local ORIGIN_X = 10
-local ORIGIN_Y = -10 + SCREEN_H - STONE_H * BOARD_H
+local SCREEN_W <const> = 200
+local SCREEN_H <const> = 300
+local BOARD_W <const> = 8
+local BOARD_H <const> = 16
+local STONE_W <const> = 16
+local STONE_H <const> = 16
+local PICK_MAX <const> = 6
+local RESERVE_NUM <const> = 6
+local JAMMER_TURN <const> = 5
+local WAIT_ERASE_FRAME <const> = 15
+local NUMBER_W <const> = 16
+local NUMBER_H <const> = 32
+local ALPHA_W <const> = 16
+local ALPHA_H <const> = 16
+local ORIGIN_X <const> = 10
+local ORIGIN_Y <const> = -10 + SCREEN_H - STONE_H * BOARD_H
 
 -- Special number tile indices
-local NUM_CROSS = 10
-local NUM_EQUAL = 11
-local NUM_PERIOD = 12
-local NUM_E = 13
-local NUM_N = 14
-local NUM_D = 15
+local NUM_CROSS <const> = 10
+local NUM_EQUAL <const> = 11
+local NUM_PERIOD <const> = 12
+local NUM_E <const> = 13
+local NUM_N <const> = 14
+local NUM_D <const> = 15
 
 -- Color enum
 local Color = {
@@ -103,7 +103,7 @@ end
 
 -- === Module ===
 
-local TICK_DT = 1 / 30
+local TICK_DT <const> = 1 / 30
 
 local M = {}
 M.width = 400

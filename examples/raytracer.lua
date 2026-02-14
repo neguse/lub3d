@@ -5,7 +5,7 @@ local glue = require("sokol.glue")
 local stm = require("sokol.time")
 local sdtx = require("sokol.debugtext")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local util = require("lib.util")
 
 ---@type sokol.gfx.Shader?
@@ -273,7 +273,7 @@ function M:init()
     sdtx.setup(sdtx.desc({ fonts = { sdtx.font_c64() } }))
     last_time = stm.now()
 
-    shader = shaderMod.compile(shader_source, "raytracer", {
+    shader = shader_mod.compile(shader_source, "raytracer", {
         { size = 16, stage = gfx.ShaderStage.FRAGMENT }
     })
     if not shader then

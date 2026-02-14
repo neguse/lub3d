@@ -49,8 +49,8 @@ local scroll_speed = const.DEFAULT_SCROLL_SPEED
 local result_data = nil
 
 -- BMS base path and cache
-local BMS_BASE_PATH = "D:/BMS"
-local BMS_CACHE_PATH = "bms_cache.lua"
+local BMS_BASE_PATH <const> = "D:/BMS"
+local BMS_CACHE_PATH <const> = "bms_cache.lua"
 
 --- Initialize game components for playing a song
 ---@param bms_path string Path to BMS file

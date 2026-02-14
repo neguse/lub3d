@@ -79,16 +79,16 @@ end
 
 -- Check if cube is out of field
 function Cube:is_out_of_area()
-    return (self.pos.x - self.length) < -const.FIELD_Lf
-        or (self.pos.x + self.length) > const.FIELD_Lf
-        or (self.pos.y - self.length) < -const.FIELD_Lf
-        or (self.pos.y + self.length) > const.FIELD_Lf
+    return (self.pos.x - self.length) < -const.FIELD_LF
+        or (self.pos.x + self.length) > const.FIELD_LF
+        or (self.pos.y - self.length) < -const.FIELD_LF
+        or (self.pos.y + self.length) > const.FIELD_LF
 end
 
 -- Clamp position to field boundaries
 function Cube:clamp_position()
-    self.pos.x = glm.clamp(self.pos.x, -const.FIELD_Lf + self.length, const.FIELD_Lf - self.length)
-    self.pos.y = glm.clamp(self.pos.y, -const.FIELD_Lf + self.length, const.FIELD_Lf - self.length)
+    self.pos.x = glm.clamp(self.pos.x, -const.FIELD_LF + self.length, const.FIELD_LF - self.length)
+    self.pos.y = glm.clamp(self.pos.y, -const.FIELD_LF + self.length, const.FIELD_LF - self.length)
 end
 
 -- Render cube

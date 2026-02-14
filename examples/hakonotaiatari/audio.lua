@@ -23,7 +23,7 @@ local sounds = {} -- index -> ma_sound
 local bgm_index = nil
 
 -- Sound file mapping (matches original app.cc order)
-local SOUND_FILES = {
+local SOUND_FILES <const> = {
     [0] = "hakotai.wav",      -- Title SE
     [1] = "ne4.wav",          -- BGM1
     [2] = "sakura.wav",       -- BGM2
@@ -43,7 +43,7 @@ local SOUND_FILES = {
 
 local initialized = false
 
-local SOUND_PATH = "examples/hakonotaiatari/assets/sounds/"
+local SOUND_PATH <const> = "examples/hakonotaiatari/assets/sounds/"
 
 -- Initialize audio system
 function M.init()

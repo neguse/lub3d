@@ -55,6 +55,7 @@
         "function_param_name_style": "snake_case",
         "table_field_name_style": [
             "snake_case",
+            "pascal_case",
             { "type": "pattern", "param": "^[A-Z][A-Z0-9_]*$" },
             { "type": "pattern", "param": "^_[a-z][a-z0-9_]*$" },
             {
@@ -83,6 +84,8 @@
         ],
         "module_local_name_style": [
             "snake_case",
+            "pascal_case",
+            { "type": "pattern", "param": "^_[a-z][a-z0-9_]*$" },
             { "type": "ignore", "param": ["M"] }
         ],
         "const_variable_name_style": "upper_snake_case",
@@ -90,6 +93,7 @@
         "class_name_style": "pascal_case",
         "module_name_style": [
             "snake_case",
+            "pascal_case",
             { "type": "ignore", "param": ["M"] }
         ]
     }

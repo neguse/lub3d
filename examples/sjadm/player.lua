@@ -5,10 +5,10 @@ local audio = require("examples.sjadm.audio")
 local player = {}
 player.__index = player
 
-local WIDTH = 25
-local HEIGHT = 50
-local KILL_Y = -3000
-local DEAD_TIMER_MAX = 1.5
+local WIDTH <const> = 25
+local HEIGHT <const> = 50
+local KILL_Y <const> = -3000
+local DEAD_TIMER_MAX <const> = 1.5
 
 function player.new(world_id, input, camera, map, registry)
     local body_def = b2d.default_body_def()

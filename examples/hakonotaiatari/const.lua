@@ -19,7 +19,7 @@ M.RT_H = 240
 
 -- Field size
 M.FIELD_L = 300
-M.FIELD_Lf = 300.0
+M.FIELD_LF = 300.0
 
 -- Cube types
 M.C_TYPE_PLAYER = 0x00000001

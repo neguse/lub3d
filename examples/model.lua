@@ -4,7 +4,7 @@ local gfx = require("sokol.gfx")
 local app = require("sokol.app")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local shaderMod = require("lib.shader")
+local shader_mod = require("lib.shader")
 local texture = require("lib.texture")
 local util = require("lib.util")
 local glm = require("lib.glm")
@@ -323,7 +323,7 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 3 },
         },
     }
-    shader = shaderMod.compile_full(shader_source, "model", shader_desc)
+    shader = shader_mod.compile_full(shader_source, "model", shader_desc)
 
     if not shader then
         log.error("Failed to compile shader")

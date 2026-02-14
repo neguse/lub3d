@@ -10,7 +10,7 @@ local ScoringEngine = {}
 ScoringEngine.__index = ScoringEngine
 
 -- EX score values per judgment
-local EX_SCORE = {
+local EX_SCORE <const> = {
     pgreat = 2,
     great = 1,
     good = 0,
@@ -20,7 +20,7 @@ local EX_SCORE = {
 }
 
 -- Judgments that continue combo
-local COMBO_CONTINUE = {
+local COMBO_CONTINUE <const> = {
     pgreat = true,
     great = true,
     good = true,
@@ -28,7 +28,7 @@ local COMBO_CONTINUE = {
 
 -- DJ LEVEL thresholds (percentage of max EX score)
 -- Based on IIDX DJ LEVEL system (9/9, 8/9, 7/9, 6/9, 5/9, 4/9, 3/9, 2/9)
-local DJ_LEVEL_THRESHOLDS = {
+local DJ_LEVEL_THRESHOLDS <const> = {
     { threshold = 8 / 9, level = "AAA" }, -- 88.89%
     { threshold = 7 / 9, level = "AA" },  -- 77.78%
     { threshold = 6 / 9, level = "A" },   -- 66.67%

@@ -56,7 +56,7 @@ end
 
 -- Helper to pack vertex data as floats (handles large arrays)
 function M.pack_floats(floats)
-    local CHUNK_SIZE = 200 -- Lua unpack limit is around 200-1000
+    local CHUNK_SIZE <const> = 200 -- Lua unpack limit is around 200-1000
     local result = {}
     for i = 1, #floats, CHUNK_SIZE do
         local chunk_end = math.min(i + CHUNK_SIZE - 1, #floats)
@@ -71,7 +71,7 @@ end
 
 -- Helper to pack index data as u32 (handles large arrays)
 function M.pack_u32(ints)
-    local CHUNK_SIZE = 200
+    local CHUNK_SIZE <const> = 200
     local result = {}
     for i = 1, #ints, CHUNK_SIZE do
         local chunk_end = math.min(i + CHUNK_SIZE - 1, #ints)
