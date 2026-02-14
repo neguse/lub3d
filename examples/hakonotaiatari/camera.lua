@@ -26,8 +26,8 @@ end
 -- Create new camera
 function Camera.new()
     local self = setmetatable({}, Camera)
-    self.eye = glm.Vec3(0, const.CAM_BEHIND_HIGH, -const.CAM_BEHIND_BACK)
-    self.lookat = glm.Vec3(0, 0, 0)
+    self.eye = glm.vec3(0, const.CAM_BEHIND_HIGH, -const.CAM_BEHIND_BACK)
+    self.lookat = glm.vec3(0, 0, 0)
     self.behind_high = const.CAM_BEHIND_HIGH
     self.behind_back = const.CAM_BEHIND_BACK
     self.rot = 0
@@ -37,8 +37,8 @@ end
 
 -- Initialize camera
 function Camera:init()
-    self.eye = glm.Vec3(0, const.CAM_BEHIND_HIGH, -const.CAM_BEHIND_BACK)
-    self.lookat = glm.Vec3(0, 0, 0)
+    self.eye = glm.vec3(0, const.CAM_BEHIND_HIGH, -const.CAM_BEHIND_BACK)
+    self.lookat = glm.vec3(0, 0, 0)
     self.behind_high = const.CAM_BEHIND_HIGH
     self.behind_back = const.CAM_BEHIND_BACK
     self.rot = 0
@@ -56,7 +56,7 @@ function Camera:update()
     if self.does_rotate then
         -- Rotate around lookat point
         self.rot = sub_rad(self.rot, -const.CAM_ROT_SPEED)
-        local diff = glm.Vec3(
+        local diff = glm.vec3(
             math.cos(self.rot) * self.behind_back,
             self.behind_high,
             math.sin(self.rot) * self.behind_back
@@ -65,7 +65,7 @@ function Camera:update()
         self.eye = self.eye + (target - self.eye) * const.CAM_BEHIND_COEFF
     else
         -- Static behind-view
-        local target = self.lookat + glm.Vec3(0, self.behind_high, -self.behind_back)
+        local target = self.lookat + glm.vec3(0, self.behind_high, -self.behind_back)
         self.eye = self.eye + (target - self.eye) * const.CAM_BEHIND_COEFF
     end
 end
@@ -98,20 +98,20 @@ end
 
 -- Get view matrix
 function Camera:view()
-    return glm.Lookat(
+    return glm.lookat(
         self.eye,
         self.lookat,
-        glm.Vec3(0, 1, 0)
+        glm.vec3(0, 1, 0)
     )
 end
 
 -- Get projection matrix
 function Camera:projection(fov)
     fov = fov or 45
-    local w = app.Widthf()
-    local h = app.Heightf()
+    local w = app.widthf()
+    local h = app.heightf()
     local aspect = w / h
-    return glm.Perspective(glm.Radians(fov), aspect, 1.0, 5000.0)
+    return glm.perspective(glm.radians(fov), aspect, 1.0, 5000.0)
 end
 
 -- Alias methods for consistency
@@ -121,7 +121,7 @@ end
 
 function Camera:get_proj(aspect)
     if aspect then
-        return glm.Perspective(glm.Radians(45), aspect, 1.0, 5000.0)
+        return glm.perspective(glm.radians(45), aspect, 1.0, 5000.0)
     end
     return self:projection()
 end

@@ -22,19 +22,19 @@ Cube.__index = Cube
 
 -- Helper: polar to cartesian (radius, angle) -> (x, y)
 local function pcs(radius, angle)
-    return glm.Vec2(math.cos(angle) * radius, math.sin(angle) * radius)
+    return glm.vec2(math.cos(angle) * radius, math.sin(angle) * radius)
 end
 
 -- Create new cube
 function Cube.new()
     local self = setmetatable({}, Cube)
     self.type = 0
-    self.pos = glm.Vec2(0, 0)
+    self.pos = glm.vec2(0, 0)
     self.velo = 0
     self.angle = 0
     self.color = 0xffffffff
     self.length = 10
-    self.force = glm.Vec2(0, 0)
+    self.force = glm.vec2(0, 0)
     self.stat = 0
     self.life = 0
     self.coll_enable = false
@@ -45,13 +45,13 @@ end
 -- Initialize cube
 function Cube:init(cube_type, pos, velo, angle, color, length, combo)
     self.type = cube_type or 0
-    self.pos = pos or glm.Vec2(0, 0)
+    self.pos = pos or glm.vec2(0, 0)
     self.velo = velo or 0
     self.angle = angle or 0
     self.color = color or 0xffffffff
     self.length = length or 10
     self.combo = combo or 0
-    self.force = glm.Vec2(0, 0)
+    self.force = glm.vec2(0, 0)
 end
 
 -- Update cube position
@@ -62,14 +62,14 @@ function Cube:update(dt)
 
     -- Apply accumulated force
     self.pos = self.pos + self.force
-    self.force = glm.Vec2(0, 0)
+    self.force = glm.vec2(0, 0)
 end
 
 -- Handle collision with another cube
 function Cube:collide(other_cube)
     local d = other_cube.pos - self.pos
     local l = (self.length + other_cube.length) * const.SQRT2
-    local dl = glm.Length(d)
+    local dl = glm.length(d)
 
     if dl > 0.001 then
         -- Push force proportional to overlap
@@ -87,8 +87,8 @@ end
 
 -- Clamp position to field boundaries
 function Cube:clamp_position()
-    self.pos.x = glm.Clamp(self.pos.x, -const.FIELD_Lf + self.length, const.FIELD_Lf - self.length)
-    self.pos.y = glm.Clamp(self.pos.y, -const.FIELD_Lf + self.length, const.FIELD_Lf - self.length)
+    self.pos.x = glm.clamp(self.pos.x, -const.FIELD_Lf + self.length, const.FIELD_Lf - self.length)
+    self.pos.y = glm.clamp(self.pos.y, -const.FIELD_Lf + self.length, const.FIELD_Lf - self.length)
 end
 
 -- Render cube
@@ -97,8 +97,8 @@ function Cube:render(proj, view)
     -- pos.x, pos.y are on XZ plane, Y is up
     -- Original uses uniform scale of length on vertices that go from -1 to 1 (size 2)
     -- So total size is length * 2 on all axes
-    local pos3d = glm.Vec3(self.pos.x, self.length, self.pos.y)
-    local size = glm.Vec3(self.length * 2, self.length * 2, self.length * 2)
+    local pos3d = glm.vec3(self.pos.x, self.length, self.pos.y)
+    local size = glm.vec3(self.length * 2, self.length * 2, self.length * 2)
     renderer.draw_cube(pos3d, size, -self.angle, r, g, b, proj, view)
 end
 
@@ -127,7 +127,7 @@ function Cube.is_collide_square(c1, l1, a1, c2, l2, a2)
     l2 = l2 * const.SQRT2
 
     -- Quick rejection: circle test
-    if glm.Length(c2 - c1) > (l1 + l2) then
+    if glm.length(c2 - c1) > (l1 + l2) then
         return false
     end
 

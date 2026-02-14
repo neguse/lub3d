@@ -33,7 +33,7 @@ function M.init(camera, audio)
 
     if camera then
         camera:set_behind(const.CAM_BEHIND_HIGH_TITLE, const.CAM_BEHIND_BACK_TITLE)
-        camera:set_lookat(glm.Vec3(0, 0, 0))
+        camera:set_lookat(glm.vec3(0, 0, 0))
         camera:set_enable_rotate(true)
     end
 

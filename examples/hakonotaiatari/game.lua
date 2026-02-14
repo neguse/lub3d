@@ -43,7 +43,7 @@ function M.init(camera, audio)
     if camera then
         camera:set_enable_rotate(false)
         camera:set_behind(const.CAM_BEHIND_HIGH, const.CAM_BEHIND_BACK)
-        camera:set_lookat(glm.Vec3(0, 0, 0))
+        camera:set_lookat(glm.vec3(0, 0, 0))
     end
 
     -- Play random BGM
@@ -71,7 +71,7 @@ function M.update(dt, camera, audio)
     end
 
     -- Get mouse position in world space
-    local target_pos = glm.Vec2(0, 0)
+    local target_pos = glm.vec2(0, 0)
     if camera then
         local world_pos = input.screen_to_world(camera:get_proj(), camera:get_view(), camera:get_eye())
         if world_pos then

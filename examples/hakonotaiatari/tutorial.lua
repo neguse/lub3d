@@ -18,7 +18,7 @@ function M.init(camera, audio)
     if camera then
         camera:set_enable_rotate(false)
         camera:set_behind(const.CAM_BEHIND_HIGH, const.CAM_BEHIND_BACK)
-        camera:set_lookat(glm.Vec3(0, 0, 0))
+        camera:set_lookat(glm.vec3(0, 0, 0))
     end
 
     -- Set gakugaku (wobble) effect

@@ -78,19 +78,19 @@ function M.screen_to_world(proj, view, cam_eye)
     local ndc_y = 1.0 - (2.0 * viewport_mouse_y / vh)
 
     -- Inverse projection and view matrices
-    local inv_proj = proj:Inverse()
-    local inv_view = view:Inverse()
+    local inv_proj = proj:inverse()
+    local inv_view = view:inverse()
 
     -- Ray in clip space
-    local ray_clip = glm.Vec4(ndc_x, ndc_y, -1.0, 1.0)
+    local ray_clip = glm.vec4(ndc_x, ndc_y, -1.0, 1.0)
 
     -- Ray in eye space
     local ray_eye = inv_proj * ray_clip
-    ray_eye = glm.Vec4(ray_eye.x, ray_eye.y, -1.0, 0.0)
+    ray_eye = glm.vec4(ray_eye.x, ray_eye.y, -1.0, 0.0)
 
     -- Ray in world space
     local ray_world = inv_view * ray_eye
-    local ray_dir = glm.Normalize(glm.Vec3(ray_world.x, ray_world.y, ray_world.z))
+    local ray_dir = glm.normalize(glm.vec3(ray_world.x, ray_world.y, ray_world.z))
 
     -- Intersect with ground plane (Y = 0)
     -- eye + t * dir = point on plane where point.y = 0
@@ -98,7 +98,7 @@ function M.screen_to_world(proj, view, cam_eye)
     -- t = -eye.y / dir.y
     if math.abs(ray_dir.y) < 0.0001 then
         -- Ray is parallel to ground, return position directly below camera
-        return glm.Vec2(cam_eye.x, cam_eye.z)
+        return glm.vec2(cam_eye.x, cam_eye.z)
     end
 
     local t = -cam_eye.y / ray_dir.y
@@ -110,10 +110,10 @@ function M.screen_to_world(proj, view, cam_eye)
     local world_pos = cam_eye + ray_dir * t
 
     -- Clamp to field boundaries
-    local x = glm.Clamp(world_pos.x, -const.FIELD_Lf, const.FIELD_Lf)
-    local z = glm.Clamp(world_pos.z, -const.FIELD_Lf, const.FIELD_Lf)
+    local x = glm.clamp(world_pos.x, -const.FIELD_Lf, const.FIELD_Lf)
+    local z = glm.clamp(world_pos.z, -const.FIELD_Lf, const.FIELD_Lf)
 
-    return glm.Vec2(x, z)
+    return glm.vec2(x, z)
 end
 
 -- Get target position for player (world coordinates)
