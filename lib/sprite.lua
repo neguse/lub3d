@@ -95,7 +95,8 @@ end
 local shared_shader_ref = nil   -- gpu.Shader (prevents GC)
 local shared_pipeline_ref = nil -- gpu.Pipeline (prevents GC)
 local shared_shader = nil       -- raw handle for pipeline creation
-local shared_pipeline = nil     -- raw handle for draw calls
+---@type sokol.gfx.Pipeline? raw handle for draw calls
+local shared_pipeline = nil
 
 local function ensure_shared_resources()
     if shared_pipeline then
@@ -329,6 +330,7 @@ function M.flush(batch)
     gfx.update_buffer(batch.vbuf.handle, gfx.Range(packed))
 
     -- Apply pipeline and bindings
+    assert(shared_pipeline, "shared_pipeline not initialized")
     gfx.apply_pipeline(shared_pipeline)
     gfx.apply_bindings(gfx.Bindings({
         vertex_buffers = { batch.vbuf.handle },

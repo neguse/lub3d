@@ -69,7 +69,7 @@ function M.init()
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
-        data = { mip_levels = { white_data } },
+        data = { mip_levels = { gfx.Range(white_data) } },
     }))
     local white_view = gpu.view(gfx.ViewDesc({
         texture = { image = white_img.handle },

@@ -2,12 +2,6 @@
 local imgui = require("imgui")
 local const = require("examples.rhythm.const")
 
--- ImGui constants
-local WINDOW_FLAGS_NO_RESIZE <const> = 2
-local WINDOW_FLAGS_NO_MOVE <const> = 4
-local WINDOW_FLAGS_NO_COLLAPSE <const> = 32
-local COND_ALWAYS <const> = 1
-local COL_TEXT <const> = 0
 
 ---@class ResultData
 ---@field title string
@@ -59,16 +53,16 @@ end
 --- Draw the result screen
 ---@param data ResultData
 function ResultRenderer:draw(data)
-    local window_flags = WINDOW_FLAGS_NO_RESIZE + WINDOW_FLAGS_NO_MOVE + WINDOW_FLAGS_NO_COLLAPSE
+    local window_flags = imgui.WindowFlags.NO_RESIZE | imgui.WindowFlags.NO_MOVE | imgui.WindowFlags.NO_COLLAPSE
 
-    imgui.set_next_window_pos({ 0, 0 }, COND_ALWAYS)
-    imgui.set_next_window_size({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, COND_ALWAYS)
+    imgui.set_next_window_pos({ 0, 0 }, imgui.Cond.ALWAYS)
+    imgui.set_next_window_size({ const.SCREEN_WIDTH, const.SCREEN_HEIGHT }, imgui.Cond.ALWAYS)
 
     if imgui.begin_window("Result", nil, window_flags) then
         imgui.spacing()
 
         -- Title
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 1.0, 1.0, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 1.0, 1.0, 1.0 })
         imgui.text_unformatted("=== RESULT ===")
         imgui.pop_style_color(1)
 
@@ -78,10 +72,10 @@ function ResultRenderer:draw(data)
 
         -- Clear status
         if data.cleared then
-            imgui.push_style_color_x_vec4(COL_TEXT, { 0.0, 1.0, 0.39, 1.0 })
+            imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.0, 1.0, 0.39, 1.0 })
             imgui.text_unformatted("CLEAR!")
         else
-            imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 0.2, 0.2, 1.0 })
+            imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 0.2, 0.2, 1.0 })
             imgui.text_unformatted("FAILED")
         end
         imgui.pop_style_color(1)
@@ -89,11 +83,11 @@ function ResultRenderer:draw(data)
         imgui.spacing()
 
         -- Song info
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.78, 0.78, 0.78, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.78, 0.78, 0.78, 1.0 })
         imgui.text_unformatted(data.title)
         imgui.pop_style_color(1)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.59, 0.59, 0.59, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.59, 0.59, 0.59, 1.0 })
         imgui.text_unformatted(data.artist)
         imgui.pop_style_color(1)
 
@@ -103,14 +97,14 @@ function ResultRenderer:draw(data)
 
         -- DJ LEVEL
         local level_color = get_level_color(data.dj_level)
-        imgui.push_style_color_x_vec4(COL_TEXT, level_color)
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, level_color)
         imgui.text_unformatted(string.format("DJ LEVEL: %s", data.dj_level))
         imgui.pop_style_color(1)
 
         imgui.spacing()
 
         -- EX Score
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 1.0, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 1.0, 0.39, 1.0 })
         imgui.text_unformatted(string.format("EX SCORE: %d / %d", data.ex_score, data.max_ex_score))
         imgui.pop_style_color(1)
 
@@ -119,14 +113,14 @@ function ResultRenderer:draw(data)
         if data.max_ex_score > 0 then
             rate = (data.ex_score / data.max_ex_score) * 100
         end
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.78, 0.78, 0.78, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.78, 0.78, 0.78, 1.0 })
         imgui.text_unformatted(string.format("(%.2f%%)", rate))
         imgui.pop_style_color(1)
 
         imgui.spacing()
 
         -- Max combo
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 0.78, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 0.78, 0.39, 1.0 })
         imgui.text_unformatted(string.format("MAX COMBO: %d", data.max_combo))
         imgui.pop_style_color(1)
 
@@ -135,7 +129,7 @@ function ResultRenderer:draw(data)
         imgui.spacing()
 
         -- Judgment breakdown
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.59, 0.59, 0.59, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.59, 0.59, 0.59, 1.0 })
         imgui.text_unformatted("--- JUDGMENT ---")
         imgui.pop_style_color(1)
 
@@ -143,47 +137,47 @@ function ResultRenderer:draw(data)
 
         local stats = data.stats
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 1.0, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 1.0, 0.39, 1.0 })
         imgui.text_unformatted(string.format("PGREAT: %4d", stats.pgreat))
         imgui.pop_style_color(1)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 0.78, 0.2, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 0.78, 0.2, 1.0 })
         imgui.text_unformatted(string.format("GREAT:  %4d", stats.great))
         imgui.pop_style_color(1)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.39, 1.0, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.39, 1.0, 0.39, 1.0 })
         imgui.text_unformatted(string.format("GOOD:   %4d", stats.good))
         imgui.pop_style_color(1)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.39, 0.39, 1.0, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.39, 0.39, 1.0, 1.0 })
         imgui.text_unformatted(string.format("BAD:    %4d", stats.bad))
         imgui.pop_style_color(1)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.59, 0.39, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.59, 0.39, 0.39, 1.0 })
         imgui.text_unformatted(string.format("POOR:   %4d", stats.empty_poor))
         imgui.pop_style_color(1)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 0.39, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 0.39, 0.39, 1.0 })
         imgui.text_unformatted(string.format("MISS:   %4d", stats.miss))
         imgui.pop_style_color(1)
 
         imgui.spacing()
 
         -- FAST/SLOW
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.39, 0.78, 1.0, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.39, 0.78, 1.0, 1.0 })
         imgui.text_unformatted(string.format("FAST: %d", stats.fast))
         imgui.pop_style_color(1)
 
         imgui.same_line(0, 20)
 
-        imgui.push_style_color_x_vec4(COL_TEXT, { 1.0, 0.59, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 1.0, 0.59, 0.39, 1.0 })
         imgui.text_unformatted(string.format("SLOW: %d", stats.slow))
         imgui.pop_style_color(1)
 
         imgui.spacing()
 
         -- Gauge info
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.59, 0.59, 0.59, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.59, 0.59, 0.59, 1.0 })
         imgui.text_unformatted(string.format("GAUGE: %s %.1f%%", data.gauge_type:upper(), data.final_gauge))
         imgui.pop_style_color(1)
 
@@ -192,7 +186,7 @@ function ResultRenderer:draw(data)
         imgui.spacing()
 
         -- Instructions
-        imgui.push_style_color_x_vec4(COL_TEXT, { 0.39, 0.39, 0.39, 1.0 })
+        imgui.push_style_color_x_vec4(imgui.Col.TEXT, { 0.39, 0.39, 0.39, 1.0 })
         imgui.text_unformatted("Press ENTER or ESC to exit")
         imgui.pop_style_color(1)
     end

@@ -228,7 +228,7 @@ local function create_default_texture(r, g, b)
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
-        data = { mip_levels = { pixels } },
+        data = { mip_levels = { gfx.Range(pixels) } },
     }))
     local view = gfx.make_view(gfx.ViewDesc({
         texture = { image = img },

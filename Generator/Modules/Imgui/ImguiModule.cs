@@ -105,7 +105,9 @@ public class ImguiModule : IModule
         // sokol_imgui 統合関数 (imgui_sokol.cpp で手書き登録)
         var extraLuaFuncs = new List<FuncBinding>
         {
-            new("l_imgui_setup", "setup", [], new BindingType.Void(), null),
+            new("l_imgui_setup", "setup",
+                [new ParamBinding("opts", new BindingType.Custom("table", "table", "", "", "", ""), IsOptional: true)],
+                new BindingType.Void(), null),
             new("l_imgui_shutdown", "shutdown", [], new BindingType.Void(), null),
             new("l_imgui_new_frame", "new_frame", [], new BindingType.Void(), null),
             new("l_imgui_render", "render", [], new BindingType.Void(), null),

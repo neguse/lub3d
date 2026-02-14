@@ -2,20 +2,9 @@
 local imgui = require("imgui")
 local const = require("examples.rhythm.const")
 
--- ImGui constants
-local WINDOW_FLAGS_NO_TITLE_BAR <const> = 1
-local WINDOW_FLAGS_NO_RESIZE <const> = 2
-local WINDOW_FLAGS_NO_MOVE <const> = 4
-local WINDOW_FLAGS_NO_SCROLLBAR <const> = 8
-local WINDOW_FLAGS_NO_BACKGROUND <const> = 128
-local WINDOW_FLAGS_NO_BRING_TO_FRONT_ON_FOCUS <const> = 8192
-local WINDOW_FLAGS_NO_INPUTS <const> = 262144 + 524288 -- NoMouseInputs + NoNav
-local COND_ALWAYS <const> = 1
-local COL_TEXT <const> = 0
-
-local hud_flags = WINDOW_FLAGS_NO_TITLE_BAR + WINDOW_FLAGS_NO_RESIZE + WINDOW_FLAGS_NO_MOVE
-    + WINDOW_FLAGS_NO_SCROLLBAR + WINDOW_FLAGS_NO_INPUTS + WINDOW_FLAGS_NO_BRING_TO_FRONT_ON_FOCUS
-    + WINDOW_FLAGS_NO_BACKGROUND
+local hud_flags = imgui.WindowFlags.NO_TITLE_BAR | imgui.WindowFlags.NO_RESIZE | imgui.WindowFlags.NO_MOVE
+    | imgui.WindowFlags.NO_SCROLLBAR | imgui.WindowFlags.NO_INPUTS | imgui.WindowFlags.NO_BRING_TO_FRONT_ON_FOCUS
+    | imgui.WindowFlags.NO_BACKGROUND
 
 local shadow_color = { 0.0, 0.0, 0.0, 1.0 }
 local shadow_offsets = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
@@ -26,7 +15,7 @@ local shadow_offsets = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } }
 local function outlined_text(text, color)
     local pos = imgui.get_cursor_pos()
     -- Shadow
-    imgui.push_style_color_x_vec4(COL_TEXT, shadow_color)
+    imgui.push_style_color_x_vec4(imgui.Col.TEXT, shadow_color)
     for _, off in ipairs(shadow_offsets) do
         imgui.set_cursor_pos({ pos[1] + off[1], pos[2] + off[2] })
         imgui.text_unformatted(text)
@@ -34,7 +23,7 @@ local function outlined_text(text, color)
     imgui.pop_style_color(1)
     -- Foreground
     imgui.set_cursor_pos(pos)
-    imgui.push_style_color_x_vec4(COL_TEXT, color)
+    imgui.push_style_color_x_vec4(imgui.Col.TEXT, color)
     imgui.text_unformatted(text)
     imgui.pop_style_color(1)
 end
@@ -57,7 +46,7 @@ function UIRenderer:draw_combo(combo)
         return
     end
 
-    imgui.set_next_window_pos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4 }, COND_ALWAYS, { 0.5, 0.5 })
+    imgui.set_next_window_pos({ const.SCREEN_WIDTH * 0.5, const.SCREEN_HEIGHT * 0.4 }, imgui.Cond.ALWAYS, { 0.5, 0.5 })
     imgui.begin_window("##hud_combo", nil, hud_flags)
     outlined_text(string.format("COMBO: %d", combo), { 1.0, 1.0, 0.0, 1.0 })
     imgui.end_window()
@@ -68,7 +57,7 @@ end
 ---@param artist string
 ---@param bpm number
 function UIRenderer:draw_song_info(title, artist, bpm)
-    imgui.set_next_window_pos({ 10, 10 }, COND_ALWAYS)
+    imgui.set_next_window_pos({ 10, 10 }, imgui.Cond.ALWAYS)
     imgui.begin_window("##hud_song", nil, hud_flags)
     outlined_text(title, { 0.78, 0.78, 0.78, 1.0 })
     outlined_text(artist, { 0.59, 0.59, 0.59, 1.0 })
@@ -79,7 +68,7 @@ end
 --- Draw state indicator
 ---@param state string
 function UIRenderer:draw_state(state)
-    imgui.set_next_window_pos({ 10, const.SCREEN_HEIGHT - 40 }, COND_ALWAYS)
+    imgui.set_next_window_pos({ 10, const.SCREEN_HEIGHT - 40 }, imgui.Cond.ALWAYS)
     imgui.begin_window("##hud_state", nil, hud_flags)
 
     if state == "loading" then
@@ -99,7 +88,7 @@ end
 ---@param bpm number
 ---@param hispeed number|nil
 function UIRenderer:draw_debug(current_beat, current_time_us, bpm, hispeed)
-    imgui.set_next_window_pos({ const.SCREEN_WIDTH - 200, 10 }, COND_ALWAYS)
+    imgui.set_next_window_pos({ const.SCREEN_WIDTH - 200, 10 }, imgui.Cond.ALWAYS)
     imgui.begin_window("##hud_debug", nil, hud_flags)
 
     outlined_text(string.format("Beat: %.2f", current_beat), { 0.39, 0.39, 0.39, 1.0 })
@@ -187,7 +176,7 @@ end
 ---@param max_ex_score integer
 ---@param stats JudgeStats
 function UIRenderer:draw_score(ex_score, max_ex_score, stats)
-    imgui.set_next_window_pos({ 10, 100 }, COND_ALWAYS)
+    imgui.set_next_window_pos({ 10, 100 }, imgui.Cond.ALWAYS)
     imgui.begin_window("##hud_score", nil, hud_flags)
 
     -- EX Score

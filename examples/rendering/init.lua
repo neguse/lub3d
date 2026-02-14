@@ -366,7 +366,7 @@ local function load_model()
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
-                data = { mip_levels = { white } },
+                data = { mip_levels = { gfx.Range(white) } },
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
@@ -382,7 +382,7 @@ local function load_model()
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
-                data = { mip_levels = { flat } },
+                data = { mip_levels = { gfx.Range(flat) } },
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({
@@ -398,7 +398,7 @@ local function load_model()
                 width = 1,
                 height = 1,
                 pixel_format = gfx.PixelFormat.RGBA8,
-                data = { mip_levels = { spec } },
+                data = { mip_levels = { gfx.Range(spec) } },
             }))
             local view = gpu.view(gfx.ViewDesc({ texture = { image = img.handle } }))
             local smp = gpu.sampler(gfx.SamplerDesc({

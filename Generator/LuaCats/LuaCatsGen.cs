@@ -43,8 +43,10 @@ public static class LuaCatsGen
     /// <summary>
     /// 構造体コンストラクタの LuaCATS フィールド定義
     /// </summary>
-    public static string StructCtor(string name, string moduleName) =>
-        $"---@field {name} fun(t?: {moduleName}.{name}): {moduleName}.{name}";
+    public static string StructCtor(string name, string moduleName, bool allowStringInit = false) =>
+        allowStringInit
+            ? $"---@field {name} fun(t?: {moduleName}.{name}|string): {moduleName}.{name}"
+            : $"---@field {name} fun(t?: {moduleName}.{name}): {moduleName}.{name}";
 
     /// <summary>
     /// モジュール名 → モジュールテーブルクラス名 (---@meta との衝突回避)
@@ -96,6 +98,9 @@ public static class LuaCatsGen
         var fieldLines = string.Join("\n", items.Select(item => $"---@field {item.name} {enumName}"));
         return SourceComment(sourceLink) + $"""
             ---@class {enumName}
+            ---@operator bor({enumName}): {enumName}
+            ---@operator band({enumName}): {enumName}
+            ---@operator bnot: {enumName}
             {fieldLines}
 
             """;
@@ -139,7 +144,7 @@ public static class LuaCatsGen
         // Module class with struct ctors + funcs + opaque ctors
         var moduleFields = new List<string>();
         foreach (var s in spec.Structs)
-            moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName));
+            moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName, s.AllowStringInit));
         foreach (var ot in spec.OpaqueTypes)
         {
             if (ot.InitFunc == null) continue;

@@ -299,7 +299,7 @@ function M:init()
 
     -- Fullscreen quad
     vbuf = gfx.make_buffer(gfx.BufferDesc({
-        data = util.pack_floats({ -1, -1, 1, -1, -1, 1, 1, 1 }),
+        data = gfx.Range(util.pack_floats({ -1, -1, 1, -1, -1, 1, 1, 1 })),
         usage = { vertex_buffer = true, immutable = true }
     }))
 end
