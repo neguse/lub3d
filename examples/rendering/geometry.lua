@@ -154,10 +154,10 @@ M.shader_desc = {
 }
 
 -- Setup common resource management (on_reload, destroy, ensure_resources)
-render_pass.Setup(M, {
+render_pass.setup(M, {
     shader_name = "geom",
     pipeline_desc = function(shader_handle)
-        return gfx.PipelineDesc({
+        return gfx.pipeline_desc({
             shader = shader_handle,
             layout = {
                 attrs = {
@@ -194,8 +194,8 @@ function M.get_pass_desc(ctx)
         return nil
     end
 
-    return gfx.Pass({
-        action = gfx.PassAction({
+    return gfx.pass({
+        action = gfx.pass_action({
             colors = {
                 { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0, g = 0, b = 0, a = 0 } },
                 { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0.5, g = 0.5, b = 0.5, a = 0 } },
@@ -225,20 +225,20 @@ function M.execute(ctx, frame_data)
     local proj_matrix = frame_data.proj
     local model_matrix = frame_data.model
 
-    gfx.ApplyPipeline(M.resources.pipeline.handle)
+    gfx.apply_pipeline(M.resources.pipeline.handle)
 
     local mvp = proj_matrix * view_matrix * model_matrix
     local vs_uniforms = mvp:pack() .. model_matrix:pack() .. view_matrix:pack()
 
     for _, mesh in ipairs(meshes) do
-        gfx.ApplyBindings(gfx.Bindings({
+        gfx.apply_bindings(gfx.bindings({
             vertex_buffers = { mesh.vbuf.handle },
             index_buffer = mesh.ibuf.handle,
             views = { mesh.diffuse_view, mesh.normal_view, mesh.specular_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp, mesh.specular_smp },
         }))
-        gfx.ApplyUniforms(0, gfx.Range(vs_uniforms))
-        gfx.Draw(0, mesh.num_indices, 1)
+        gfx.apply_uniforms(0, gfx.range(vs_uniforms))
+        gfx.draw(0, mesh.num_indices, 1)
     end
 
     -- Set outputs for downstream passes

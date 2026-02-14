@@ -51,7 +51,7 @@ local M = {}
 M.NUMBER_OF_LIGHTS = 4
 
 ---p3d_LightModel.ambient
-M.light_model_ambient = glm.Vec4(0.388, 0.356, 0.447, 1.0)
+M.light_model_ambient = glm.vec4(0.388, 0.356, 0.447, 1.0)
 
 ---Light sources array
 ---@type rendering.LightSourceParameters[]
@@ -63,11 +63,11 @@ M.animation_speed = 10 -- degrees per second
 M.animate_enabled = true
 
 -- Color constants (from tutorial)
-local sunlight_color0 = glm.Vec4(0.612, 0.365, 0.306, 1) -- sunrise/sunset
-local sunlight_color1 = glm.Vec4(0.765, 0.573, 0.400, 1) -- midday
-local moonlight_color0 = glm.Vec4(0.247, 0.384, 0.404, 1)
-local moonlight_color1 = glm.Vec4(0.392, 0.537, 0.571, 1)
-local window_light_color = glm.Vec4(0.765, 0.573, 0.400, 1)
+local sunlight_color0 = glm.vec4(0.612, 0.365, 0.306, 1) -- sunrise/sunset
+local sunlight_color1 = glm.vec4(0.765, 0.573, 0.400, 1) -- midday
+local moonlight_color0 = glm.vec4(0.247, 0.384, 0.404, 1)
+local moonlight_color1 = glm.vec4(0.392, 0.537, 0.571, 1)
+local window_light_color = glm.vec4(0.765, 0.573, 0.400, 1)
 
 ---Mix two colors
 ---@param a vec4
@@ -75,7 +75,7 @@ local window_light_color = glm.Vec4(0.765, 0.573, 0.400, 1)
 ---@param t number 0-1
 ---@return vec4
 local function mix_color(a, b, t)
-    return glm.Vec4(
+    return glm.vec4(
         a.x + (b.x - a.x) * t,
         a.y + (b.y - a.y) * t,
         a.z + (b.z - a.z) * t,
@@ -94,14 +94,14 @@ end
 ---@return rendering.LightSourceParameters
 local function default_params()
     return {
-        color = glm.Vec4(0, 0, 0, 1),
-        ambient = glm.Vec4(0, 0, 0, 1),
-        diffuse = glm.Vec4(0, 0, 0, 1),
-        specular = glm.Vec4(0, 0, 0, 1),
-        position = glm.Vec4(0, 0, 1, 0),           -- default directional from +Z
-        spot_direction = glm.Vec4(0, 0, -1, 0),    -- exponent=0
-        spot_params = glm.Vec4(math.pi, -1, 0, 0), -- cutoff=180deg (no spotlight), cosCutoff=-1
-        attenuation = glm.Vec4(1, 0, 0, 0),        -- constant=1, linear=0, quadratic=0
+        color = glm.vec4(0, 0, 0, 1),
+        ambient = glm.vec4(0, 0, 0, 1),
+        diffuse = glm.vec4(0, 0, 0, 1),
+        specular = glm.vec4(0, 0, 0, 1),
+        position = glm.vec4(0, 0, 1, 0),           -- default directional from +Z
+        spot_direction = glm.vec4(0, 0, -1, 0),    -- exponent=0
+        spot_params = glm.vec4(math.pi, -1, 0, 0), -- cutoff=180deg (no spotlight), cosCutoff=-1
+        attenuation = glm.vec4(1, 0, 0, 0),        -- constant=1, linear=0, quadratic=0
     }
 end
 
@@ -110,16 +110,16 @@ end
 ---@param direction? vec3 Light direction (default: from node transform)
 ---@return rendering.LightSourceParameters
 function M.directional_light(color, direction)
-    local c = glm.Vec4(color.x, color.y, color.z, color.w or 1)
-    local dir = direction and direction:Normalize() or glm.Vec3(0, 0, -1)
+    local c = glm.vec4(color.x, color.y, color.z, color.w or 1)
+    local dir = direction and direction:normalize() or glm.vec3(0, 0, -1)
 
     local params = default_params()
     params.color = c
     -- DirectionalLight: diffuse/specular = color, ambient = black
-    params.diffuse = glm.Vec4(c.x, c.y, c.z, c.w)
-    params.specular = glm.Vec4(c.x, c.y, c.z, c.w)
+    params.diffuse = glm.vec4(c.x, c.y, c.z, c.w)
+    params.specular = glm.vec4(c.x, c.y, c.z, c.w)
     -- position.w = 0 means directional, xyz is direction (negated for "from" direction)
-    params.position = glm.Vec4(-dir.x, -dir.y, -dir.z, 0)
+    params.position = glm.vec4(-dir.x, -dir.y, -dir.z, 0)
     return params
 end
 
@@ -129,16 +129,16 @@ end
 ---@param attenuation? vec3 (constant, linear, quadratic), default (1,0,0)
 ---@return rendering.LightSourceParameters
 function M.point_light(color, position, attenuation)
-    local c = glm.Vec4(color.x, color.y, color.z, color.w or 1)
-    local atten = attenuation or glm.Vec3(1, 0, 0)
+    local c = glm.vec4(color.x, color.y, color.z, color.w or 1)
+    local atten = attenuation or glm.vec3(1, 0, 0)
 
     local params = default_params()
     params.color = c
-    params.diffuse = glm.Vec4(c.x, c.y, c.z, c.w)
-    params.specular = glm.Vec4(c.x, c.y, c.z, c.w)
+    params.diffuse = glm.vec4(c.x, c.y, c.z, c.w)
+    params.specular = glm.vec4(c.x, c.y, c.z, c.w)
     -- position.w = 1 means positional
-    params.position = glm.Vec4(position.x, position.y, position.z, 1)
-    params.attenuation = glm.Vec4(atten.x, atten.y, atten.z, 0)
+    params.position = glm.vec4(position.x, position.y, position.z, 1)
+    params.attenuation = glm.vec4(atten.x, atten.y, atten.z, 0)
     return params
 end
 
@@ -151,19 +151,19 @@ end
 ---@param attenuation? vec3 (constant, linear, quadratic), default (1,0,0)
 ---@return rendering.LightSourceParameters
 function M.spotlight(color, position, direction, exponent, cutoff, attenuation)
-    local c = glm.Vec4(color.x, color.y, color.z, color.w or 1)
-    local dir = direction:Normalize()
-    local atten = attenuation or glm.Vec3(1, 0, 0)
+    local c = glm.vec4(color.x, color.y, color.z, color.w or 1)
+    local dir = direction:normalize()
+    local atten = attenuation or glm.vec3(1, 0, 0)
 
     local params = default_params()
     params.color = c
-    params.diffuse = glm.Vec4(c.x, c.y, c.z, c.w)
-    params.specular = glm.Vec4(c.x, c.y, c.z, c.w)
+    params.diffuse = glm.vec4(c.x, c.y, c.z, c.w)
+    params.specular = glm.vec4(c.x, c.y, c.z, c.w)
     -- position.w = 1 means positional
-    params.position = glm.Vec4(position.x, position.y, position.z, 1)
-    params.spot_direction = glm.Vec4(dir.x, dir.y, dir.z, exponent)
-    params.spot_params = glm.Vec4(cutoff, math.cos(cutoff), 0, 0)
-    params.attenuation = glm.Vec4(atten.x, atten.y, atten.z, 0)
+    params.position = glm.vec4(position.x, position.y, position.z, 1)
+    params.spot_direction = glm.vec4(dir.x, dir.y, dir.z, exponent)
+    params.spot_params = glm.vec4(cutoff, math.cos(cutoff), 0, 0)
+    params.attenuation = glm.vec4(atten.x, atten.y, atten.z, 0)
     return params
 end
 
@@ -182,18 +182,18 @@ local function to_view_space(light, view_matrix)
 
     if is_directional then
         -- Transform direction (w=0)
-        local dir = view_matrix * glm.Vec4(light.position.x, light.position.y, light.position.z, 0)
-        vs.position = glm.Vec4(dir.x, dir.y, dir.z, 0)
+        local dir = view_matrix * glm.vec4(light.position.x, light.position.y, light.position.z, 0)
+        vs.position = glm.vec4(dir.x, dir.y, dir.z, 0)
     else
         -- Transform position (w=1)
-        local pos = view_matrix * glm.Vec4(light.position.x, light.position.y, light.position.z, 1)
-        vs.position = glm.Vec4(pos.x, pos.y, pos.z, 1)
+        local pos = view_matrix * glm.vec4(light.position.x, light.position.y, light.position.z, 1)
+        vs.position = glm.vec4(pos.x, pos.y, pos.z, 1)
     end
 
     -- Transform spot direction if spotlight
     if light.spot_params.x < math.pi then
-        local dir = view_matrix * glm.Vec4(light.spot_direction.x, light.spot_direction.y, light.spot_direction.z, 0)
-        vs.spot_direction = glm.Vec4(dir.x, dir.y, dir.z, light.spot_direction.w)
+        local dir = view_matrix * glm.vec4(light.spot_direction.x, light.spot_direction.y, light.spot_direction.z, 0)
+        vs.spot_direction = glm.vec4(dir.x, dir.y, dir.z, light.spot_direction.w)
     else
         vs.spot_direction = light.spot_direction
     end
@@ -317,7 +317,7 @@ local function sun_direction_from_pitch(pitch)
     -- Add some horizontal component based on HPR heading 135
     local h_rad = math.rad(135)
     local x = -math.sin(h_rad) * math.cos(rad) * 0.5
-    return glm.Vec3(x, y, z):Normalize()
+    return glm.vec3(x, y, z):normalize()
 end
 
 ---Setup lights similar to generateLights() in tutorial
@@ -326,24 +326,24 @@ function M.setup_default()
     M.sun_pitch = 270 -- midday
 
     -- Global ambient (from tutorial)
-    M.light_model_ambient = glm.Vec4(0.388, 0.356, 0.447, 1.0)
+    M.light_model_ambient = glm.vec4(0.388, 0.356, 0.447, 1.0)
 
     -- Sunlight (DirectionalLight) - will be updated by animate()
-    table.insert(M.sources, M.directional_light(sunlight_color1, glm.Vec3(1, -1, 1)))
+    table.insert(M.sources, M.directional_light(sunlight_color1, glm.vec3(1, -1, 1)))
 
     -- Moonlight (DirectionalLight) - 180 degrees offset from sun
-    table.insert(M.sources, M.directional_light(moonlight_color1, glm.Vec3(-1, 1, -1)))
+    table.insert(M.sources, M.directional_light(moonlight_color1, glm.vec3(-1, 1, -1)))
 
     -- Window spotlight (from generateWindowLight)
     -- set_exponent(5), set_attenuation(1, 0.008, 0), fov=140
     local cutoff = math.rad(70) -- fov/2 = 140/2 = 70
     table.insert(M.sources, M.spotlight(
         window_light_color,
-        glm.Vec3(1.5, 2.49, 7.9), -- position
-        glm.Vec3(0, -1, 0),       -- direction (hpr=180,0,0 → -Y)
+        glm.vec3(1.5, 2.49, 7.9), -- position
+        glm.vec3(0, -1, 0),       -- direction (hpr=180,0,0 → -Y)
         5,                        -- exponent
         cutoff,
-        glm.Vec3(1, 0.008, 0)     -- attenuation
+        glm.vec3(1, 0.008, 0)     -- attenuation
     ))
 
     -- Run initial animation to set correct colors
@@ -382,8 +382,8 @@ function M.animate(dt)
     local sun_dir = sun_direction_from_pitch(p)
     local sun = M.sources[1]
     if sun then
-        sun.position = glm.Vec4(-sun_dir.x, -sun_dir.y, -sun_dir.z, 0)
-        local c = glm.Vec4(
+        sun.position = glm.vec4(-sun_dir.x, -sun_dir.y, -sun_dir.z, 0)
+        local c = glm.vec4(
             light_color.x * day_magnitude,
             light_color.y * day_magnitude,
             light_color.z * day_magnitude,
@@ -398,8 +398,8 @@ function M.animate(dt)
     local moon_dir = sun_direction_from_pitch(p - 180)
     local moon = M.sources[2]
     if moon then
-        moon.position = glm.Vec4(-moon_dir.x, -moon_dir.y, -moon_dir.z, 0)
-        local c = glm.Vec4(
+        moon.position = glm.vec4(-moon_dir.x, -moon_dir.y, -moon_dir.z, 0)
+        local c = glm.vec4(
             light_color.x * night_magnitude,
             light_color.y * night_magnitude,
             light_color.z * night_magnitude,
@@ -414,7 +414,7 @@ function M.animate(dt)
     local window_magnitude = night_magnitude ^ 0.4
     local window = M.sources[3]
     if window then
-        local c = glm.Vec4(
+        local c = glm.vec4(
             window_light_color.x * window_magnitude,
             window_light_color.y * window_magnitude,
             window_light_color.z * window_magnitude,
