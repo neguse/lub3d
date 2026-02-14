@@ -207,6 +207,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
                     "text": text.strip()
                 })
 
+    licenses.sort(key=lambda l: l["name"].lower())
     return licenses
 
 def split_string_literal(s, max_len=8000):
