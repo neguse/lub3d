@@ -16,12 +16,14 @@ public record ModuleSpec(
     bool IsCpp = false,
     string? EntryPoint = null,
     List<FuncBinding>? ExtraLuaFuncs = null,
-    List<ArrayAdapterBinding>? ArrayAdapters = null
+    List<ArrayAdapterBinding>? ArrayAdapters = null,
+    List<EventAdapterBinding>? EventAdapters = null
 )
 {
     public List<OpaqueTypeBinding> OpaqueTypes { get; init; } = OpaqueTypes ?? [];
     public List<FuncBinding> ExtraLuaFuncs { get; init; } = ExtraLuaFuncs ?? [];
     public List<ArrayAdapterBinding> ArrayAdapters { get; init; } = ArrayAdapters ?? [];
+    public List<EventAdapterBinding> EventAdapters { get; init; } = EventAdapters ?? [];
 }
 
 /// <summary>
@@ -58,7 +60,8 @@ public record FuncBinding(
     BindingType ReturnType,
     string? SourceLink,
     string? CppNamespace = null,
-    string? CppFuncName = null
+    string? CppFuncName = null,
+    List<PostCallPatch>? PostCallPatches = null
 );
 
 public enum CallbackBridgeMode { None, Immediate }
@@ -113,3 +116,22 @@ public record ArrayAdapterBinding(
     List<ParamBinding> InputParams,
     BindingType ElementType
 );
+
+public record PostCallPatch(string FieldName, string CExpression);
+
+public record EventAdapterBinding(
+    string LuaName,
+    string CFuncName,
+    string CReturnType,
+    List<ParamBinding> InputParams,
+    List<EventArrayField> ArrayFields
+);
+
+public record EventArrayField(
+    string LuaFieldName,
+    string CArrayAccessor,
+    string CCountAccessor,
+    List<EventElementField> ElementFields
+);
+
+public record EventElementField(string LuaFieldName, string CAccessor, BindingType Type);

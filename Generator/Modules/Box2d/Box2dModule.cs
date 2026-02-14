@@ -87,8 +87,10 @@ public class Box2dModule : IModule
         "b2Chain_GetSegments",
         // Output param functions → ExtraCCode
         "b2Joint_GetConstraintTuning",
-        // Event functions (return array structs) → ExtraCCode
-        "b2World_GetBodyEvents", "b2World_GetSensorEvents", "b2World_GetContactEvents",
+        // Event functions → EventAdapter
+        // (b2World_GetBodyEvents, b2World_GetSensorEvents, b2World_GetContactEvents are now auto-generated)
+        // DefaultWorldDef → PostCallPatch
+        "b2DefaultWorldDef",
         // Allocator / Assert
         "b2SetAllocator", "b2SetAssertFcn",
         // Internal / low-level
@@ -372,26 +374,11 @@ public class Box2dModule : IModule
         // ===== ExtraLuaRegs + ExtraLuaFuncs =====
         var extraRegs = new List<(string LuaName, string CFunc)>
         {
-            ("default_world_def", "l_b2d_default_world_def"),
-            ("world_get_contact_events", "l_b2d_world_get_contact_events"),
-            ("world_get_sensor_events", "l_b2d_world_get_sensor_events"),
-            ("world_get_body_events", "l_b2d_world_get_body_events"),
             ("world_cast_ray_closest", "l_b2d_world_cast_ray_closest"),
         };
 
         var extraLuaFuncs = new List<FuncBinding>
         {
-            new("l_b2d_default_world_def", "default_world_def", [],
-                HandleType("b2WorldDef"), null),
-            new("l_b2d_world_get_contact_events", "world_get_contact_events",
-                [new ParamBinding("worldId", HandleType("b2WorldId"))],
-                new BindingType.Void(), null),
-            new("l_b2d_world_get_sensor_events", "world_get_sensor_events",
-                [new ParamBinding("worldId", HandleType("b2WorldId"))],
-                new BindingType.Void(), null),
-            new("l_b2d_world_get_body_events", "world_get_body_events",
-                [new ParamBinding("worldId", HandleType("b2WorldId"))],
-                new BindingType.Void(), null),
             new("l_b2d_world_cast_ray_closest", "world_cast_ray_closest",
                 [
                     new ParamBinding("worldId", HandleType("b2WorldId")),
@@ -401,6 +388,16 @@ public class Box2dModule : IModule
                 ],
                 new BindingType.Void(), null),
         };
+
+        // ===== PostCallPatch: b2DefaultWorldDef =====
+        funcs.Add(new FuncBinding(
+            "b2DefaultWorldDef", "default_world_def", [],
+            new BindingType.Struct("b2WorldDef", "b2d.WorldDef", "b2d.WorldDef"), null,
+            PostCallPatches:
+            [
+                new PostCallPatch("enqueueTask", "(b2EnqueueTaskCallback*)b2d_enqueue_task"),
+                new PostCallPatch("finishTask", "b2d_finish_task"),
+            ]));
 
         var arrayAdapters = new List<ArrayAdapterBinding>
         {
@@ -412,6 +409,57 @@ public class Box2dModule : IModule
                 HandleType("b2JointId")),
         };
 
+        // ===== EventAdapters =====
+        var eventAdapters = new List<EventAdapterBinding>
+        {
+            new("world_get_contact_events", "b2World_GetContactEvents", "b2ContactEvents",
+                [new ParamBinding("worldId", HandleType("b2WorldId"))],
+                [
+                    new EventArrayField("begin_events", "beginEvents", "beginCount",
+                    [
+                        new EventElementField("shape_id_a", "shapeIdA", HandleType("b2ShapeId")),
+                        new EventElementField("shape_id_b", "shapeIdB", HandleType("b2ShapeId")),
+                    ]),
+                    new EventArrayField("end_events", "endEvents", "endCount",
+                    [
+                        new EventElementField("shape_id_a", "shapeIdA", HandleType("b2ShapeId")),
+                        new EventElementField("shape_id_b", "shapeIdB", HandleType("b2ShapeId")),
+                    ]),
+                    new EventArrayField("hit_events", "hitEvents", "hitCount",
+                    [
+                        new EventElementField("shape_id_a", "shapeIdA", HandleType("b2ShapeId")),
+                        new EventElementField("shape_id_b", "shapeIdB", HandleType("b2ShapeId")),
+                        new EventElementField("point", "point", B2Vec2Type),
+                        new EventElementField("normal", "normal", B2Vec2Type),
+                        new EventElementField("approach_speed", "approachSpeed", new BindingType.Float()),
+                    ]),
+                ]),
+            new("world_get_sensor_events", "b2World_GetSensorEvents", "b2SensorEvents",
+                [new ParamBinding("worldId", HandleType("b2WorldId"))],
+                [
+                    new EventArrayField("begin_events", "beginEvents", "beginCount",
+                    [
+                        new EventElementField("sensor_shape_id", "sensorShapeId", HandleType("b2ShapeId")),
+                        new EventElementField("visitor_shape_id", "visitorShapeId", HandleType("b2ShapeId")),
+                    ]),
+                    new EventArrayField("end_events", "endEvents", "endCount",
+                    [
+                        new EventElementField("sensor_shape_id", "sensorShapeId", HandleType("b2ShapeId")),
+                        new EventElementField("visitor_shape_id", "visitorShapeId", HandleType("b2ShapeId")),
+                    ]),
+                ]),
+            new("world_get_body_events", "b2World_GetBodyEvents", "b2BodyEvents",
+                [new ParamBinding("worldId", HandleType("b2WorldId"))],
+                [
+                    new EventArrayField("move_events", "moveEvents", "moveCount",
+                    [
+                        new EventElementField("transform", "transform", B2TransformType),
+                        new EventElementField("body_id", "bodyId", HandleType("b2BodyId")),
+                        new EventElementField("fell_asleep", "fellAsleep", new BindingType.Bool()),
+                    ]),
+                ]),
+        };
+
         return new ModuleSpec(
             ModuleName, Prefix,
             ["box2d/box2d.h", "box2d/math_functions.h", "box2d/collision.h"],
@@ -420,7 +468,8 @@ public class Box2dModule : IModule
             extraRegs,
             [],
             ExtraLuaFuncs: extraLuaFuncs,
-            ArrayAdapters: arrayAdapters);
+            ArrayAdapters: arrayAdapters,
+            EventAdapters: eventAdapters);
     }
 
     // ===== IModule 実装 =====
@@ -500,157 +549,6 @@ public class Box2dModule : IModule
         {
             (void)userTask;
             (void)userContext;
-        }
-
-        /* Default world def with serial task system */
-        static int l_b2d_default_world_def(lua_State *L) {
-            b2WorldDef* ud = (b2WorldDef*)lua_newuserdatauv(L, sizeof(b2WorldDef), 0);
-            *ud = b2DefaultWorldDef();
-            ud->enqueueTask = (b2EnqueueTaskCallback*)b2d_enqueue_task;
-            ud->finishTask = b2d_finish_task;
-            luaL_setmetatable(L, "b2d.WorldDef");
-            return 1;
-        }
-
-        /* Contact events → {begin_events={...}, end_events={...}, hit_events={...}} */
-        static int l_b2d_world_get_contact_events(lua_State *L) {
-            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
-            b2ContactEvents events = b2World_GetContactEvents(worldId);
-
-            lua_newtable(L);
-
-            /* begin */
-            lua_newtable(L);
-            for (int i = 0; i < events.beginCount; i++) {
-                lua_newtable(L);
-                b2ShapeId* sidA = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sidA = events.beginEvents[i].shapeIdA;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shape_id_a");
-                b2ShapeId* sidB = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sidB = events.beginEvents[i].shapeIdB;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shape_id_b");
-                lua_rawseti(L, -2, i + 1);
-            }
-            lua_setfield(L, -2, "begin_events");
-
-            /* endEvents */
-            lua_newtable(L);
-            for (int i = 0; i < events.endCount; i++) {
-                lua_newtable(L);
-                b2ShapeId* sidA = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sidA = events.endEvents[i].shapeIdA;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shape_id_a");
-                b2ShapeId* sidB = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sidB = events.endEvents[i].shapeIdB;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shape_id_b");
-                lua_rawseti(L, -2, i + 1);
-            }
-            lua_setfield(L, -2, "end_events");
-
-            /* hitEvents */
-            lua_newtable(L);
-            for (int i = 0; i < events.hitCount; i++) {
-                lua_newtable(L);
-                b2ShapeId* sidA = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sidA = events.hitEvents[i].shapeIdA;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shape_id_a");
-                b2ShapeId* sidB = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sidB = events.hitEvents[i].shapeIdB;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "shape_id_b");
-                lua_newtable(L);
-                lua_pushnumber(L, events.hitEvents[i].point.x); lua_rawseti(L, -2, 1);
-                lua_pushnumber(L, events.hitEvents[i].point.y); lua_rawseti(L, -2, 2);
-                lua_setfield(L, -2, "point");
-                lua_newtable(L);
-                lua_pushnumber(L, events.hitEvents[i].normal.x); lua_rawseti(L, -2, 1);
-                lua_pushnumber(L, events.hitEvents[i].normal.y); lua_rawseti(L, -2, 2);
-                lua_setfield(L, -2, "normal");
-                lua_pushnumber(L, events.hitEvents[i].approachSpeed);
-                lua_setfield(L, -2, "approach_speed");
-                lua_rawseti(L, -2, i + 1);
-            }
-            lua_setfield(L, -2, "hit_events");
-
-            return 1;
-        }
-
-        /* Sensor events → {begin_events={...}, end_events={...}} */
-        static int l_b2d_world_get_sensor_events(lua_State *L) {
-            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
-            b2SensorEvents events = b2World_GetSensorEvents(worldId);
-
-            lua_newtable(L);
-
-            lua_newtable(L);
-            for (int i = 0; i < events.beginCount; i++) {
-                lua_newtable(L);
-                b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sid = events.beginEvents[i].sensorShapeId;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "sensor_shape_id");
-                sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sid = events.beginEvents[i].visitorShapeId;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "visitor_shape_id");
-                lua_rawseti(L, -2, i + 1);
-            }
-            lua_setfield(L, -2, "begin_events");
-
-            lua_newtable(L);
-            for (int i = 0; i < events.endCount; i++) {
-                lua_newtable(L);
-                b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sid = events.endEvents[i].sensorShapeId;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "sensor_shape_id");
-                sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-                *sid = events.endEvents[i].visitorShapeId;
-                luaL_setmetatable(L, "b2d.ShapeId");
-                lua_setfield(L, -2, "visitor_shape_id");
-                lua_rawseti(L, -2, i + 1);
-            }
-            lua_setfield(L, -2, "end_events");
-
-            return 1;
-        }
-
-        /* Body events → {move_events={...}} */
-        static int l_b2d_world_get_body_events(lua_State *L) {
-            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
-            b2BodyEvents events = b2World_GetBodyEvents(worldId);
-
-            lua_newtable(L);
-            lua_newtable(L);
-            for (int i = 0; i < events.moveCount; i++) {
-                lua_newtable(L);
-                /* transform as {{px,py},{c,s}} */
-                lua_newtable(L);
-                lua_newtable(L);
-                lua_pushnumber(L, events.moveEvents[i].transform.p.x); lua_rawseti(L, -2, 1);
-                lua_pushnumber(L, events.moveEvents[i].transform.p.y); lua_rawseti(L, -2, 2);
-                lua_rawseti(L, -2, 1);
-                lua_newtable(L);
-                lua_pushnumber(L, events.moveEvents[i].transform.q.c); lua_rawseti(L, -2, 1);
-                lua_pushnumber(L, events.moveEvents[i].transform.q.s); lua_rawseti(L, -2, 2);
-                lua_rawseti(L, -2, 2);
-                lua_setfield(L, -2, "transform");
-                b2BodyId* bid = (b2BodyId*)lua_newuserdatauv(L, sizeof(b2BodyId), 0);
-                *bid = events.moveEvents[i].bodyId;
-                luaL_setmetatable(L, "b2d.BodyId");
-                lua_setfield(L, -2, "body_id");
-                lua_pushboolean(L, events.moveEvents[i].fellAsleep);
-                lua_setfield(L, -2, "fell_asleep");
-                lua_rawseti(L, -2, i + 1);
-            }
-            lua_setfield(L, -2, "move_events");
-
-            return 1;
         }
 
         /* CastRayClosest wrapper */
