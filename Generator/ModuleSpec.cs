@@ -59,11 +59,14 @@ public record FuncBinding(
     string? CppFuncName = null
 );
 
+public enum CallbackBridgeMode { None, Immediate }
+
 public record ParamBinding(
     string Name,
     BindingType Type,
     bool IsOptional = false,
-    bool IsOutput = false
+    bool IsOutput = false,
+    CallbackBridgeMode CallbackBridge = CallbackBridgeMode.None
 );
 
 public record EnumBinding(

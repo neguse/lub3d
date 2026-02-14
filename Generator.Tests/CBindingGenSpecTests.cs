@@ -1088,6 +1088,138 @@ public class CBindingGenSpecTests
 
     // ===== Custom 型戻り値 =====
 
+    // ===== Immediate Callback Bridge =====
+
+    [Fact]
+    public void ImmediateCallbackParam_DoesNotThrow()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapAABB", "WorldOverlapAABB",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var exception = Record.Exception(() => CBindingGen.Generate(spec));
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    public void ImmediateCallback_GeneratesContextStruct()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapAABB", "WorldOverlapAABB",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2World_OverlapAABB_cb_ctx", code);
+        Assert.Contains("lua_State* L", code);
+        Assert.Contains("int callback_idx", code);
+    }
+
+    [Fact]
+    public void ImmediateCallback_GeneratesTrampoline_BoolReturn()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapAABB", "WorldOverlapAABB",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2World_OverlapAABB_trampoline", code);
+        Assert.Contains("lua_toboolean", code);
+        Assert.Contains("lua_call(ctx->L, 1, 1)", code);
+    }
+
+    [Fact]
+    public void ImmediateCallback_GeneratesTrampoline_FloatReturn()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+             ("point", vsType),
+             ("normal", vsType),
+             ("fraction", new BindingType.Float())],
+            new BindingType.Float());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_CastRay", "WorldCastRay",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2World_CastRay_trampoline", code);
+        Assert.Contains("lua_tonumber", code);
+        Assert.Contains("lua_call(ctx->L, 4, 1)", code);
+    }
+
+    [Fact]
+    public void ImmediateCallback_BindingFunc_ChecksFunction()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapAABB", "WorldOverlapAABB",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("luaL_checktype(L, 2, LUA_TFUNCTION)", code);
+    }
+
+    [Fact]
+    public void ImmediateCallback_BindingFunc_PassesTrampolineAndCtx()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapAABB", "WorldOverlapAABB",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2World_OverlapAABB_trampoline", code);
+        Assert.Contains("&_cb_ctx", code);
+    }
+
+    [Fact]
+    public void NoCallbackBridge_StillThrows()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapAABB", "WorldOverlapAABB",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType)],
+                new BindingType.Void(), null)],
+            [], []);
+        Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
     [Fact]
     public void Generate_CustomReturn_UsesPushCode()
     {
