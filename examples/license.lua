@@ -14,11 +14,11 @@ M.window_title = "Lub3d - Licenses"
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
 
-    imgui.Setup()
+    imgui.setup()
 
     -- Build license text
     local parts = { "=== Lub3d Third-Party Licenses ===\n\n" }
@@ -39,41 +39,41 @@ function M:init()
 end
 
 function M:frame()
-    local w = app.Width()
-    local h = app.Height()
+    local w = app.width()
+    local h = app.height()
 
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
             } }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
 
-    imgui.NewFrame()
+    imgui.new_frame()
 
-    imgui.SetNextWindowPos({ w * 0.1, h * 0.05 })
-    imgui.SetNextWindowSize({ w * 0.8, h * 0.9 })
+    imgui.set_next_window_pos({ w * 0.1, h * 0.05 })
+    imgui.set_next_window_size({ w * 0.8, h * 0.9 })
     local flags = imgui.WindowFlags.NO_RESIZE + imgui.WindowFlags.NO_MOVE + imgui.WindowFlags.NO_COLLAPSE
-    if imgui.Begin("Lub3d Licenses", nil, flags) then
-        imgui.TextUnformatted(license_text)
+    if imgui.begin_window("Lub3d Licenses", nil, flags) then
+        imgui.text_unformatted(license_text)
     end
-    imgui.End()
+    imgui.end_window()
 
-    imgui.Render()
-    gfx.EndPass()
-    gfx.Commit()
+    imgui.render()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    imgui.Shutdown()
-    gfx.Shutdown()
+    imgui.shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
-    imgui.HandleEvent(ev)
+    imgui.handle_event(ev)
 end
 
 return M

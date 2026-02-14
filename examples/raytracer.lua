@@ -265,15 +265,15 @@ function M:init()
     log.log("Raytracer init starting...")
 
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
 
-    stm.Setup()
-    sdtx.Setup(sdtx.Desc({ fonts = { sdtx.FontC64() } }))
-    last_time = stm.Now()
+    stm.setup()
+    sdtx.setup(sdtx.desc({ fonts = { sdtx.font_c64() } }))
+    last_time = stm.now()
 
-    shader = shaderMod.Compile(shader_source, "raytracer", {
+    shader = shaderMod.compile(shader_source, "raytracer", {
         { size = 16, stage = gfx.ShaderStage.FRAGMENT }
     })
     if not shader then
@@ -282,7 +282,7 @@ function M:init()
     end
     log.log("Shader compiled OK")
 
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
         shader = shader,
         layout = {
             attrs = {
@@ -292,14 +292,14 @@ function M:init()
         primitive_type = gfx.PrimitiveType.TRIANGLE_STRIP,
     }))
 
-    if gfx.QueryPipelineState(pipeline) ~= gfx.ResourceState.VALID then
+    if gfx.query_pipeline_state(pipeline) ~= gfx.ResourceState.VALID then
         log.log("Pipeline creation failed!")
         return
     end
 
     -- Fullscreen quad
-    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = util.PackFloats({ -1, -1, 1, -1, -1, 1, 1, 1 }),
+    vbuf = gfx.make_buffer(gfx.buffer_desc({
+        data = util.pack_floats({ -1, -1, 1, -1, -1, 1, 1, 1 }),
         usage = { vertex_buffer = true, immutable = true }
     }))
 end
@@ -310,50 +310,50 @@ function M:frame()
 
     -- Calculate FPS
     frame_count = frame_count + 1
-    local now = stm.Now()
-    local elapsed = stm.Ms(stm.Diff(now, last_time))
+    local now = stm.now()
+    local elapsed = stm.ms(stm.diff(now, last_time))
     if elapsed >= 1000 then
         fps = frame_count * 1000 / elapsed
         frame_count = 0
         last_time = now
     end
 
-    local w = app.Width()
-    local h = app.Height()
+    local w = app.width()
+    local h = app.height()
 
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = { { load_action = gfx.LoadAction.CLEAR, clear_value = { r = 0, g = 0, b = 0, a = 1 } } }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
 
-    gfx.ApplyPipeline(pipeline)
-    gfx.ApplyBindings(gfx.Bindings({ vertex_buffers = { vbuf } }))
+    gfx.apply_pipeline(pipeline)
+    gfx.apply_bindings(gfx.bindings({ vertex_buffers = { vbuf } }))
 
     -- Pass uniforms (time, aspect ratio)
-    gfx.ApplyUniforms(0, gfx.Range(util.PackFloats({ t, w / h, 0, 0 })))
+    gfx.apply_uniforms(0, gfx.range(util.pack_floats({ t, w / h, 0, 0 })))
 
-    gfx.Draw(0, 4, 1)
+    gfx.draw(0, 4, 1)
 
     -- Draw FPS and resolution (3x size for low-res readability)
-    sdtx.Canvas(w / 3, h / 3)
-    sdtx.Origin(0.5, 0.5)
-    sdtx.Color3f(1, 1, 0)
-    sdtx.Puts(string.format("FPS: %.1f\n%dx%d", fps, w, h))
-    sdtx.Draw()
+    sdtx.canvas(w / 3, h / 3)
+    sdtx.origin(0.5, 0.5)
+    sdtx.color3f(1, 1, 0)
+    sdtx.puts(string.format("FPS: %.1f\n%dx%d", fps, w, h))
+    sdtx.draw()
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
-        app.Quit()
+        app.quit()
     end
 end
 

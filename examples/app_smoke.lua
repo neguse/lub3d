@@ -4,7 +4,7 @@ local log = require("sokol.log")
 local tested = false
 
 local function info(msg)
-    log.Func("lua", 3, 0, msg, 0, "", nil)
+    log.func("lua", 3, 0, msg, 0, "", nil)
 end
 
 local function smoke_test()
@@ -16,52 +16,52 @@ local function smoke_test()
     end
 
     -- Query functions (read-only, safe to call anytime after init)
-    test("Isvalid", function() assert(type(app.Isvalid()) == "boolean") end)
-    test("Width", function() assert(type(app.Width()) == "number") end)
-    test("Widthf", function() assert(type(app.Widthf()) == "number") end)
-    test("Height", function() assert(type(app.Height()) == "number") end)
-    test("Heightf", function() assert(type(app.Heightf()) == "number") end)
-    test("ColorFormat", function() assert(type(app.ColorFormat()) == "number") end)
-    test("DepthFormat", function() assert(type(app.DepthFormat()) == "number") end)
-    test("SampleCount", function() assert(type(app.SampleCount()) == "number") end)
-    test("HighDpi", function() assert(type(app.HighDpi()) == "boolean") end)
-    test("DpiScale", function() assert(type(app.DpiScale()) == "number") end)
-    test("FrameCount", function() assert(type(app.FrameCount()) == "number") end)
-    test("FrameDuration", function() assert(type(app.FrameDuration()) == "number") end)
+    test("isvalid", function() assert(type(app.isvalid()) == "boolean") end)
+    test("width", function() assert(type(app.width()) == "number") end)
+    test("widthf", function() assert(type(app.widthf()) == "number") end)
+    test("height", function() assert(type(app.height()) == "number") end)
+    test("heightf", function() assert(type(app.heightf()) == "number") end)
+    test("color_format", function() assert(type(app.color_format()) == "number") end)
+    test("depth_format", function() assert(type(app.depth_format()) == "number") end)
+    test("sample_count", function() assert(type(app.sample_count()) == "number") end)
+    test("high_dpi", function() assert(type(app.high_dpi()) == "boolean") end)
+    test("dpi_scale", function() assert(type(app.dpi_scale()) == "number") end)
+    test("frame_count", function() assert(type(app.frame_count()) == "number") end)
+    test("frame_duration", function() assert(type(app.frame_duration()) == "number") end)
 
     -- Keyboard
-    test("KeyboardShown", function() assert(type(app.KeyboardShown()) == "boolean") end)
-    test("ShowKeyboard", function() app.ShowKeyboard(false) end)
+    test("keyboard_shown", function() assert(type(app.keyboard_shown()) == "boolean") end)
+    test("show_keyboard", function() app.show_keyboard(false) end)
 
     -- Fullscreen
-    test("IsFullscreen", function() assert(type(app.IsFullscreen()) == "boolean") end)
+    test("is_fullscreen", function() assert(type(app.is_fullscreen()) == "boolean") end)
 
     -- Mouse
-    test("MouseShown", function() assert(type(app.MouseShown()) == "boolean") end)
-    test("ShowMouse", function() app.ShowMouse(true) end)
-    test("MouseLocked", function() assert(type(app.MouseLocked()) == "boolean") end)
-    test("LockMouse", function() app.LockMouse(false) end)
-    test("GetMouseCursor", function() assert(type(app.GetMouseCursor()) == "number") end)
-    test("SetMouseCursor", function() app.SetMouseCursor(app.GetMouseCursor()) end)
+    test("mouse_shown", function() assert(type(app.mouse_shown()) == "boolean") end)
+    test("show_mouse", function() app.show_mouse(true) end)
+    test("mouse_locked", function() assert(type(app.mouse_locked()) == "boolean") end)
+    test("lock_mouse", function() app.lock_mouse(false) end)
+    test("get_mouse_cursor", function() assert(type(app.get_mouse_cursor()) == "number") end)
+    test("set_mouse_cursor", function() app.set_mouse_cursor(app.get_mouse_cursor()) end)
 
     -- Window
-    test("SetWindowTitle", function() app.SetWindowTitle("smoke test") end)
+    test("set_window_title", function() app.set_window_title("smoke test") end)
 
     -- Clipboard
-    test("GetClipboardString", function() app.GetClipboardString() end)
+    test("get_clipboard_string", function() app.get_clipboard_string() end)
 
     -- Userdata
-    test("Userdata", function() app.Userdata() end)
+    test("userdata", function() app.userdata() end)
 
     -- Struct return
-    test("QueryDesc", function()
-        local desc = app.QueryDesc()
+    test("query_desc", function()
+        local desc = app.query_desc()
         assert(type(desc) == "userdata" or type(desc) == "table")
     end)
 
     -- Platform-specific (may fail on some platforms, that's expected)
-    test("D3d11GetSwapChain", function() app.D3d11GetSwapChain() end)
-    test("Win32GetHwnd", function() app.Win32GetHwnd() end)
+    test("d3d11_get_swap_chain", function() app.d3d11_get_swap_chain() end)
+    test("win32_get_hwnd", function() app.win32_get_hwnd() end)
 
     -- Print results via sokol.log
     info("=== sokol.app smoke test ===")
@@ -88,7 +88,7 @@ function M:frame()
     if not tested then
         tested = true
         smoke_test()
-        app.RequestQuit()
+        app.request_quit()
     end
 end
 

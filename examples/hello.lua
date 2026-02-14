@@ -14,10 +14,10 @@ M.height = 600
 M.window_title = "Hello Lub3d (Lua Entry Point)"
 
 function M:init()
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
-    gl.Setup(gl.Desc({}))
+    gl.setup(gl.desc({}))
 end
 
 function M:frame()
@@ -29,43 +29,43 @@ function M:frame()
     local g = (math.sin(t + 2) + 1) / 2
     local b = (math.sin(t + 4) + 1) / 2
 
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = {
-                gfx.ColorAttachmentAction({
+                gfx.color_attachment_action({
                     load_action = gfx.LoadAction.CLEAR,
-                    clear_value = gfx.Color({ r = r, g = g, b = b, a = 1.0 }),
+                    clear_value = gfx.color({ r = r, g = g, b = b, a = 1.0 }),
                 }),
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
     -- Draw a simple triangle using sokol.gl
-    gl.Defaults()
-    gl.MatrixModeProjection()
-    gl.Ortho(-1, 1, -1, 1, -1, 1)
+    gl.defaults()
+    gl.matrix_mode_projection()
+    gl.ortho(-1, 1, -1, 1, -1, 1)
 
-    gl.BeginTriangles()
-    gl.V2fC3f(0.0, 0.5, 1.0, 0.0, 0.0)
-    gl.V2fC3f(-0.5, -0.5, 0.0, 1.0, 0.0)
-    gl.V2fC3f(0.5, -0.5, 0.0, 0.0, 1.0)
-    gl.End()
+    gl.begin_triangles()
+    gl.v2f_c3f(0.0, 0.5, 1.0, 0.0, 0.0)
+    gl.v2f_c3f(-0.5, -0.5, 0.0, 1.0, 0.0)
+    gl.v2f_c3f(0.5, -0.5, 0.0, 0.0, 1.0)
+    gl["end"]()
 
-    gl.Draw()
-    gfx.EndPass()
-    gfx.Commit()
+    gl.draw()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    gl.Shutdown()
-    gfx.Shutdown()
+    gl.shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
-            app.Quit()
+            app.quit()
         end
     end
 end

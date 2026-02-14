@@ -9,16 +9,16 @@ local util = require("lib.util")
 local glm = require("lib.glm")
 
 -- Camera
-local camera_pos = glm.Vec3(0, -15, 8)
-local camera_target = glm.Vec3(0, 0, 3)
-local camera_up = glm.Vec3(0, 0, 1) -- Z-up coordinate system
+local camera_pos = glm.vec3(0, -15, 8)
+local camera_target = glm.vec3(0, 0, 3)
+local camera_up = glm.vec3(0, 0, 1) -- Z-up coordinate system
 local camera_yaw = 0
 local camera_pitch = 0.3
 
 -- Light
-local light_pos = glm.Vec3(5, -5, 10)
-local light_color = glm.Vec3(2, 1.9, 1.8)     -- brighter
-local ambient_color = glm.Vec3(0.5, 0.5, 0.5) -- brighter
+local light_pos = glm.vec3(5, -5, 10)
+local light_color = glm.vec3(2, 1.9, 1.8)     -- brighter
+local ambient_color = glm.vec3(0.5, 0.5, 0.5) -- brighter
 
 -- Graphics resources
 local shader = nil
@@ -257,13 +257,13 @@ function M:init()
     log.info("Lighting example init")
 
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
 
     -- Compile shader
     -- Single uniform block: 2 mat4 + 6 vec4 = 128 + 96 = 224 bytes
-    shader = shaderMod.Compile(shader_source, "lighting", {
+    shader = shaderMod.compile(shader_source, "lighting", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 224,
@@ -290,7 +290,7 @@ function M:init()
     end
 
     -- Create pipeline
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
         shader = shader,
         layout = {
             attrs = {
@@ -311,13 +311,13 @@ function M:init()
     local cube_verts = make_cube_vertices()
     local cube_indices = make_cube_indices()
 
-    cube_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.PackFloats(cube_verts)),
+    cube_vbuf = gfx.make_buffer(gfx.buffer_desc({
+        data = gfx.range(util.pack_floats(cube_verts)),
     }))
 
-    cube_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
+    cube_ibuf = gfx.make_buffer(gfx.buffer_desc({
         usage = { index_buffer = true },
-        data = gfx.Range(pack_indices(cube_indices)),
+        data = gfx.range(pack_indices(cube_indices)),
     }))
 
     cube_data = {
@@ -328,13 +328,13 @@ function M:init()
     local sphere_verts, segs, rings = make_sphere_vertices(24, 12)
     local sphere_indices = make_sphere_indices(segs, rings)
 
-    sphere_vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(util.PackFloats(sphere_verts)),
+    sphere_vbuf = gfx.make_buffer(gfx.buffer_desc({
+        data = gfx.range(util.pack_floats(sphere_verts)),
     }))
 
-    sphere_ibuf = gfx.MakeBuffer(gfx.BufferDesc({
+    sphere_ibuf = gfx.make_buffer(gfx.buffer_desc({
         usage = { index_buffer = true },
-        data = gfx.Range(pack_indices(sphere_indices)),
+        data = gfx.range(pack_indices(sphere_indices)),
     }))
 
     sphere_data = {
@@ -349,12 +349,12 @@ function M:frame()
 
     -- Update camera based on input
     local move_speed = 0.2
-    local forward = glm.Vec3(
+    local forward = glm.vec3(
         math.sin(camera_yaw) * math.cos(camera_pitch),
         math.cos(camera_yaw) * math.cos(camera_pitch),
         math.sin(camera_pitch)
     )
-    local right = glm.Normalize(glm.Cross(forward, camera_up))
+    local right = glm.normalize(glm.cross(forward, camera_up))
 
     if keys_down["W"] then camera_pos = camera_pos + forward * move_speed end
     if keys_down["S"] then camera_pos = camera_pos - forward * move_speed end
@@ -364,28 +364,28 @@ function M:frame()
     if keys_down["LEFT_SHIFT"] then camera_pos = camera_pos - camera_up * move_speed end
 
     -- Animate light
-    light_pos = glm.Vec3(
+    light_pos = glm.vec3(
         math.sin(t * 0.5) * 8,
         math.cos(t * 0.5) * 8,
         6 + math.sin(t * 0.3) * 2
     )
 
     -- Matrices
-    local w = app.Width()
-    local h = app.Height()
+    local w = app.width()
+    local h = app.height()
     local aspect = w / h
 
-    local proj = glm.Perspective(math.rad(60), aspect, 0.1, 100)
+    local proj = glm.perspective(math.rad(60), aspect, 0.1, 100)
     -- Simple fixed camera looking at origin
-    local eye = glm.Vec3(0, -10, 5)
-    local center = glm.Vec3(0, 0, 0)
-    local up = glm.Vec3(0, 0, 1)
-    local view = glm.Lookat(eye, center, up)
+    local eye = glm.vec3(0, -10, 5)
+    local center = glm.vec3(0, 0, 0)
+    local up = glm.vec3(0, 0, 1)
+    local view = glm.lookat(eye, center, up)
     camera_pos = eye -- for lighting calculation
 
     -- Begin pass
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 }
@@ -395,13 +395,13 @@ function M:frame()
                 clear_value = 1.0
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
-    gfx.ApplyPipeline(pipeline)
+    gfx.apply_pipeline(pipeline)
 
     -- Draw spheres (better for showing Fresnel)
-    gfx.ApplyBindings(gfx.Bindings({
+    gfx.apply_bindings(gfx.bindings({
         vertex_buffers = { sphere_vbuf },
         index_buffer = sphere_ibuf,
     }))
@@ -423,12 +423,12 @@ function M:frame()
     }
 
     for i, pos in ipairs(sphere_positions) do
-        local model = glm.Translate(glm.Vec3(pos[1], pos[2], pos[3])) * glm.Scale(glm.Vec3(1.5, 1.5, 1.5))
+        local model = glm.translate(glm.vec3(pos[1], pos[2], pos[3])) * glm.scale(glm.vec3(1.5, 1.5, 1.5))
         local mvp = proj * view * model
 
         local color = sphere_colors[i]
 
-        local uniforms = mvp:Pack() .. model:Pack() .. util.PackFloats({
+        local uniforms = mvp:pack() .. model:pack() .. util.pack_floats({
             light_pos.x, light_pos.y, light_pos.z, 1,
             light_color.x, light_color.y, light_color.z, 1,
             ambient_color.x, ambient_color.y, ambient_color.z, 1,
@@ -437,15 +437,15 @@ function M:frame()
             0.3, 0.3, 0.3, 64,               -- specular + shininess
         })
 
-        gfx.ApplyUniforms(0, gfx.Range(uniforms))
-        gfx.Draw(0, sphere_data.index_count, 1)
+        gfx.apply_uniforms(0, gfx.range(uniforms))
+        gfx.draw(0, sphere_data.index_count, 1)
     end
 
     -- Draw light indicator (small bright sphere)
-    local light_model = glm.Translate(light_pos) * glm.Scale(glm.Vec3(0.3, 0.3, 0.3))
+    local light_model = glm.translate(light_pos) * glm.scale(glm.vec3(0.3, 0.3, 0.3))
     local light_mvp = proj * view * light_model
 
-    local uniforms = light_mvp:Pack() .. light_model:Pack() .. util.PackFloats({
+    local uniforms = light_mvp:pack() .. light_model:pack() .. util.pack_floats({
         light_pos.x, light_pos.y, light_pos.z, 1,
         1, 1, 1, 1,
         5, 5, 5, 1, -- high ambient = emissive
@@ -454,11 +454,11 @@ function M:frame()
         0, 0, 0, 1,
     })
 
-    gfx.ApplyUniforms(0, gfx.Range(uniforms))
-    gfx.Draw(0, sphere_data.index_count, 1)
+    gfx.apply_uniforms(0, gfx.range(uniforms))
+    gfx.draw(0, sphere_data.index_count, 1)
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:event(ev)
@@ -467,8 +467,8 @@ function M:event(ev)
         local key = ev.key_code
         if key == app.Keycode.ESCAPE then
             mouse_captured = false
-            app.ShowMouse(true)
-            app.LockMouse(false)
+            app.show_mouse(true)
+            app.lock_mouse(false)
         elseif key == app.Keycode.W then
             keys_down["W"] = true
         elseif key == app.Keycode.S then
@@ -499,8 +499,8 @@ function M:event(ev)
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
-        app.ShowMouse(false)
-        app.LockMouse(true)
+        app.show_mouse(false)
+        app.lock_mouse(true)
     elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
             local dx = ev.mouse_dx
@@ -513,7 +513,7 @@ function M:event(ev)
 end
 
 function M:cleanup()
-    gfx.Shutdown()
+    gfx.shutdown()
     log.info("Lighting cleanup")
 end
 

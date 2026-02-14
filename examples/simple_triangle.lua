@@ -66,12 +66,12 @@ function M:init()
     log.info("Simple triangle example init")
 
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
 
     -- Setup ImGui
-    imgui.Setup()
+    imgui.setup()
 
     -- Create triangle vertex buffer
     -- Each vertex: pos (x, y), color (r, g, b)
@@ -82,8 +82,8 @@ function M:init()
         -0.5, -0.5, 0.0, 0.0, 1.0, -- bottom left (blue)
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
-    vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-        data = gfx.Range(data),
+    vbuf = gfx.make_buffer(gfx.buffer_desc({
+        data = gfx.range(data),
     }))
 
     -- Compile shader
@@ -103,14 +103,14 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 1 },
         },
     }
-    shader = shaderMod.CompileFull(shader_source, "simple", shader_desc)
+    shader = shaderMod.compile_full(shader_source, "simple", shader_desc)
     if not shader then
         log.error("Failed to compile shader")
         return
     end
 
     -- Create pipeline
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
         shader = shader,
         layout = {
             attrs = {
@@ -124,7 +124,7 @@ function M:init()
 end
 
 function M:frame()
-    imgui.NewFrame()
+    imgui.new_frame()
 
     -- Update rotation
     if auto_rotate then
@@ -132,19 +132,19 @@ function M:frame()
     end
 
     -- === RENDER PASS ===
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1.0 },
             } },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
-    gfx.ApplyPipeline(pipeline)
+    gfx.apply_pipeline(pipeline)
 
-    gfx.ApplyBindings(gfx.Bindings({
+    gfx.apply_bindings(gfx.bindings({
         vertex_buffers = { vbuf },
     }))
 
@@ -154,60 +154,60 @@ function M:frame()
         triangle_color[1], triangle_color[2], triangle_color[3], 1.0,
         rotation, 0.0, 0.0, 0.0
     )
-    gfx.ApplyUniforms(0, gfx.Range(uniform_data))
+    gfx.apply_uniforms(0, gfx.range(uniform_data))
 
-    gfx.Draw(0, 3, 1)
+    gfx.draw(0, 3, 1)
 
     -- ImGui UI
-    if imgui.Begin("Triangle Controls") then
-        imgui.TextUnformatted("Simple Triangle Example")
-        imgui.Separator()
+    if imgui.begin_window("Triangle Controls") then
+        imgui.text_unformatted("Simple Triangle Example")
+        imgui.separator()
 
-        local clicked, new_val = imgui.Checkbox("Auto Rotate", auto_rotate)
+        local clicked, new_val = imgui.checkbox("Auto Rotate", auto_rotate)
         if clicked then auto_rotate = new_val end
 
-        local changed, new_speed = imgui.SliderFloat("Rotation Speed", rotation_speed, 0.0, 5.0)
+        local changed, new_speed = imgui.slider_float("Rotation Speed", rotation_speed, 0.0, 5.0)
         if changed then rotation_speed = new_speed end
 
         if not auto_rotate then
-            local rot_changed, new_rot = imgui.SliderFloat("Rotation", rotation, 0.0, 6.28318)
+            local rot_changed, new_rot = imgui.slider_float("Rotation", rotation, 0.0, 6.28318)
             if rot_changed then rotation = new_rot end
         end
 
-        imgui.Separator()
+        imgui.separator()
 
-        local col_changed, new_col = imgui.ColorEdit3("Tint Color", triangle_color)
+        local col_changed, new_col = imgui.color_edit3("Tint Color", triangle_color)
         if col_changed then
             triangle_color = new_col
         end
 
-        imgui.Separator()
-        imgui.TextUnformatted(string.format("Rotation: %.2f rad", rotation))
+        imgui.separator()
+        imgui.text_unformatted(string.format("Rotation: %.2f rad", rotation))
     end
-    imgui.End()
+    imgui.end_window()
 
-    imgui.Render()
+    imgui.render()
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    imgui.Shutdown()
-    gfx.Shutdown()
+    imgui.shutdown()
+    gfx.shutdown()
     log.info("cleanup")
 end
 
 function M:event(ev)
     -- Let ImGui handle events first
-    if imgui.HandleEvent(ev) then
+    if imgui.handle_event(ev) then
         return
     end
 
     -- ESC to quit
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE then
-            app.RequestQuit()
+            app.request_quit()
         end
     end
 end

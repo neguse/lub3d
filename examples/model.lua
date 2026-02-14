@@ -15,14 +15,14 @@ M.height = 768
 M.window_title = "Lub3d - Model Loading"
 
 -- Camera
-local camera_pos = glm.Vec3(0, -20, 10)
+local camera_pos = glm.vec3(0, -20, 10)
 local camera_yaw = 0
 local camera_pitch = 0.3
 
 -- Light
-local light_pos = glm.Vec3(10, -10, 20)
-local light_color = glm.Vec3(1.5, 1.4, 1.3)
-local ambient_color = glm.Vec3(0.2, 0.2, 0.25)
+local light_pos = glm.vec3(10, -10, 20)
+local light_color = glm.vec3(1.5, 1.4, 1.3)
+local ambient_color = glm.vec3(0.2, 0.2, 0.25)
 
 -- Graphics resources
 local shader = nil
@@ -213,7 +213,7 @@ local function load_texture_cached(path)
     end
 
     local full_path = "textures/" .. path
-    local tex = texture.Load(full_path)
+    local tex = texture.load(full_path)
     if tex then
         textures_cache[path] = tex
         return tex.view.handle, tex.smp.handle
@@ -224,16 +224,16 @@ end
 -- Create a default 1x1 texture (returns view, sampler)
 local function create_default_texture(r, g, b)
     local pixels = string.char(math.floor(r * 255), math.floor(g * 255), math.floor(b * 255), 255)
-    local img = gfx.MakeImage(gfx.ImageDesc({
+    local img = gfx.make_image(gfx.image_desc({
         width = 1,
         height = 1,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { pixels } },
     }))
-    local view = gfx.MakeView(gfx.ViewDesc({
+    local view = gfx.make_view(gfx.view_desc({
         texture = { image = img },
     }))
-    local smp = gfx.MakeSampler(gfx.SamplerDesc({
+    local smp = gfx.make_sampler(gfx.sampler_desc({
         min_filter = gfx.Filter.NEAREST,
         mag_filter = gfx.Filter.NEAREST,
     }))
@@ -245,8 +245,8 @@ local default_normal_view, default_normal_smp
 
 function M:init()
     -- Initialize sokol.gfx
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
 
     log.info("Model loading example init")
@@ -323,7 +323,7 @@ function M:init()
             { hlsl_sem_name = "TEXCOORD", hlsl_sem_index = 3 },
         },
     }
-    shader = shaderMod.CompileFull(shader_source, "model", shader_desc)
+    shader = shaderMod.compile_full(shader_source, "model", shader_desc)
 
     if not shader then
         log.error("Failed to compile shader")
@@ -331,7 +331,7 @@ function M:init()
     end
 
     -- Create pipeline
-    pipeline = gfx.MakePipeline(gfx.PipelineDesc({
+    pipeline = gfx.make_pipeline(gfx.pipeline_desc({
         shader = shader,
         layout = {
             attrs = {
@@ -368,8 +368,8 @@ function M:init()
             local verts_with_tangents = add_tangents(mesh.vertices)
 
             if #verts_with_tangents > 0 then
-                local vbuf = gfx.MakeBuffer(gfx.BufferDesc({
-                    data = gfx.Range(util.PackFloats(verts_with_tangents)),
+                local vbuf = gfx.make_buffer(gfx.buffer_desc({
+                    data = gfx.range(util.pack_floats(verts_with_tangents)),
                 }))
 
                 -- Get textures (views)
@@ -430,13 +430,13 @@ function M:frame()
 
     -- Camera controls
     local move_speed = 0.3
-    local camera_up = glm.Vec3(0, 0, 1)
-    local forward = glm.Vec3(
+    local camera_up = glm.vec3(0, 0, 1)
+    local forward = glm.vec3(
         math.sin(camera_yaw) * math.cos(camera_pitch),
         math.cos(camera_yaw) * math.cos(camera_pitch),
         math.sin(camera_pitch)
     )
-    local right = glm.Normalize(glm.Cross(forward, camera_up))
+    local right = glm.normalize(glm.cross(forward, camera_up))
 
     if keys_down["W"] then
         camera_pos = camera_pos + forward * move_speed
@@ -458,19 +458,19 @@ function M:frame()
     end
 
     -- Matrices
-    local w = app.Width()
-    local h = app.Height()
+    local w = app.width()
+    local h = app.height()
     local aspect = w / h
 
-    local proj = glm.Perspective(math.rad(60), aspect, 0.1, 500)
+    local proj = glm.perspective(math.rad(60), aspect, 0.1, 500)
     local center = camera_pos + forward
-    local view = glm.Lookat(camera_pos, center, camera_up)
+    local view = glm.lookat(camera_pos, center, camera_up)
 
-    local model = glm.Mat4() -- identity
+    local model = glm.mat4() -- identity
 
     -- Begin pass
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = {
                 {
                     load_action = gfx.LoadAction.CLEAR,
@@ -482,25 +482,25 @@ function M:frame()
                 clear_value = 1.0,
             },
         }),
-        swapchain = glue.Swapchain(),
+        swapchain = glue.swapchain(),
     }))
 
-    gfx.ApplyPipeline(pipeline)
+    gfx.apply_pipeline(pipeline)
 
     local mvp = proj * view * model
 
     -- Draw all meshes
     for _, mesh in ipairs(meshes) do
-        gfx.ApplyBindings(gfx.Bindings({
+        gfx.apply_bindings(gfx.bindings({
             vertex_buffers = { mesh.vbuf },
             views = { mesh.diffuse_view, mesh.normal_view },
             samplers = { mesh.diffuse_smp, mesh.normal_smp },
         }))
 
         local mat = mesh.material
-        local uniforms = mvp:Pack()
-            .. model:Pack()
-            .. util.PackFloats({
+        local uniforms = mvp:pack()
+            .. model:pack()
+            .. util.pack_floats({
                 light_pos.x,
                 light_pos.y,
                 light_pos.z,
@@ -523,12 +523,12 @@ function M:frame()
                 mat.shininess or 32,
             })
 
-        gfx.ApplyUniforms(0, gfx.Range(uniforms))
-        gfx.Draw(0, mesh.vertex_count, 1)
+        gfx.apply_uniforms(0, gfx.range(uniforms))
+        gfx.draw(0, mesh.vertex_count, 1)
     end
 
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.end_pass()
+    gfx.commit()
 end
 
 local event_logged = false
@@ -543,8 +543,8 @@ function M:event(ev)
         log.info("KEY_DOWN: " .. tostring(key))
         if key == app.Keycode.ESCAPE then
             mouse_captured = false
-            app.ShowMouse(true)
-            app.LockMouse(false)
+            app.show_mouse(true)
+            app.lock_mouse(false)
         elseif key == app.Keycode.W then
             keys_down["W"] = true
         elseif key == app.Keycode.S then
@@ -583,8 +583,8 @@ function M:event(ev)
         end
     elseif evtype == app.EventType.MOUSE_DOWN then
         mouse_captured = true
-        app.ShowMouse(false)
-        app.LockMouse(true)
+        app.show_mouse(false)
+        app.lock_mouse(true)
     elseif evtype == app.EventType.MOUSE_MOVE then
         if mouse_captured then
             local dx = ev.mouse_dx
@@ -606,7 +606,7 @@ function M:cleanup()
     textures_cache = {}
 
     log.info("Model cleanup")
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 return M

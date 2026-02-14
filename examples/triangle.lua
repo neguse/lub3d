@@ -47,15 +47,15 @@ M.window_title = "Lub3d - Simple Triangle"
 
 function M:init()
     -- Initialize sokol.gfx (once only, cannot be called twice)
-    gfx.Setup(gfx.Desc({
-        environment = glue.Environment(),
+    gfx.setup(gfx.desc({
+        environment = glue.environment(),
     }))
     self:create_resources()
 end
 
 function M:create_resources()
     -- Compile shader using lib.shader (auto-detects backend language)
-    self.shd = shader.Compile(shader_source, "triangle", {
+    self.shd = shader.compile(shader_source, "triangle", {
         {
             stage = gfx.ShaderStage.VERTEX,
             size = 16, -- rotation (float) padded to 16 bytes
@@ -66,7 +66,7 @@ function M:create_resources()
         return
     end
 
-    self.pip = gfx.MakePipeline(gfx.PipelineDesc({
+    self.pip = gfx.make_pipeline(gfx.pipeline_desc({
         shader = self.shd,
         layout = {
             attrs = {
@@ -84,7 +84,7 @@ function M:create_resources()
     }
     local data = string.pack(string.rep("f", #vertices), table.unpack(vertices))
     self.bind = {
-        vertex_buffers = { gfx.MakeBuffer(gfx.BufferDesc({ data = gfx.Range(data) })) }
+        vertex_buffers = { gfx.make_buffer(gfx.buffer_desc({ data = gfx.range(data) })) }
     }
     self.time = self.time or 0
 end
@@ -92,35 +92,35 @@ end
 function M:frame()
     self.time = (self.time or 0) + 1 / 60
 
-    gfx.BeginPass(gfx.Pass({
-        action = gfx.PassAction({
+    gfx.begin_pass(gfx.pass({
+        action = gfx.pass_action({
             colors = { {
                 load_action = gfx.LoadAction.CLEAR,
                 clear_value = { r = 0.1, g = 0.1, b = 0.15, a = 1 }
             } }
         }),
-        swapchain = glue.Swapchain()
+        swapchain = glue.swapchain()
     }))
 
-    gfx.ApplyPipeline(self.pip)
-    gfx.ApplyBindings(gfx.Bindings(self.bind))
+    gfx.apply_pipeline(self.pip)
+    gfx.apply_bindings(gfx.bindings(self.bind))
 
     -- Pack uniform: rotation (float) padded to 16 bytes
     local uniform_data = string.pack("ffff", self.time, 0, 0, 0)
-    gfx.ApplyUniforms(0, gfx.Range(uniform_data))
+    gfx.apply_uniforms(0, gfx.range(uniform_data))
 
-    gfx.Draw(0, 3, 1)
-    gfx.EndPass()
-    gfx.Commit()
+    gfx.draw(0, 3, 1)
+    gfx.end_pass()
+    gfx.commit()
 end
 
 function M:cleanup()
-    gfx.Shutdown()
+    gfx.shutdown()
 end
 
 function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN and ev.key_code == app.Keycode.Q then
-        app.Quit()
+        app.quit()
     end
 end
 
