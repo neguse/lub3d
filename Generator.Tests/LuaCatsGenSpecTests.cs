@@ -272,6 +272,24 @@ public class LuaCatsGenSpecTests
         Assert.Contains("fun(name: string): boolean", code);
     }
 
+    // ===== ValueStruct =====
+
+    [Fact]
+    public void Generate_ValueStruct_Type()
+    {
+        var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [],
+            [new FuncBinding("b2Body_GetPosition", "BodyGetPosition",
+                [new ParamBinding("bodyId", new BindingType.Struct("b2BodyId", "b2d.BodyId", "b2d.BodyId"))],
+                vsType, null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("fun(bodyId: b2d.BodyId): number[]", code);
+    }
+
     // ===== ExtraLuaFuncs =====
 
     [Fact]

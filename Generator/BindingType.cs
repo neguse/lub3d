@@ -36,6 +36,16 @@ public abstract record BindingType
     public sealed record Vec4 : BindingType;               // ImVec4 → table {x, y, z, w}
     public sealed record FloatArray(int Length) : BindingType; // float[N] → table
 
+    // 値型構造体 — table ⇔ C struct 変換を構造化データから生成
+    public sealed record ValueStruct(
+        string CTypeName, string LuaCatsType,
+        List<ValueStructField> Fields,
+        bool Settable = true) : BindingType;
+
+    public abstract record ValueStructField(string CAccessor);
+    public sealed record ScalarField(string CAccessor) : ValueStructField(CAccessor);
+    public sealed record NestedFields(string CAccessor, List<string> SubAccessors) : ValueStructField(CAccessor);
+
     // エスケープハッチ — sg_range 等の自動演繹不可な型
     public sealed record Custom(
         string CTypeName, string LuaCatsType,
