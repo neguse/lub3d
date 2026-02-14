@@ -136,8 +136,8 @@ local function load_cache(cache_path)
 end
 
 -- Get shader language for current backend
-function M.GetLang()
-    local backend = gfx.QueryBackend()
+function M.get_lang()
+    local backend = gfx.query_backend()
     if backend == gfx.Backend.D3D11 then
         return "hlsl5"
     elseif
@@ -164,12 +164,12 @@ end
 ---@param attrs? table vertex attribute semantics for D3D11
 ---@param texture_sampler_pairs? table texture-sampler pair descriptors
 ---@return sokol.gfx.Shader? shader shader handle or nil on failure
-function M.Compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
+function M.compile(source, program_name, uniform_blocks, attrs, texture_sampler_pairs)
     if not shdc then
         log.error("shdc module not available (requires LUB3D_BUILD_SHDC=ON)")
         return nil
     end
-    local lang = M.GetLang()
+    local lang = M.get_lang()
 
     -- Try to load from cache first
     local cache_path = get_cache_path(source, program_name, lang)
@@ -208,7 +208,7 @@ function M.Compile(source, program_name, uniform_blocks, attrs, texture_sampler_
     )
 
     -- Create shader using generated bindings
-    local backend = gfx.QueryBackend()
+    local backend = gfx.query_backend()
     local is_source = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3 or backend == gfx.Backend.WGPU)
 
     local vs_data, fs_data
@@ -250,8 +250,8 @@ function M.Compile(source, program_name, uniform_blocks, attrs, texture_sampler_
             }
     end
 
-    local shd = gfx.MakeShader(gfx.ShaderDesc(desc_table))
-    if gfx.QueryShaderState(shd) ~= gfx.ResourceState.VALID then
+    local shd = gfx.make_shader(gfx.shader_desc(desc_table))
+    if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
         log.error("Failed to create shader")
         return nil
     end
@@ -264,12 +264,12 @@ end
 ---@param program_name string program name in shader
 ---@param shader_desc table full shader descriptor (uniform_blocks, views, samplers, texture_sampler_pairs, attrs)
 ---@return sokol.gfx.Shader? shader shader handle or nil on failure
-function M.CompileFull(source, program_name, shader_desc)
+function M.compile_full(source, program_name, shader_desc)
     if not shdc then
         log.error("shdc module not available (requires LUB3D_BUILD_SHDC=ON)")
         return nil
     end
-    local lang = M.GetLang()
+    local lang = M.get_lang()
 
     -- Try to load from cache first
     local cache_path = get_cache_path(source, program_name, lang)
@@ -307,7 +307,7 @@ function M.CompileFull(source, program_name, shader_desc)
         .. tostring(result.fs_source and #result.fs_source or "nil")
     )
 
-    local backend = gfx.QueryBackend()
+    local backend = gfx.query_backend()
     local is_source = (backend == gfx.Backend.GLCORE or backend == gfx.Backend.GLES3 or backend == gfx.Backend.WGPU)
 
     local vs_data, fs_data
@@ -346,8 +346,8 @@ function M.CompileFull(source, program_name, shader_desc)
         desc_table.attrs = shader_desc.attrs
     end
 
-    local shd = gfx.MakeShader(gfx.ShaderDesc(desc_table))
-    if gfx.QueryShaderState(shd) ~= gfx.ResourceState.VALID then
+    local shd = gfx.make_shader(gfx.shader_desc(desc_table))
+    if gfx.query_shader_state(shd) ~= gfx.ResourceState.VALID then
         log.error("Failed to create shader")
         return nil
     end

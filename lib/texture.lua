@@ -39,7 +39,7 @@ end
 ---@param filename string path to image file
 ---@return texture.ImageData?
 ---@return string? err
-function M.LoadImageData(filename)
+function M.load_image_data(filename)
     local resolved = resolve_path(filename)
     local data = fs.read(resolved)
     if not data then
@@ -57,10 +57,10 @@ end
 ---@param opts? table optional settings { filter_min, filter_mag, wrap_u, wrap_v }
 ---@return texture.LoadResult?
 ---@return string? err
-function M.Load(filename, opts)
+function M.load(filename, opts)
     opts = opts or {}
 
-    local data, err = M.LoadImageData(filename)
+    local data, err = M.load_image_data(filename)
     if not data then
         return nil, err or "Failed to load image"
     end
@@ -68,24 +68,24 @@ function M.Load(filename, opts)
     log.info("Loaded texture: " .. filename .. " (" .. data.w .. "x" .. data.h .. ")")
 
     -- Create image with gpu wrapper (GC-safe)
-    local img = gpu.Image(gfx.ImageDesc({
+    local img = gpu.image(gfx.image_desc({
         width = data.w,
         height = data.h,
         pixel_format = gfx.PixelFormat.RGBA8,
         data = { mip_levels = { data.pixels } },
     }))
 
-    if gfx.QueryImageState(img.handle) ~= gfx.ResourceState.VALID then
+    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create image"
     end
 
     -- Create view from image (required for binding)
-    local view = gpu.View(gfx.ViewDesc({
+    local view = gpu.view(gfx.view_desc({
         texture = { image = img.handle },
     }))
 
     -- Create sampler
-    local smp = gpu.Sampler(gfx.SamplerDesc({
+    local smp = gpu.sampler(gfx.sampler_desc({
         min_filter = opts.filter_min or gfx.Filter.LINEAR,
         mag_filter = opts.filter_mag or gfx.Filter.LINEAR,
         wrap_u = opts.wrap_u or gfx.Wrap.REPEAT,
@@ -101,12 +101,12 @@ end
 ---@param opts? table optional settings { filter_min, filter_mag, wrap_u, wrap_v, srgb, rdo_quality }
 ---@return texture.LoadResult?
 ---@return string? err
-function M.LoadBc7(filename, opts)
+function M.load_bc7(filename, opts)
     opts = opts or {}
 
     -- If bc7enc not available, fall back to regular load
     if not bc7enc then
-        return M.Load(filename, opts)
+        return M.load(filename, opts)
     end
 
     -- Generate BC7 cache path
@@ -134,7 +134,7 @@ function M.LoadBc7(filename, opts)
 
     -- If no valid cache, load source and encode to BC7
     if not compressed then
-        local img_data, err = M.LoadImageData(filename)
+        local img_data, err = M.load_image_data(filename)
         if not img_data then
             return nil, err or "Failed to load image"
         end
@@ -162,22 +162,22 @@ function M.LoadBc7(filename, opts)
 
     -- Upload BC7 to GPU
     local pixel_format = opts.srgb and gfx.PixelFormat.BC7_SRGBA or gfx.PixelFormat.BC7_RGBA
-    local img = gpu.Image(gfx.ImageDesc({
+    local img = gpu.image(gfx.image_desc({
         width = w,
         height = h,
         pixel_format = pixel_format,
         data = { mip_levels = { compressed } },
     }))
 
-    if gfx.QueryImageState(img.handle) ~= gfx.ResourceState.VALID then
+    if gfx.query_image_state(img.handle) ~= gfx.ResourceState.VALID then
         return nil, "Failed to create BC7 image"
     end
 
-    local view = gpu.View(gfx.ViewDesc({
+    local view = gpu.view(gfx.view_desc({
         texture = { image = img.handle },
     }))
 
-    local smp = gpu.Sampler(gfx.SamplerDesc({
+    local smp = gpu.sampler(gfx.sampler_desc({
         min_filter = opts.filter_min or gfx.Filter.LINEAR,
         mag_filter = opts.filter_mag or gfx.Filter.LINEAR,
         wrap_u = opts.wrap_u or gfx.Wrap.REPEAT,

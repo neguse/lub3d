@@ -4,7 +4,7 @@ local log = require("lib.log")
 
 -- Initialize sokol_time (once)
 if not _G._stm_initialized then
-    stm.Setup()
+    stm.setup()
     _G._stm_initialized = true
 end
 
@@ -20,22 +20,22 @@ M.profile = {
 --- Start a profiling measurement
 ---@param category string category (e.g., "shader", "texture")
 ---@param name string specific item name
-function M.ProfileBegin(category, name)
+function M.profile_begin(category, name)
     if not M.profile.enabled then return end
     local key = category .. ":" .. name
-    M.profile.pending[key] = stm.Now()
+    M.profile.pending[key] = stm.now()
 end
 
 --- End a profiling measurement, log if slow
 ---@param category string category (e.g., "shader", "texture")
 ---@param name string specific item name
-function M.ProfileEnd(category, name)
+function M.profile_end(category, name)
     if not M.profile.enabled then return end
     local key = category .. ":" .. name
     local start = M.profile.pending[key]
     if not start then return end
 
-    local elapsed_ms = stm.Ms(stm.Since(start))
+    local elapsed_ms = stm.ms(stm.since(start))
     M.profile.pending[key] = nil
 
     if elapsed_ms >= M.profile.threshold_ms then
@@ -47,7 +47,7 @@ end
 -- Absolute paths (starting with / or X:) are returned as-is
 ---@param path string
 ---@return string
-function M.ResolvePath(path)
+function M.resolve_path(path)
     if path:match("^/") or path:match("^%a:") then
         return path
     end
@@ -55,7 +55,7 @@ function M.ResolvePath(path)
 end
 
 -- Helper to pack vertex data as floats (handles large arrays)
-function M.PackFloats(floats)
+function M.pack_floats(floats)
     local CHUNK_SIZE = 200 -- Lua unpack limit is around 200-1000
     local result = {}
     for i = 1, #floats, CHUNK_SIZE do
@@ -70,7 +70,7 @@ function M.PackFloats(floats)
 end
 
 -- Helper to pack index data as u32 (handles large arrays)
-function M.PackU32(ints)
+function M.pack_u32(ints)
     local CHUNK_SIZE = 200
     local result = {}
     for i = 1, #ints, CHUNK_SIZE do

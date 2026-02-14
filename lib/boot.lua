@@ -74,4 +74,4 @@ desc.event = function(ev)
     if M.event then M:event(ev) end
 end
 
-app.Run(app.Desc(desc))
+app.run(app.desc(desc))

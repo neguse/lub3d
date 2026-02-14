@@ -18,7 +18,7 @@ M.passes = {}
 
 ---Register a pass to the pipeline
 ---@param pass RenderPass
-function M.Register(pass)
+function M.register(pass)
     table.insert(M.passes, pass)
 end
 
@@ -40,7 +40,7 @@ end
 ---Execute all registered passes
 ---@param ctx any Render context
 ---@param frame_data any Frame-specific data (view/proj matrices, etc.)
-function M.Execute(ctx, frame_data)
+function M.execute(ctx, frame_data)
     for _, pass in ipairs(M.passes) do
         -- Check required outputs before calling get_pass_desc
         local req_ok, missing = check_requirements(pass, ctx)
@@ -56,21 +56,21 @@ function M.Execute(ctx, frame_data)
         end
 
         if desc then
-            gfx.BeginPass(desc)
+            gfx.begin_pass(desc)
             local ok, err = pcall(pass.execute, ctx, frame_data)
             if not ok then
                 log.warn("[" .. pass.name .. "] execute error: " .. tostring(err))
             end
-            gfx.EndPass()
+            gfx.end_pass()
         end
 
         ::continue::
     end
-    gfx.Commit()
+    gfx.commit()
 end
 
 ---Destroy all passes and clear the pipeline
-function M.Destroy()
+function M.destroy()
     for _, pass in ipairs(M.passes) do
         if pass.destroy then
             local ok, err = pcall(pass.destroy)
@@ -83,7 +83,7 @@ function M.Destroy()
 end
 
 ---Clear all registered passes without destroying them
-function M.Clear()
+function M.clear()
     M.passes = {}
 end
 

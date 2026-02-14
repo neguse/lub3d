@@ -102,7 +102,7 @@ local function ensure_shared_resources()
         return
     end
 
-    local shd = shaderMod.CompileFull(shader_source, "sprite", {
+    local shd = shaderMod.compile_full(shader_source, "sprite", {
         uniform_blocks = {
             {
                 stage = gfx.ShaderStage.VERTEX,
@@ -146,7 +146,7 @@ local function ensure_shared_resources()
     end
     shared_shader = shd
 
-    local pip = gfx.MakePipeline(gfx.PipelineDesc({
+    local pip = gfx.make_pipeline(gfx.pipeline_desc({
         shader = shd,
         layout = {
             attrs = {
@@ -171,9 +171,9 @@ local function ensure_shared_resources()
             write_enabled = false,
         },
     }))
-    if gfx.QueryPipelineState(pip) ~= gfx.ResourceState.VALID then
+    if gfx.query_pipeline_state(pip) ~= gfx.ResourceState.VALID then
         log.error("sprite: failed to create pipeline")
-        gfx.DestroyShader(shd)
+        gfx.destroy_shader(shd)
         shared_shader = nil
         return
     end
@@ -190,14 +190,14 @@ end
 function M.new_batch(tex_result, tex_w, tex_h, screen_w, screen_h)
     ensure_shared_resources()
 
-    local vbuf = gpu.Buffer(gfx.BufferDesc({
+    local vbuf = gpu.buffer(gfx.buffer_desc({
         usage = { vertex_buffer = true, dynamic_update = true },
         size = MAX_QUADS * VERTS_PER_QUAD * FLOATS_PER_VERT * 4,
     }))
 
-    local ibuf = gpu.Buffer(gfx.BufferDesc({
+    local ibuf = gpu.buffer(gfx.buffer_desc({
         usage = { index_buffer = true },
-        data = gfx.Range(get_ibuf_data()),
+        data = gfx.range(get_ibuf_data()),
     }))
 
     ---@type sprite.Batch
@@ -317,7 +317,7 @@ function M.draw(batch, sx, sy, sw, sh, dx, dy, opts)
 end
 
 --- Flush queued sprites: upload vertex data and issue draw call
---- Must be called between gfx.BeginPass and gfx.EndPass
+--- Must be called between gfx.begin_pass and gfx.end_pass
 ---@param batch sprite.Batch
 function M.flush(batch)
     if batch.quad_count == 0 then
@@ -325,12 +325,12 @@ function M.flush(batch)
     end
 
     -- Upload vertex data
-    local packed = util.PackFloats(batch.verts)
-    gfx.UpdateBuffer(batch.vbuf.handle, gfx.Range(packed))
+    local packed = util.pack_floats(batch.verts)
+    gfx.update_buffer(batch.vbuf.handle, gfx.range(packed))
 
     -- Apply pipeline and bindings
-    gfx.ApplyPipeline(shared_pipeline)
-    gfx.ApplyBindings(gfx.Bindings({
+    gfx.apply_pipeline(shared_pipeline)
+    gfx.apply_bindings(gfx.bindings({
         vertex_buffers = { batch.vbuf.handle },
         index_buffer = batch.ibuf.handle,
         views = { batch.tex_view.handle },
@@ -338,18 +338,18 @@ function M.flush(batch)
     }))
 
     -- Set screen size uniform
-    local params = util.PackFloats({ batch.screen_w, batch.screen_h, 0, 0 })
-    gfx.ApplyUniforms(0, gfx.Range(params))
+    local params = util.pack_floats({ batch.screen_w, batch.screen_h, 0, 0 })
+    gfx.apply_uniforms(0, gfx.range(params))
 
     -- Draw
-    gfx.Draw(0, batch.quad_count * INDICES_PER_QUAD, 1)
+    gfx.draw(0, batch.quad_count * INDICES_PER_QUAD, 1)
 
     -- Reset
     batch.verts = {}
     batch.quad_count = 0
 end
 
---- Destroy a batch's GPU resources (call before gfx.Shutdown)
+--- Destroy a batch's GPU resources (call before gfx.shutdown)
 ---@param batch sprite.Batch
 function M.destroy_batch(batch)
     if batch.vbuf then
@@ -362,14 +362,14 @@ function M.destroy_batch(batch)
     end
 end
 
---- Shutdown shared resources (call before gfx.Shutdown)
+--- Shutdown shared resources (call before gfx.shutdown)
 function M.shutdown()
     if shared_pipeline then
-        gfx.DestroyPipeline(shared_pipeline)
+        gfx.destroy_pipeline(shared_pipeline)
         shared_pipeline = nil
     end
     if shared_shader then
-        gfx.DestroyShader(shared_shader)
+        gfx.destroy_shader(shared_shader)
         shared_shader = nil
     end
 end
