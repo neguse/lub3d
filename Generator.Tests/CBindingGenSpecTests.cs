@@ -1429,6 +1429,72 @@ public class CBindingGenSpecTests
         Assert.Contains("lua_setfield(L, -2, \"fell_asleep\")", code);
     }
 
+    // ===== CallbackBridge + ConstPtr(Struct) param =====
+
+    [Fact]
+    public void CallbackBridgeWithConstPtrParam_GeneratesCorrectCode()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapShape", "WorldOverlapShape",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("proxy", new BindingType.ConstPtr(
+                     new BindingType.Struct("b2ShapeProxy", "b2d.ShapeProxy", "b2d.ShapeProxy"))),
+                 new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("const b2ShapeProxy* proxy = (const b2ShapeProxy*)luaL_checkudata(L, 2, \"b2d.ShapeProxy\")", code);
+        Assert.Contains("b2World_OverlapShape_trampoline", code);
+    }
+
+    // ===== CallbackBridge + Void return =====
+
+    [Fact]
+    public void CallbackBridgeWithVoidReturn_GeneratesCallAndReturn0()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+            new BindingType.Bool());
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_OverlapShape", "WorldOverlapShape",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Immediate)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2World_OverlapShape(worldId", code);
+        Assert.Contains("return 0;", code);
+    }
+
+    // ===== ArrayAdapter (sensor overlaps / chain segments pattern) =====
+
+    [Fact]
+    public void ArrayAdapter_SensorOverlaps_GeneratesMallocFree()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ShapeId", "ShapeId", "b2d.ShapeId", false,
+                [new FieldBinding("index1", "index1", new BindingType.Int())], null)],
+            [], [], [],
+            ArrayAdapters:
+            [
+                new ArrayAdapterBinding("shape_get_sensor_overlaps", "b2Shape_GetSensorCapacity", "b2Shape_GetSensorOverlaps",
+                    [new ParamBinding("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+                    new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+            ]);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("b2Shape_GetSensorCapacity(shapeId)", code);
+        Assert.Contains("malloc(_count * sizeof(b2ShapeId))", code);
+        Assert.Contains("b2Shape_GetSensorOverlaps(shapeId, _buf, _count)", code);
+        Assert.Contains("free(_buf)", code);
+    }
+
     // ===== PostCallPatch =====
 
     [Fact]
