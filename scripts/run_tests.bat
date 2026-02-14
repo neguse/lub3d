@@ -26,21 +26,16 @@ set FAILED=0
 REM Run all top-level examples (examples\foo.lua → examples.foo)
 for %%s in (examples\*.lua) do (
     set BASENAME=%%~ns
-    REM Skip model (crashes in dummy backend with shdc, needs investigation)
-    if /i "!BASENAME!"=="model" (
-        echo Skipped: %%s [dummy-backend issue]
+    set MODNAME=examples.!BASENAME!
+    echo ----------------------------------------
+    echo Testing: !MODNAME!
+    "%TEST_RUNNER%" "!MODNAME!" %NUM_FRAMES%
+    set EC=!errorlevel!
+    if !EC! equ 0 (
+        set /a PASSED+=1
     ) else (
-        set MODNAME=examples.!BASENAME!
-        echo ----------------------------------------
-        echo Testing: !MODNAME!
-        "%TEST_RUNNER%" "!MODNAME!" %NUM_FRAMES%
-        set EC=!errorlevel!
-        if !EC! equ 0 (
-            set /a PASSED+=1
-        ) else (
-            echo FAILED with exit code: !EC!
-            set /a FAILED+=1
-        )
+        echo FAILED with exit code: !EC!
+        set /a FAILED+=1
     )
 )
 

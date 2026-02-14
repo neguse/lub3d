@@ -28,11 +28,14 @@ SKIPPED=0
 # Module names to test
 # Note: examples.rendering excluded - requires assets/mill-scene which is gitignored
 MODULES=(
-    "examples.main"
-    "examples.breakout"
-    "examples.raytracer"
-    "examples.lighting"
+    "examples.hello"
     "examples.triangle"
+    "examples.imgui_test"
+    "examples.b2d_hello"
+    "examples.raytracer"
+    "examples.miniaudio_test"
+    "examples.license"
+    "examples.breakout"
     "examples.hakonotaiatari"
 )
 
