@@ -78,10 +78,8 @@ public class Box2dModule : IModule
         "b2World_SetCustomFilterCallback", "b2World_SetPreSolveCallback",
         "b2World_SetFrictionCallback", "b2World_SetRestitutionCallback",
         // Query functions (need Lua callback wrappers → ExtraCCode or CallbackBridge)
-        "b2World_OverlapShape",
-        "b2World_CastShape",
-        "b2World_CastMover", "b2World_CollideMover",
-        // Array output functions → ExtraCCode
+        "b2World_CollideMover",
+        // Array output functions → ExtraCCode / ArrayAdapter
         "b2Body_GetShapes", "b2Body_GetJoints", "b2Body_GetContactData",
         "b2Shape_GetContactData", "b2Shape_GetSensorOverlaps",
         "b2Chain_GetSegments",
@@ -372,22 +370,9 @@ public class Box2dModule : IModule
         }
 
         // ===== ExtraLuaRegs + ExtraLuaFuncs =====
-        var extraRegs = new List<(string LuaName, string CFunc)>
-        {
-            ("world_cast_ray_closest", "l_b2d_world_cast_ray_closest"),
-        };
+        var extraRegs = new List<(string LuaName, string CFunc)>();
 
-        var extraLuaFuncs = new List<FuncBinding>
-        {
-            new("l_b2d_world_cast_ray_closest", "world_cast_ray_closest",
-                [
-                    new ParamBinding("worldId", HandleType("b2WorldId")),
-                    new ParamBinding("origin", B2Vec2Type),
-                    new ParamBinding("translation", B2Vec2Type),
-                    new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
-                ],
-                new BindingType.Void(), null),
-        };
+        var extraLuaFuncs = new List<FuncBinding>();
 
         // ===== PostCallPatch: b2DefaultWorldDef =====
         funcs.Add(new FuncBinding(
@@ -407,6 +392,12 @@ public class Box2dModule : IModule
             new("body_get_joints", "b2Body_GetJointCount", "b2Body_GetJoints",
                 [new ParamBinding("bodyId", HandleType("b2BodyId"))],
                 HandleType("b2JointId")),
+            new("shape_get_sensor_overlaps", "b2Shape_GetSensorCapacity", "b2Shape_GetSensorOverlaps",
+                [new ParamBinding("shapeId", HandleType("b2ShapeId"))],
+                HandleType("b2ShapeId")),
+            new("chain_get_segments", "b2Chain_GetSegmentCount", "b2Chain_GetSegments",
+                [new ParamBinding("chainId", HandleType("b2ChainId"))],
+                HandleType("b2ShapeId")),
         };
 
         // ===== EventAdapters =====
@@ -549,40 +540,6 @@ public class Box2dModule : IModule
         {
             (void)userTask;
             (void)userContext;
-        }
-
-        /* CastRayClosest wrapper */
-        static int l_b2d_world_cast_ray_closest(lua_State *L) {
-            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
-            luaL_checktype(L, 2, LUA_TTABLE);
-            b2Vec2 origin;
-            lua_rawgeti(L, 2, 1); origin.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_rawgeti(L, 2, 2); origin.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            luaL_checktype(L, 3, LUA_TTABLE);
-            b2Vec2 translation;
-            lua_rawgeti(L, 3, 1); translation.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            lua_rawgeti(L, 3, 2); translation.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
-            b2QueryFilter filter = *(b2QueryFilter*)luaL_checkudata(L, 4, "b2d.QueryFilter");
-            b2RayResult result = b2World_CastRayClosest(worldId, origin, translation, filter);
-            /* Return table: {shapeId, point, normal, fraction, hit} */
-            lua_newtable(L);
-            b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(L, sizeof(b2ShapeId), 0);
-            *sid = result.shapeId;
-            luaL_setmetatable(L, "b2d.ShapeId");
-            lua_setfield(L, -2, "shape_id");
-            lua_newtable(L);
-            lua_pushnumber(L, result.point.x); lua_rawseti(L, -2, 1);
-            lua_pushnumber(L, result.point.y); lua_rawseti(L, -2, 2);
-            lua_setfield(L, -2, "point");
-            lua_newtable(L);
-            lua_pushnumber(L, result.normal.x); lua_rawseti(L, -2, 1);
-            lua_pushnumber(L, result.normal.y); lua_rawseti(L, -2, 2);
-            lua_setfield(L, -2, "normal");
-            lua_pushnumber(L, result.fraction);
-            lua_setfield(L, -2, "fraction");
-            lua_pushboolean(L, result.hit);
-            lua_setfield(L, -2, "hit");
-            return 1;
         }
 
         """;

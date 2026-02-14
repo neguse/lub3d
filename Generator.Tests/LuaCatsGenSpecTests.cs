@@ -307,6 +307,23 @@ public class LuaCatsGenSpecTests
         Assert.Contains("---@field body_get_shapes fun(bodyId: b2d.BodyId): b2d.ShapeId[]", code);
     }
 
+    // ===== ArrayAdapter (sensor overlaps pattern) =====
+
+    [Fact]
+    public void Generate_ArrayAdapter_SensorOverlaps_GeneratesReturnType()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [], [], [], [],
+            ArrayAdapters:
+            [
+                new ArrayAdapterBinding("shape_get_sensor_overlaps", "b2Shape_GetSensorCapacity", "b2Shape_GetSensorOverlaps",
+                    [new ParamBinding("shapeId", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId"))],
+                    new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+            ]);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@field shape_get_sensor_overlaps fun(shapeId: b2d.ShapeId): b2d.ShapeId[]", code);
+    }
+
     // ===== ExtraLuaFuncs =====
 
     [Fact]
