@@ -58,6 +58,7 @@ M.P_COL_FUTTOBI = 0xffa0a0a0
 M.P_COL_DASH_PARTICLE = 0xfff89880
 M.P_COL_DASH_GUIDE = 0xfff0f0f0
 M.P_COL_DASH_GUIDE_DISABLE = 0xff404040
+M.P_COL_DASH_PT = 0xffffffa0  -- Bright yellow-white for PT emission during dash
 
 -- Player timing (frames)
 M.P_MUTEKI_F = 180  -- Invulnerability duration
