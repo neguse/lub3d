@@ -248,6 +248,8 @@ public static class LuaCatsGen
         BindingType.FloatArray(_) => new Type.Primitive("number[]"),
         BindingType.ValueStruct(_, var luaCatsType, _, _)
             => new Type.Primitive(luaCatsType),
+        BindingType.ValueStructArray(_, var luaCatsType, _, _)
+            => new Type.Primitive(luaCatsType),
         BindingType.Custom(_, var luaCatsType, _, _, _, _)
             => new Type.Primitive(luaCatsType),
         _ => new Type.Primitive("any")

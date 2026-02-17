@@ -18,6 +18,11 @@ public class Box2dModule : IModule
         "b2Vec2", "number[]",
         [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
 
+    /// <summary>const b2Vec2* → Lua table of {x, y} tables</summary>
+    private static readonly BindingType B2Vec2ArrayType = new BindingType.ValueStructArray(
+        "b2Vec2", "number[][]",
+        [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+
     /// <summary>b2CosSin → Lua table {cosine, sine}</summary>
     private static readonly BindingType B2CosSinType = new BindingType.ValueStruct(
         "b2CosSin", "number[]",
@@ -55,6 +60,20 @@ public class Box2dModule : IModule
          ("normal", B2Vec2Type), ("fraction", new BindingType.Float())],
         new BindingType.Float());
 
+    /// <summary>b2Manifold* → lightuserdata (callback arg としてポインタ渡し)</summary>
+    private static readonly BindingType ManifoldPtrType =
+        new BindingType.Custom("b2Manifold*", "lightuserdata", null, null, null, null);
+
+    /// <summary>b2PreSolveFcn: bool callback(b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* context)</summary>
+    private BindingType PreSolveCallbackType => new BindingType.Callback(
+        [("shapeIdA", HandleType("b2ShapeId")),
+         ("shapeIdB", HandleType("b2ShapeId")),
+         ("manifold", ManifoldPtrType)],
+        new BindingType.Bool());
+
+    /// <summary>Persistent コールバック型名の判別用</summary>
+    private static readonly HashSet<string> PersistentCallbackTypeNames = ["b2PreSolveFcn"];
+
     // ===== Handle 型 (struct userdata) =====
 
     private BindingType HandleType(string cName) =>
@@ -75,7 +94,7 @@ public class Box2dModule : IModule
         // Memory dump
         "b2World_DumpMemoryStats",
         // Callback setters (need custom wrappers or skip)
-        "b2World_SetCustomFilterCallback", "b2World_SetPreSolveCallback",
+        "b2World_SetCustomFilterCallback",
         "b2World_SetFrictionCallback", "b2World_SetRestitutionCallback",
         // Query functions (need Lua callback wrappers → ExtraCCode or CallbackBridge)
         "b2World_CollideMover",
@@ -213,7 +232,9 @@ public class Box2dModule : IModule
             // Box2D callback typedefs (must precede generic Ptr/ConstPtr)
             Types.Ptr(Types.StructRef("b2OverlapResultFcn")) => OverlapCallbackType,
             Types.Ptr(Types.StructRef("b2CastResultFcn")) => CastCallbackType,
+            Types.Ptr(Types.StructRef("b2PreSolveFcn")) => PreSolveCallbackType,
             Types.ConstPtr(Types.String) => new BindingType.Str(),
+            Types.ConstPtr(Types.StructRef("b2Vec2")) => B2Vec2ArrayType,
             Types.ConstPtr(var inner) => new BindingType.ConstPtr(Resolve(inner)),
             Types.Ptr(var inner) => new BindingType.Ptr(Resolve(inner)),
             // Box2D math types → Custom
@@ -318,7 +339,13 @@ public class Box2dModule : IModule
                 // Callback parameter → set CallbackBridge and skip next void* context
                 if (pt is BindingType.Callback)
                 {
-                    parms.Add(new ParamBinding(p.Name, pt, CallbackBridge: CallbackBridgeMode.Immediate));
+                    var mode = p.ParsedType is Types.Ptr(Types.StructRef(var cbTypeName))
+                        && PersistentCallbackTypeNames.Contains(cbTypeName)
+                        ? CallbackBridgeMode.Persistent
+                        : CallbackBridgeMode.Immediate;
+                    parms.Add(new ParamBinding(p.Name, pt,
+                        IsOptional: mode == CallbackBridgeMode.Persistent,
+                        CallbackBridge: mode));
                     skipNextVoidPtr = true;
                     continue;
                 }
@@ -370,9 +397,26 @@ public class Box2dModule : IModule
         }
 
         // ===== ExtraLuaRegs + ExtraLuaFuncs =====
-        var extraRegs = new List<(string LuaName, string CFunc)>();
+        var extraRegs = new List<(string LuaName, string CFunc)>
+        {
+            ("manifold_point_count", "l_b2d_manifold_point_count"),
+            ("manifold_point", "l_b2d_manifold_point"),
+            ("manifold_normal", "l_b2d_manifold_normal"),
+        };
 
-        var extraLuaFuncs = new List<FuncBinding>();
+        var extraLuaFuncs = new List<FuncBinding>
+        {
+            new("l_b2d_manifold_point_count", "manifold_point_count",
+                [new ParamBinding("manifold", ManifoldPtrType)],
+                new BindingType.Int(), null),
+            new("l_b2d_manifold_point", "manifold_point",
+                [new ParamBinding("manifold", ManifoldPtrType),
+                 new ParamBinding("index", new BindingType.Int())],
+                B2Vec2Type, null),
+            new("l_b2d_manifold_normal", "manifold_normal",
+                [new ParamBinding("manifold", ManifoldPtrType)],
+                B2Vec2Type, null),
+        };
 
         // ===== PostCallPatch: b2DefaultWorldDef =====
         funcs.Add(new FuncBinding(
@@ -540,6 +584,28 @@ public class Box2dModule : IModule
         {
             (void)userTask;
             (void)userContext;
+        }
+
+        /* Manifold accessors for PreSolve callback */
+        static int l_b2d_manifold_point_count(lua_State *L) {
+            b2Manifold* m = (b2Manifold*)lua_touserdata(L, 1);
+            lua_pushinteger(L, m->pointCount);
+            return 1;
+        }
+        static int l_b2d_manifold_point(lua_State *L) {
+            b2Manifold* m = (b2Manifold*)lua_touserdata(L, 1);
+            int i = (int)luaL_checkinteger(L, 2) - 1;
+            lua_newtable(L);
+            lua_pushnumber(L, m->points[i].point.x); lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, m->points[i].point.y); lua_rawseti(L, -2, 2);
+            return 1;
+        }
+        static int l_b2d_manifold_normal(lua_State *L) {
+            b2Manifold* m = (b2Manifold*)lua_touserdata(L, 1);
+            lua_newtable(L);
+            lua_pushnumber(L, m->normal.x); lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, m->normal.y); lua_rawseti(L, -2, 2);
+            return 1;
         }
 
         """;

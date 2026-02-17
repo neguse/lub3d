@@ -64,7 +64,7 @@ public record FuncBinding(
     List<PostCallPatch>? PostCallPatches = null
 );
 
-public enum CallbackBridgeMode { None, Immediate }
+public enum CallbackBridgeMode { None, Immediate, Persistent }
 
 public record ParamBinding(
     string Name,

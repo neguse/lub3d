@@ -981,6 +981,32 @@ public class CBindingGenSpecTests
     }
 
     [Fact]
+    public void Generate_ValueStructArrayParam()
+    {
+        var vsaType = new BindingType.ValueStructArray("b2Vec2", "number[][]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2ComputeHull", "ComputeHull",
+                [new ParamBinding("points", vsaType),
+                 new ParamBinding("count", new BindingType.Int())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        // テーブル入力
+        Assert.Contains("luaL_checktype(L, 1, LUA_TTABLE)", code);
+        // 固定バッファ
+        Assert.Contains("b2Vec2 _points_buf[64]", code);
+        // ループ読み取り
+        Assert.Contains("_points_buf[_i].x = (float)lua_tonumber", code);
+        Assert.Contains("_points_buf[_i].y = (float)lua_tonumber", code);
+        // ポインタ代入
+        Assert.Contains("const b2Vec2* points = _points_buf", code);
+        // count バリデーション
+        Assert.Contains("count >= 0 && count <= _points_len", code);
+    }
+
+    [Fact]
     public void Generate_ValueStructField_Index()
     {
         var vsType = new BindingType.ValueStruct("b2Vec2", "number[]",
@@ -1218,6 +1244,59 @@ public class CBindingGenSpecTests
                 new BindingType.Void(), null)],
             [], []);
         Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
+    // ===== Persistent Callback Bridge =====
+
+    private static ModuleSpec SpecWithPersistentCallback()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeIdA", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+             ("shapeIdB", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+             ("manifold", new BindingType.Custom("b2Manifold*", "lightuserdata", null, null, null, null))],
+            new BindingType.Bool());
+        return new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_SetPreSolveCallback", "world_set_pre_solve_callback",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Persistent)],
+                new BindingType.Void(), null)],
+            [], []);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesStaticContext()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("b2World_SetPreSolveCallback_cb_ctx", code);
+        Assert.Contains("callback_ref", code);
+        Assert.Contains("_b2World_SetPreSolveCallback_static_ctx", code);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesTrampoline()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("b2World_SetPreSolveCallback_trampoline", code);
+        Assert.Contains("lua_rawgeti(ctx->L, LUA_REGISTRYINDEX, ctx->callback_ref)", code);
+        Assert.Contains("LUA_NOREF", code);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesNilUnregister()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("luaL_unref(L, LUA_REGISTRYINDEX", code);
+        Assert.Contains("lua_isnil(L, 2)", code);
+        Assert.Contains("b2World_SetPreSolveCallback(worldId, NULL, NULL)", code);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesFunctionRegister()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("luaL_ref(L, LUA_REGISTRYINDEX)", code);
+        Assert.Contains("b2World_SetPreSolveCallback(worldId, b2World_SetPreSolveCallback_trampoline, NULL)", code);
     }
 
     // ===== ArrayAdapter =====

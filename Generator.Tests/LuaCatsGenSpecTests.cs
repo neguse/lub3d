@@ -290,6 +290,24 @@ public class LuaCatsGenSpecTests
         Assert.Contains("fun(bodyId: b2d.BodyId): number[]", code);
     }
 
+    // ===== ValueStructArray =====
+
+    [Fact]
+    public void Generate_ValueStructArray_Type()
+    {
+        var vsaType = new BindingType.ValueStructArray("b2Vec2", "number[][]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2ComputeHull", "ComputeHull",
+                [new ParamBinding("points", vsaType),
+                 new ParamBinding("count", new BindingType.Int())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("fun(points: number[][], count: integer)", code);
+    }
+
     // ===== ArrayAdapter =====
 
     [Fact]
