@@ -131,14 +131,14 @@ local function update_kinematic_platforms()
     step_count = step_count + 1
     local theta = 0.025 * step_count
 
-    -- Kinematic platform 1: circular orbit around (15, 15)
-    local target1 = { 15 + 2 * math.sin(theta), 15 + 2.55 * math.cos(theta) }
+    -- Kinematic platform 1: circular orbit around (0, 10)
+    local target1 = { 0 + 2 * math.sin(theta), 10 + 2.55 * math.cos(theta) }
     local pos1 = b2d.body_get_position(kinematic_body_1)
     b2d.body_set_linear_velocity(kinematic_body_1,
         { 60 * (target1[1] - pos1[1]), 60 * (target1[2] - pos1[2]) })
 
-    -- Kinematic platform 2: vertical oscillation around y=20
-    local target2 = { 15, 20 - 2.55 * math.cos(theta) }
+    -- Kinematic platform 2: vertical oscillation around y=15
+    local target2 = { 0, 15 - 2.55 * math.cos(theta) }
     local pos2 = b2d.body_get_position(kinematic_body_2)
     b2d.body_set_linear_velocity(kinematic_body_2,
         { 60 * (target2[1] - pos2[1]), 60 * (target2[2] - pos2[2]) })
@@ -278,9 +278,9 @@ function scene:setup(world_id, ground_id)
     -- Kinematic moving platforms
     local kin_color = { 0.5, 0.5, 0.8 }
     kinematic_body_1 = setup_one_way_wall(world_id, ground_id,
-        b2d.BodyType.KINEMATIC_BODY, { 15, 15 }, 0, 1, kin_color)
+        b2d.BodyType.KINEMATIC_BODY, { 0, 10 }, 0, 1, kin_color)
     kinematic_body_2 = setup_one_way_wall(world_id, ground_id,
-        b2d.BodyType.KINEMATIC_BODY, { 15, 20 }, 0, 1, kin_color)
+        b2d.BodyType.KINEMATIC_BODY, { 0, 15 }, 0, 1, kin_color)
 
     -- Rotating floor section
     local rot_color = { 0.5, 0.8, 0.5 }

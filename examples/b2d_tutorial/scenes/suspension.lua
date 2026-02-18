@@ -50,15 +50,18 @@ local function generate_terrain(world_id)
     local seg_width = 0.8
     local start_x = -segments * seg_width / 2
 
+    -- Pre-generate random heights (C++: rnd_1()*2, range [0,2])
+    local heights = {}
+    for i = 0, segments do
+        heights[i] = math.random() * 2
+    end
+
     for i = 0, segments - 1 do
         local x1 = start_x + i * seg_width
         local x2 = start_x + (i + 1) * seg_width
-        -- Terrain profile: gentle sine waves + noise
-        local y1 = math.sin(x1 * 0.15) * 2 + math.sin(x1 * 0.3) * 0.5
-        local y2 = math.sin(x2 * 0.15) * 2 + math.sin(x2 * 0.3) * 0.5
 
         b2d.create_segment_shape(terrain, shape_def,
-            b2d.Segment({ point1 = { x1, y1 }, point2 = { x2, y2 } }))
+            b2d.Segment({ point1 = { x1, heights[i] }, point2 = { x2, heights[i + 1] } }))
     end
 
     table.insert(terrain_bodies, terrain)

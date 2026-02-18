@@ -239,6 +239,7 @@ function scene:setup(world_id, ground_id)
     local car_def = b2d.default_body_def()
     car_def.type = b2d.BodyType.DYNAMIC_BODY
     car_def.position = { -52.56, 0.89 }
+    car_def.enable_sleep = false
     car_id = b2d.create_body(world_id, car_def)
 
     local car_shape_def = b2d.default_shape_def()
@@ -263,6 +264,7 @@ function scene:setup(world_id, ground_id)
     local fw_def = b2d.default_body_def()
     fw_def.type = b2d.BodyType.DYNAMIC_BODY
     fw_def.position = { -51.58, 0.37 }
+    fw_def.enable_sleep = false
     front_wheel_id = b2d.create_body(world_id, fw_def)
 
     local fw_shape_def = b2d.default_shape_def()
@@ -281,6 +283,7 @@ function scene:setup(world_id, ground_id)
     local rw_def = b2d.default_body_def()
     rw_def.type = b2d.BodyType.DYNAMIC_BODY
     rw_def.position = { -53.58, 0.37 }
+    rw_def.enable_sleep = false
     rear_wheel_id = b2d.create_body(world_id, rw_def)
 
     local rw_shape_def = b2d.default_shape_def()

@@ -9,7 +9,7 @@ local draw = require("examples.b2d_tutorial.draw")
 
 local scene = {}
 scene.name = "Sticky Projectiles"
-scene.description = "Left-drag launcher to aim, Q to fire.\nA/S to change speed.\nArrows stick on contact via weld joint."
+scene.description = "Left-drag launcher to aim, Q to fire.\nA/S to change speed.  M to toggle weld/fixture mode.\nArrows stick on contact via weld joint or fixture transfer."
 
 local world_ref
 local body_entries = {}
@@ -18,6 +18,7 @@ local drag_constant = 0.1
 local step_count = 0
 local camera_ref
 local camera_initialized = false
+local stick_mode = "weld" -- "weld" or "fixture"
 
 -- Target hardness: approach_speed must exceed this to stick
 local HARDNESS_STRAW <const> = 1
@@ -93,6 +94,7 @@ function scene:setup(world_id, ground_id)
     camera_initialized = false
     loaded_arrow = nil
     launch_speed = 50
+    stick_mode = "weld"
 
     -- Joint anchor body at origin (equivalent to m_groundBody in original)
     local anchor_def = b2d.default_body_def()
@@ -310,26 +312,56 @@ function scene:update(dt)
             end
 
             if target_body and arrow_body then
-                -- Create weld joint at arrow tip
-                local weld_def = b2d.default_weld_joint_def()
-                weld_def.body_id_a = target_body
-                weld_def.body_id_b = arrow_body
-                local tip_world = b2d.body_get_world_point(arrow_body, { 0.6, 0 })
-                weld_def.local_anchor_a = b2d.body_get_local_point(target_body, tip_world)
-                weld_def.local_anchor_b = { 0.6, 0 }
-                local rot_a = b2d.body_get_rotation(target_body)
-                local rot_b = b2d.body_get_rotation(arrow_body)
-                local angle_a = b2d.rot_get_angle(rot_a)
-                local angle_b = b2d.rot_get_angle(rot_b)
-                weld_def.reference_angle = angle_b - angle_a
-                local joint = b2d.create_weld_joint(world_ref, weld_def)
+                if stick_mode == "fixture" then
+                    -- Fixture mode: transfer arrow shape to target body
+                    local local_verts = {}
+                    for _, v in ipairs(arrow_verts) do
+                        local wp = b2d.body_get_world_point(arrow_body, v)
+                        table.insert(local_verts, b2d.body_get_local_point(target_body, wp))
+                    end
+                    local new_shape_def = b2d.default_shape_def()
+                    new_shape_def.density = 1.0
+                    new_shape_def.enable_contact_events = true
+                    new_shape_def.enable_hit_events = true
+                    local hull = b2d.compute_hull(local_verts, #local_verts)
+                    b2d.create_polygon_shape(target_body, new_shape_def, b2d.make_polygon(hull, 0))
 
-                -- Mark arrow as stuck
-                for _, arrow in ipairs(arrows) do
-                    if arrow.body_id == arrow_body then
-                        arrow.flying = false
-                        arrow.joint_id = joint
-                        break
+                    -- Remove arrow from tracking lists
+                    for i = #arrows, 1, -1 do
+                        if arrows[i].body_id == arrow_body then
+                            table.remove(arrows, i)
+                            break
+                        end
+                    end
+                    for i = #body_entries, 1, -1 do
+                        if body_entries[i].body_id == arrow_body then
+                            table.remove(body_entries, i)
+                            break
+                        end
+                    end
+                    b2d.destroy_body(arrow_body)
+                else
+                    -- Weld mode: create weld joint at arrow tip
+                    local weld_def = b2d.default_weld_joint_def()
+                    weld_def.body_id_a = target_body
+                    weld_def.body_id_b = arrow_body
+                    local tip_world = b2d.body_get_world_point(arrow_body, { 0.6, 0 })
+                    weld_def.local_anchor_a = b2d.body_get_local_point(target_body, tip_world)
+                    weld_def.local_anchor_b = { 0.6, 0 }
+                    local rot_a = b2d.body_get_rotation(target_body)
+                    local rot_b = b2d.body_get_rotation(arrow_body)
+                    local angle_a = b2d.rot_get_angle(rot_a)
+                    local angle_b = b2d.rot_get_angle(rot_b)
+                    weld_def.reference_angle = angle_b - angle_a
+                    local joint = b2d.create_weld_joint(world_ref, weld_def)
+
+                    -- Mark arrow as stuck
+                    for _, arrow in ipairs(arrows) do
+                        if arrow.body_id == arrow_body then
+                            arrow.flying = false
+                            arrow.joint_id = joint
+                            break
+                        end
                     end
                 end
             end
@@ -347,8 +379,9 @@ function scene:render_extra() end
 function scene:render_ui()
     imgui.text_unformatted(string.format("Launch speed: %.1f", launch_speed))
     imgui.text_unformatted(string.format("Arrows: %d", #arrows))
+    imgui.text_unformatted(string.format("Stick mode: %s", stick_mode))
     imgui.separator()
-    imgui.text_unformatted("Q: fire  A/S: change speed")
+    imgui.text_unformatted("Q: fire  A/S: change speed  M: toggle mode")
     imgui.text_unformatted("Hardness: straw=1, wood=5, steel=100")
 end
 
@@ -360,6 +393,8 @@ function scene:event(ev)
             launch_speed = launch_speed * 1.02
         elseif ev.key_code == app.Keycode.S then
             launch_speed = launch_speed * 0.98
+        elseif ev.key_code == app.Keycode.M then
+            stick_mode = stick_mode == "weld" and "fixture" or "weld"
         end
     end
 end

@@ -15,6 +15,7 @@ scene.description = "Rotating launcher with trajectory prediction.\nQ/W: Fire/Re
 -- Collision categories
 local CAT_DEFAULT <const> = 0x0001
 local CAT_PLAYER_PROJ <const> = 0x0002
+local CAT_COMPUTER_PROJ <const> = 0x0004
 
 local BALL_SIZE <const> = 0.25
 local DT <const> = 1.0 / 60.0
@@ -222,6 +223,7 @@ function scene:setup(world_id, ground_id)
     local box2_shape_def = b2d.default_shape_def()
     box2_shape_def.density = 1.0
     box2_shape_def.material = shelf_mat
+    box2_shape_def.filter = b2d.Filter({ category_bits = CAT_COMPUTER_PROJ, mask_bits = 0xFFFF })
     b2d.create_circle_shape(little_box2, box2_shape_def,
         b2d.Circle({ center = { 0, 0 }, radius = BALL_SIZE }))
     b2d.body_set_gravity_scale(little_box2, 0)
@@ -251,7 +253,7 @@ function scene:render_extra()
 
     -- Raycast filter: skip player projectile
     local ray_filter = b2d.default_query_filter()
-    ray_filter.mask_bits = 0xFFFD -- ~CAT_PLAYER_PROJ
+    ray_filter.mask_bits = 0xFFF9 -- ~(CAT_PLAYER_PROJ | CAT_COMPUTER_PROJ)
 
     -- 1. Yellow trajectory line (GL_LINES pairs = dashed line)
     local hit_point = nil

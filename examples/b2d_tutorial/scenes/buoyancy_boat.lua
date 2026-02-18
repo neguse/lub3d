@@ -405,7 +405,7 @@ function scene:setup(world_id, ground_id)
     -- Generate ground bumps (100 random points)
     ground_points = {}
     for i = 0, 99 do
-        ground_points[i + 1] = { i * 3, (math.random() * 2 - 1) * 3 }
+        ground_points[i + 1] = { i * 3, math.random() * 3 }
     end
 end
 
@@ -445,7 +445,7 @@ function scene:update(dt)
             -- Bubbles
             if steps_since_last_bubble > 0 then
                 local bubble_pos = pos -- engine is at local (0,0)
-                local rnd = math.random() * 2 - 1
+                local rnd = math.random()
                 local bubble_dir = b2d.body_get_world_vector(
                     boat_body, { -50, -20 - rnd * 40 })
 

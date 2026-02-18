@@ -6,14 +6,15 @@ local app = require("sokol.app")
 local b2d = require("b2d")
 local imgui = require("imgui")
 local draw = require("examples.b2d_tutorial.draw")
+local track_data = require("examples.b2d_tutorial.scenes.racetrack_data")
 
 local scene = {}
 scene.name = "Top-Down Car"
-scene.description = "WASD or Arrow keys to drive.\nUp=forward, Down=reverse, Left/Right=steer.\nZero gravity, tire friction model.\nTraction zones affect handling."
+scene.description = "WASD or Arrow keys to drive.\nUp=forward, Down=reverse, Left/Right=steer.\nZero gravity, tire friction model.\nRace track with barrels and water zones."
 
 local world_ref
 local chassis_id
-local tires = {} -- { body_id, joint_id, is_front, max_forward_speed, ..., current_traction, contacted_areas }
+local tires = {} -- { body_id, joint_id, is_front, max_forward_speed, ..., current_traction, current_drag, contacted_areas }
 local body_entries = {}
 local camera_ref
 local follow_car = true
@@ -23,17 +24,21 @@ local dir_down = false
 local dir_left = false
 local dir_right = false
 
--- Original iforce2d constants
+-- Original iforce2d race track constants
 local lock_angle = math.rad(35)
-local turn_speed_per_sec = math.rad(160)
+local turn_speed_per_sec = math.rad(320)
 
 -- Filter: car-scene objects only collide with each other, not the default ground
 local car_filter = b2d.Filter({ category_bits = 0x0002, mask_bits = 0x0002 })
 
 -- Ground area sensor data
-local ground_areas = {} -- tostring(shape_id) -> { friction_modifier }
+local ground_areas = {} -- tostring(shape_id) -> { friction_modifier, drag_modifier }
 local tire_shapes = {} -- tostring(shape_id) -> tire_index
-local zone_bodies = {} -- { body_id, hw, hh, center, rotation } for visualization
+
+-- Track rendering state
+local chain_ids = {}
+local track_body_id
+local water_zone_verts = {} -- for debug rendering
 
 local function shape_key(shape_id)
     return tostring(shape_id)
@@ -47,24 +52,47 @@ local function len2(a)
     return math.sqrt(a[1] * a[1] + a[2] * a[2])
 end
 
+local function signed_area(verts)
+    local a = 0
+    local n = #verts
+    for i = 1, n do
+        local j = (i % n) + 1
+        a = a + verts[i][1] * verts[j][2] - verts[j][1] * verts[i][2]
+    end
+    return a * 0.5
+end
+
+local function get_lateral_velocity(body)
+    local right = b2d.body_get_world_vector(body, { 1, 0 })
+    local vel = b2d.body_get_linear_velocity(body)
+    local d = dot2(vel, right)
+    return { d * right[1], d * right[2] }
+end
+
 local function update_tire_traction(tire)
     if not next(tire.contacted_areas) then
         tire.current_traction = 1.0
+        tire.current_drag = 1.0
     else
         tire.current_traction = 0
+        tire.current_drag = 1.0
         for _, area in pairs(tire.contacted_areas) do
             if area.friction_modifier > tire.current_traction then
                 tire.current_traction = area.friction_modifier
+            end
+            if area.drag_modifier > tire.current_drag then
+                tire.current_drag = area.drag_modifier
             end
         end
     end
 end
 
--- Tire: original iforce2d TDTire class
+-- Tire: iforce2d TDTireR class (race track version)
 local function create_tire(world_id, max_fwd, max_bwd, max_drive, max_lateral)
     local body_def = b2d.default_body_def()
     body_def.type = b2d.BodyType.DYNAMIC_BODY
     body_def.position = { 0, 0 } -- will be placed by joint
+    body_def.enable_sleep = false
     local body = b2d.create_body(world_id, body_def)
 
     local shape_def = b2d.default_shape_def()
@@ -83,6 +111,7 @@ local function create_tire(world_id, max_fwd, max_bwd, max_drive, max_lateral)
         max_drive_force = max_drive,
         max_lateral_impulse = max_lateral,
         current_traction = 1.0,
+        current_drag = 1.0,
         contacted_areas = {},
     }
 
@@ -92,69 +121,85 @@ local function create_tire(world_id, max_fwd, max_bwd, max_drive, max_lateral)
     return tire
 end
 
-local function update_tire_friction(tire)
+-- Race track version: no lateral impulse, drag modifier on forward drag
+local function update_tire_friction(tire, dt)
     local body = tire.body_id
     local vel = b2d.body_get_linear_velocity(body)
-    local mass = b2d.body_get_mass(body)
     local traction = tire.current_traction
+    local dt_scale = dt * 60.0 -- 1.0 at 60Hz
 
-    -- Get tire's right vector (local +x in world)
-    local right = b2d.body_get_world_vector(body, { 1, 0 })
-
-    -- Lateral velocity
-    local lat_speed = dot2(vel, right)
-    local lat_vel = { lat_speed * right[1], lat_speed * right[2] }
-
-    -- Lateral impulse to cancel sideways motion (scaled by traction)
-    local impulse = { -mass * lat_vel[1], -mass * lat_vel[2] }
-    local imp_len = len2(impulse)
-    if imp_len > tire.max_lateral_impulse then
-        impulse[1] = impulse[1] * tire.max_lateral_impulse / imp_len
-        impulse[2] = impulse[2] * tire.max_lateral_impulse / imp_len
-    end
-    b2d.body_apply_linear_impulse_to_center(body,
-        { traction * impulse[1], traction * impulse[2] }, true)
-
-    -- Angular velocity damping (scaled by traction)
+    -- Angular velocity damping (scaled by traction and dt)
     local ang_vel = b2d.body_get_angular_velocity(body)
     local mass_data = b2d.body_get_mass_data(body)
     local inertia = mass_data.rotational_inertia or 1.0
-    b2d.body_apply_angular_impulse(body, traction * -0.1 * inertia * ang_vel, true)
+    b2d.body_apply_angular_impulse(body, traction * -0.1 * dt_scale * inertia * ang_vel, true)
 
-    -- Forward drag (scaled by traction)
+    -- Forward drag (scaled by traction and drag modifier)
     local forward = b2d.body_get_world_vector(body, { 0, 1 })
     local fwd_speed = dot2(vel, forward)
-    local drag = -2 * fwd_speed
+    local drag = -0.25 * fwd_speed * tire.current_drag
     b2d.body_apply_force_to_center(body,
         { traction * drag * forward[1], traction * drag * forward[2] }, true)
 end
 
-local function update_tire_drive(tire)
+local function update_tire_drive(tire, dt)
     local body = tire.body_id
     local forward = b2d.body_get_world_vector(body, { 0, 1 })
     local vel = b2d.body_get_linear_velocity(body)
     local current_speed = dot2(vel, forward)
+    local traction = tire.current_traction
 
+    -- Step 1: desired_speed and force from input
     local desired_speed = 0
-    if dir_up then
-        desired_speed = tire.max_forward_speed
-    elseif dir_down then
-        desired_speed = tire.max_backward_speed
-    else
-        return
-    end
+    if dir_up then desired_speed = tire.max_forward_speed
+    elseif dir_down then desired_speed = tire.max_backward_speed end
 
     local force = 0
-    if desired_speed > current_speed then
-        force = tire.max_drive_force
-    elseif desired_speed < current_speed then
-        force = -tire.max_drive_force
+    if dir_up or dir_down then
+        if desired_speed > current_speed then
+            force = tire.max_drive_force
+        elseif desired_speed < current_speed then
+            force = -tire.max_drive_force * 0.5
+        end
     end
 
-    -- Drive force scaled by traction
-    local traction = tire.current_traction
-    b2d.body_apply_force_to_center(body,
-        { traction * force * forward[1], traction * force * forward[2] }, true)
+    -- Step 2: drive impulse (force -> impulse, dt-scaled)
+    local speed_factor = current_speed / 120.0
+    local di_x = (force * dt) * forward[1]
+    local di_y = (force * dt) * forward[2]
+    local di_len = math.sqrt(di_x * di_x + di_y * di_y)
+    if di_len > tire.max_lateral_impulse then
+        local s = tire.max_lateral_impulse / di_len
+        di_x, di_y = di_x * s, di_y * s
+    end
+
+    -- Step 3: lateral friction impulse (speed-dependent grip)
+    local lat_vel = get_lateral_velocity(body)
+    local mass = b2d.body_get_mass(body)
+    local lfi_x = -mass * lat_vel[1]
+    local lfi_y = -mass * lat_vel[2]
+
+    local lat_available = tire.max_lateral_impulse * 2.0 * speed_factor
+    if lat_available < 0.5 * tire.max_lateral_impulse then
+        lat_available = 0.5 * tire.max_lateral_impulse
+    end
+    local lfi_len = math.sqrt(lfi_x * lfi_x + lfi_y * lfi_y)
+    if lfi_len > lat_available then
+        local s = lat_available / lfi_len
+        lfi_x, lfi_y = lfi_x * s, lfi_y * s
+    end
+
+    -- Step 4: combine, cap, apply
+    local ix = di_x + lfi_x
+    local iy = di_y + lfi_y
+    local i_len = math.sqrt(ix * ix + iy * iy)
+    if i_len > tire.max_lateral_impulse then
+        local s = tire.max_lateral_impulse / i_len
+        ix, iy = ix * s, iy * s
+    end
+
+    b2d.body_apply_linear_impulse_to_center(body,
+        { traction * ix, traction * iy }, true)
 end
 
 function scene:set_camera(cam)
@@ -167,7 +212,9 @@ function scene:setup(world_id, ground_id)
     tires = {}
     ground_areas = {}
     tire_shapes = {}
-    zone_bodies = {}
+    chain_ids = {}
+    track_body_id = nil
+    water_zone_verts = {}
     dir_up = false
     dir_down = false
     dir_left = false
@@ -177,68 +224,92 @@ function scene:setup(world_id, ground_id)
     -- Zero gravity
     b2d.world_set_gravity(world_id, { 0, 0 })
 
-    -- Ground area sensors (on ground body)
-    local zone_defs = {
-        { hw = 9, hh = 7, center = { -10, 15 }, angle = math.rad(20), friction_modifier = 0.5 },
-        { hw = 9, hh = 5, center = { 5, 20 }, angle = math.rad(-40), friction_modifier = 0.2 },
-    }
-    for _, zd in ipairs(zone_defs) do
+    -- Track body (static, at origin since data is pre-transformed to world coords)
+    local track_def = b2d.default_body_def()
+    track_def.position = { 0, 0 }
+    track_body_id = b2d.create_body(world_id, track_def)
+
+    -- Track walls (chain shapes)
+    -- Box2D v3 chains are one-sided: CCW winding = normal points outward.
+    -- Outer wall needs CW (normal inward) to block car from leaving.
+    -- Inner walls need CCW (normal outward) to block car from entering.
+    local max_wall_area = 0
+    local outer_wall_idx = 1
+    for i, wall_verts in ipairs(track_data.walls) do
+        local area = math.abs(signed_area(wall_verts))
+        if area > max_wall_area then
+            max_wall_area = area
+            outer_wall_idx = i
+        end
+    end
+
+    for i, wall_verts in ipairs(track_data.walls) do
+        local verts = wall_verts
+        local area = signed_area(verts)
+        if i == outer_wall_idx then
+            -- Outer wall: ensure CW (area > 0 means CCW, reverse it)
+            if area > 0 then
+                local rev = {}
+                for j = #verts, 1, -1 do rev[#rev + 1] = verts[j] end
+                verts = rev
+            end
+        else
+            -- Inner wall: ensure CCW (area < 0 means CW, reverse it)
+            if area < 0 then
+                local rev = {}
+                for j = #verts, 1, -1 do rev[#rev + 1] = verts[j] end
+                verts = rev
+            end
+        end
+        local chain_def = b2d.default_chain_def()
+        chain_def.points = verts
+        chain_def.is_loop = true
+        chain_def.filter = car_filter
+        local chain_id = b2d.create_chain(track_body_id, chain_def)
+        b2d.chain_set_friction(chain_id, 0.1)
+        b2d.chain_set_restitution(chain_id, 0.1)
+        table.insert(chain_ids, chain_id)
+    end
+
+    -- Water zones (sensor polygons on ground body for traction detection)
+    for _, zone_verts in ipairs(track_data.water_zones) do
         local zone_shape_def = b2d.default_shape_def()
         zone_shape_def.is_sensor = true
         zone_shape_def.enable_sensor_events = true
-        local zone_polygon = b2d.make_offset_box(zd.hw, zd.hh, zd.center, b2d.make_rot(zd.angle))
-        local zone_sid = b2d.create_polygon_shape(ground_id, zone_shape_def, zone_polygon)
-        ground_areas[shape_key(zone_sid)] = { friction_modifier = zd.friction_modifier }
-        table.insert(zone_bodies, {
-            center = zd.center, hw = zd.hw, hh = zd.hh, angle = zd.angle,
-            friction_modifier = zd.friction_modifier,
-        })
+        local hull = b2d.compute_hull(zone_verts, #zone_verts)
+        local zone_sid = b2d.create_polygon_shape(ground_id, zone_shape_def,
+            b2d.make_polygon(hull, 0))
+        ground_areas[shape_key(zone_sid)] = { friction_modifier = 1.0, drag_modifier = 30.0 }
+        table.insert(water_zone_verts, zone_verts)
     end
 
-    -- Boundary walls (large arena for high-speed car)
-    local arena = 150
-    local walls = {
-        { pos = { 0, -arena }, hw = arena, hh = 1 },
-        { pos = { 0, arena }, hw = arena, hh = 1 },
-        { pos = { -arena, 0 }, hw = 1, hh = arena },
-        { pos = { arena, 0 }, hw = 1, hh = arena },
-    }
-    for _, w in ipairs(walls) do
-        local body_def = b2d.default_body_def()
-        body_def.position = w.pos
-        local wall = b2d.create_body(world_id, body_def)
-        local shape_def = b2d.default_shape_def()
-        shape_def.filter = car_filter
-        b2d.create_polygon_shape(wall, shape_def, b2d.make_box(w.hw, w.hh))
-        table.insert(body_entries, { body_id = wall, color = { 0.4, 0.4, 0.4 } })
-    end
-
-    -- Obstacles
-    local obstacles = {
-        { pos = { -30, 40 }, hw = 3, hh = 3 },
-        { pos = { 40, -20 }, hw = 4, hh = 2 },
-        { pos = { -20, -50 }, hw = 2, hh = 5 },
-        { pos = { 60, 50 }, hw = 2, hh = 8 },
-        { pos = { -50, -30 }, hw = 5, hh = 2 },
-    }
-    for _, obs in ipairs(obstacles) do
-        local body_def = b2d.default_body_def()
-        body_def.position = obs.pos
-        local ob = b2d.create_body(world_id, body_def)
-        local shape_def = b2d.default_shape_def()
-        shape_def.filter = car_filter
-        b2d.create_polygon_shape(ob, shape_def, b2d.make_box(obs.hw, obs.hh))
-        table.insert(body_entries, { body_id = ob, color = { 0.5, 0.5, 0.6 } })
+    -- Barrels (dynamic circles)
+    local barrel_shape_def = b2d.default_shape_def()
+    barrel_shape_def.density = 5.0
+    barrel_shape_def.filter = car_filter
+    local barrel_mat = b2d.default_surface_material()
+    barrel_mat.friction = 0.8
+    barrel_shape_def.material = barrel_mat
+    for _, pos in ipairs(track_data.barrels) do
+        local barrel_def = b2d.default_body_def()
+        barrel_def.type = b2d.BodyType.DYNAMIC_BODY
+        barrel_def.position = pos
+        barrel_def.linear_damping = 10.0
+        barrel_def.angular_damping = 10.0
+        local barrel = b2d.create_body(world_id, barrel_def)
+        b2d.create_circle_shape(barrel, barrel_shape_def,
+            b2d.Circle({ center = { 0, 0 }, radius = 2.0 }))
+        table.insert(body_entries, { body_id = barrel, color = { 0.6, 0.4, 0.2 } })
     end
 
     -- Chassis: original iforce2d 8-vertex car polygon
     local body_def = b2d.default_body_def()
     body_def.type = b2d.BodyType.DYNAMIC_BODY
     body_def.position = { 0, 0 }
-    body_def.angular_damping = 3.0
+    body_def.angular_damping = 5.0
+    body_def.enable_sleep = false
     chassis_id = b2d.create_body(world_id, body_def)
 
-    -- Original iforce2d 8-vertex car polygon
     local vertices = {
         { 1.5, 0 }, { 3, 2.5 }, { 2.8, 5.5 }, { 1, 10 },
         { -1, 10 }, { -2.8, 5.5 }, { -3, 2.5 }, { -1.5, 0 },
@@ -250,12 +321,12 @@ function scene:setup(world_id, ground_id)
     b2d.create_polygon_shape(chassis_id, shape_def, b2d.make_polygon(hull, 0))
     table.insert(body_entries, { body_id = chassis_id, color = { 0.2, 0.5, 0.9 } })
 
-    -- Original iforce2d tire parameters:
-    -- Back:  maxForward=250, maxBackward=-40, maxDrive=300, maxLateral=8.5
-    -- Front: maxForward=250, maxBackward=-40, maxDrive=500, maxLateral=7.5
+    -- Race track tire parameters (iforce2d_TopdownCarRaceTrack.h):
+    -- Back:  maxForward=300, maxBackward=-40, maxDrive=950, maxLateral=9
+    -- Front: maxForward=300, maxBackward=-40, maxDrive=400, maxLateral=9
 
     -- Back left tire
-    local bl = create_tire(world_id, 250, -40, 300, 8.5)
+    local bl = create_tire(world_id, 300, -40, 950, 9)
     local jdef = b2d.default_revolute_joint_def()
     jdef.body_id_a = chassis_id
     jdef.body_id_b = bl.body_id
@@ -269,7 +340,7 @@ function scene:setup(world_id, ground_id)
     table.insert(tires, bl)
 
     -- Back right tire
-    local br = create_tire(world_id, 250, -40, 300, 8.5)
+    local br = create_tire(world_id, 300, -40, 950, 9)
     jdef = b2d.default_revolute_joint_def()
     jdef.body_id_a = chassis_id
     jdef.body_id_b = br.body_id
@@ -283,7 +354,7 @@ function scene:setup(world_id, ground_id)
     table.insert(tires, br)
 
     -- Front left tire
-    local fl = create_tire(world_id, 250, -40, 500, 7.5)
+    local fl = create_tire(world_id, 300, -40, 400, 9)
     jdef = b2d.default_revolute_joint_def()
     jdef.body_id_a = chassis_id
     jdef.body_id_b = fl.body_id
@@ -297,7 +368,7 @@ function scene:setup(world_id, ground_id)
     table.insert(tires, fl)
 
     -- Front right tire
-    local fr = create_tire(world_id, 250, -40, 500, 7.5)
+    local fr = create_tire(world_id, 300, -40, 400, 9)
     jdef = b2d.default_revolute_joint_def()
     jdef.body_id_a = chassis_id
     jdef.body_id_b = fr.body_id
@@ -314,6 +385,7 @@ function scene:setup(world_id, ground_id)
     if camera_ref then
         camera_ref.x = 0
         camera_ref.y = 0
+        camera_ref.zoom = 80
     end
 end
 
@@ -362,8 +434,8 @@ function scene:update(dt)
             b2d.revolute_joint_set_limits(tire.joint_id, new_angle, new_angle)
         end
 
-        update_tire_friction(tire)
-        update_tire_drive(tire)
+        update_tire_friction(tire, dt)
+        update_tire_drive(tire, dt)
     end
 
     -- Follow camera
@@ -379,23 +451,22 @@ function scene:get_bodies()
 end
 
 function scene:render_extra()
-    -- Draw traction zone outlines
-    for _, zd in ipairs(zone_bodies) do
-        local cx, cy = zd.center[1], zd.center[2]
-        local hw, hh = zd.hw, zd.hh
-        local cos_a = math.cos(zd.angle)
-        local sin_a = math.sin(zd.angle)
-        local corners = {
-            { cx + (-hw * cos_a - (-hh) * sin_a), cy + (-hw * sin_a + (-hh) * cos_a) },
-            { cx + (hw * cos_a - (-hh) * sin_a), cy + (hw * sin_a + (-hh) * cos_a) },
-            { cx + (hw * cos_a - hh * sin_a), cy + (hw * sin_a + hh * cos_a) },
-            { cx + (-hw * cos_a - hh * sin_a), cy + (-hw * sin_a + hh * cos_a) },
-        }
-        local r, g, b_c = 0.8, 0.4, 0.1
-        if zd.friction_modifier < 0.3 then
-            r, g, b_c = 0.2, 0.4, 0.8
+    -- Draw track walls (chain segments)
+    for _, chain_id in ipairs(chain_ids) do
+        if b2d.chain_is_valid(chain_id) then
+            local segments = b2d.chain_get_segments(chain_id)
+            for _, seg_shape in ipairs(segments) do
+                local seg = b2d.shape_get_chain_segment(seg_shape)
+                draw.line(seg.segment.point1[1], seg.segment.point1[2],
+                    seg.segment.point2[1], seg.segment.point2[2],
+                    0.5, 0.5, 0.5)
+            end
         end
-        draw.polygon_outline(corners, r, g, b_c)
+    end
+
+    -- Draw water zones (blue outlines)
+    for _, verts in ipairs(water_zone_verts) do
+        draw.polygon_outline(verts, 0.2, 0.4, 0.8)
     end
 
     -- Draw direction indicator on chassis
@@ -422,7 +493,8 @@ function scene:render_ui()
     imgui.separator()
     local names = { "BL", "BR", "FL", "FR" }
     for i, tire in ipairs(tires) do
-        imgui.text_unformatted(string.format("Tire %s traction: %.2f", names[i] or i, tire.current_traction))
+        imgui.text_unformatted(string.format("Tire %s traction: %.2f drag: %.1f",
+            names[i] or i, tire.current_traction, tire.current_drag))
     end
 end
 
