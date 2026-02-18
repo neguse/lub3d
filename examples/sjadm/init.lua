@@ -14,11 +14,18 @@ local Camera = require("examples.sjadm.camera")
 local audio = require("examples.sjadm.audio")
 local map_mod = require("examples.sjadm.map")
 local player_mod = require("examples.sjadm.player")
+local pathtracer = require("examples.sjadm.pathtracer")
 
 local M = {}
 M.width = 800
 M.height = 600
 M.window_title = "Super Jump And Dash Man"
+
+-- Render modes
+local MODE_ORIGINAL <const> = 1
+local MODE_PATHTRACED <const> = 2
+local render_mode = MODE_ORIGINAL
+local pt_initialized = false
 
 local world_id
 local cam
@@ -148,7 +155,61 @@ function M:init()
     pl:set_respawn_point(map:get_start_point())
     pl:respawn()
 
+    -- Initialize path tracer
+    pt_initialized = pathtracer.init()
+    if pt_initialized then
+        log.info("sjadm path tracer ready (TAB to toggle)")
+    end
+
     log.info("sjadm initialized")
+end
+
+-- Collect visible boxes for pathtracer (frustum cull by camera X range)
+local function collect_pt_boxes()
+    local cam_params = cam:get_3d_params()
+    local visible_range = 8.0 / cam.s  -- game units range in scaled coords
+    local cam_x = cam.x
+    local min_x = cam_x - visible_range
+    local max_x = cam_x + visible_range
+
+    local boxes = {}
+    -- Platforms (type=0)
+    for _, b in ipairs(map:get_boxes()) do
+        if b.cx + b.hw >= min_x and b.cx - b.hw <= max_x then
+            table.insert(boxes, { cx = b.cx, cy = b.cy, hw = b.hw, hh = b.hh, angle = b.angle, type = 0 })
+        end
+    end
+    -- Kill zones (type=1)
+    for _, k in ipairs(map:get_kills()) do
+        if k.cx + k.hw >= min_x and k.cx - k.hw <= max_x then
+            table.insert(boxes, { cx = k.cx, cy = k.cy, hw = k.hw, hh = k.hh, angle = k.angle, type = 1 })
+        end
+    end
+
+    -- Items (visible, not consumed)
+    local items = {}
+    for _, it in ipairs(map:get_items()) do
+        if not it:is_consumed() then
+            local pos = b2d.body_get_position(it.body_id)
+            items[#items + 1] = { x = pos[1], y = pos[2], radius = 50 }
+        end
+    end
+
+    -- Checkpoints
+    local checkpoints = {}
+    for _, cp in ipairs(map:get_checkpoints()) do
+        checkpoints[#checkpoints + 1] = { x = cp.x, y = cp.y, radius = 150 }
+    end
+
+    -- Player info
+    local px, py = pl:get_position()
+    local player_info = {
+        x = px, y = py,
+        hw = 25 / 2, hh = 50 / 2,
+        alive = not pl.dead,
+    }
+
+    return boxes, player_info, cam_params, items, checkpoints
 end
 
 function M:frame()
@@ -169,65 +230,101 @@ function M:frame()
     pl:update(dt)
     cam:update(dt)
 
-    -- Render
-    gfx.begin_pass(gfx.Pass({
-        action = gfx.PassAction({
-            colors = { {
-                load_action = gfx.LoadAction.CLEAR,
-                clear_value = { r = 0.05, g = 0.05, b = 0.1, a = 1.0 },
-            } },
-        }),
-        swapchain = glue.swapchain(),
-    }))
-
     local w = app.widthf()
     local h = app.heightf()
 
-    gl.defaults()
-    gl.matrix_mode_projection()
-    gl.ortho(0, w, h, 0, -1, 1)
-    gl.matrix_mode_modelview()
+    if render_mode == MODE_PATHTRACED and pt_initialized then
+        -- Path traced rendering
+        local boxes, player_info, cam_params, items, checkpoints = collect_pt_boxes()
+        local pass_open = pathtracer.render(boxes, player_info, cam_params, items, checkpoints)
 
-    -- Camera transform
-    cam:push()
+        if pass_open then
+            -- HUD overlay on top of path traced image
+            local canvas_w = w / 2
+            local canvas_h = h / 2
+            sdtx.canvas(canvas_w, canvas_h)
+            sdtx.origin(1, 1)
+            sdtx.color3f(1, 1, 1)
 
-    -- Render world
-    pl:render()
-    map:render()
+            if pl.game_time then
+                sdtx.puts("time:" .. time_string(pl.game_time) .. "\n")
+            end
+            if pl.goal_time then
+                sdtx.puts("goal:" .. time_string(pl.goal_time) .. "\n")
+            end
+            if pl.jump_max > 0 then
+                sdtx.puts(string.format("jump: %d\n", pl.jump_num))
+            end
+            if pl.dash_max > 0 then
+                sdtx.puts(string.format("dash: %d\n", pl.dash_num))
+            end
 
-    cam:pop()
+            local fps = math.floor(1.0 / (dt > 0 and dt or 1))
+            sdtx.origin(canvas_w / 8 - 10, 1)
+            sdtx.color3f(1, 1, 0)
+            sdtx.puts(string.format("FPS:%3d PT", fps))
 
-    -- UI overlay (screen space)
-    local canvas_w = w / 2
-    local canvas_h = h / 2
-    sdtx.canvas(canvas_w, canvas_h)
-    sdtx.origin(1, 1)
-    sdtx.color3f(1, 1, 1)
+            sdtx.draw()
+            gfx.end_pass()
+        end
+    else
+        -- Original sokol.gl rendering
+        gfx.begin_pass(gfx.Pass({
+            action = gfx.PassAction({
+                colors = { {
+                    load_action = gfx.LoadAction.CLEAR,
+                    clear_value = { r = 0.05, g = 0.05, b = 0.1, a = 1.0 },
+                } },
+            }),
+            swapchain = glue.swapchain(),
+        }))
 
-    if pl.game_time then
-        sdtx.puts("time:" .. time_string(pl.game_time) .. "\n")
+        gl.defaults()
+        gl.matrix_mode_projection()
+        gl.ortho(0, w, h, 0, -1, 1)
+        gl.matrix_mode_modelview()
+
+        -- Camera transform
+        cam:push()
+
+        -- Render world
+        pl:render()
+        map:render()
+
+        cam:pop()
+
+        -- UI overlay (screen space)
+        local canvas_w = w / 2
+        local canvas_h = h / 2
+        sdtx.canvas(canvas_w, canvas_h)
+        sdtx.origin(1, 1)
+        sdtx.color3f(1, 1, 1)
+
+        if pl.game_time then
+            sdtx.puts("time:" .. time_string(pl.game_time) .. "\n")
+        end
+        if pl.goal_time then
+            sdtx.puts("goal:" .. time_string(pl.goal_time) .. "\n")
+        end
+        if pl.jump_max > 0 then
+            sdtx.puts(string.format("jump: %d\n", pl.jump_num))
+        end
+        if pl.dash_max > 0 then
+            sdtx.puts(string.format("dash: %d\n", pl.dash_num))
+        end
+
+        -- FPS (top right)
+        local fps = math.floor(1.0 / (dt > 0 and dt or 1))
+        sdtx.origin(canvas_w / 8 - 10, 1)
+        sdtx.color3f(1, 1, 0)
+        sdtx.puts(string.format("FPS:%3d", fps))
+
+        gl.draw()
+        sdtx.draw()
+        gfx.end_pass()
     end
-    if pl.goal_time then
-        sdtx.puts("goal:" .. time_string(pl.goal_time) .. "\n")
-    end
-    if pl.jump_max > 0 then
-        sdtx.puts(string.format("jump: %d\n", pl.jump_num))
-    end
-    if pl.dash_max > 0 then
-        sdtx.puts(string.format("dash: %d\n", pl.dash_num))
-    end
 
-    -- FPS (top right)
-    local fps = math.floor(1.0 / (dt > 0 and dt or 1))
-    sdtx.origin(canvas_w / 8 - 10, 1)
-    sdtx.color3f(1, 1, 0)
-    sdtx.puts(string.format("FPS:%3d", fps))
-
-    gl.draw()
-    sdtx.draw()
-    gfx.end_pass()
     gfx.commit()
-
     input.end_frame()
 end
 
@@ -237,11 +334,24 @@ function M:event(ev)
     if ev.type == app.EventType.KEY_DOWN then
         if ev.key_code == app.Keycode.ESCAPE or ev.key_code == app.Keycode.Q then
             app.quit()
+        elseif ev.key_code == app.Keycode.TAB then
+            if pt_initialized then
+                if render_mode == MODE_ORIGINAL then
+                    render_mode = MODE_PATHTRACED
+                else
+                    render_mode = MODE_ORIGINAL
+                end
+                local names = { [MODE_ORIGINAL] = "ORIGINAL", [MODE_PATHTRACED] = "PATHTRACED" }
+                log.info("Render mode: " .. names[render_mode])
+            end
         end
     end
 end
 
 function M:cleanup()
+    if pt_initialized then
+        pathtracer.cleanup()
+    end
     audio.cleanup()
     b2d.destroy_world(world_id)
     gl.shutdown()

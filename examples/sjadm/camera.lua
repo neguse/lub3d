@@ -54,4 +54,17 @@ function camera:target(x, y, s)
     self.tx, self.ty, self.ts = x, y, s
 end
 
+-- Derive 3D camera parameters for path tracer
+-- Returns eye and target positions in scaled world coordinates (1/1000)
+function camera:get_3d_params()
+    local scale = 1.0 / 1000.0
+    local cx = self.x * scale
+    local cy = self.y * scale
+    local dist = 5.0 / self.s  -- farther when zoomed out
+    return {
+        eye = { x = cx, y = cy + 1.0, z = dist },
+        target = { x = cx, y = cy, z = 0 },
+    }
+end
+
 return camera

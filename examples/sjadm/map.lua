@@ -134,6 +134,23 @@ function map:reset_items()
     self.reset_required = true
 end
 
+-- Accessors for pathtracer scene data
+function map:get_boxes()
+    return self.bodies
+end
+
+function map:get_kills()
+    return self.kills
+end
+
+function map:get_items()
+    return self.items
+end
+
+function map:get_checkpoints()
+    return self.checkpoints
+end
+
 local function draw_rotated_box(cx, cy, hw, hh, angle, r, g, b, mode)
     local cos_a = math.cos(angle)
     local sin_a = math.sin(angle)
