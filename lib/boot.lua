@@ -1,12 +1,15 @@
 -- boot.lua
 -- Module bootloader: sets up hotreload, requires the entry script, and launches app.Run()
 --
--- Two modes:
---   _lub3d_script  (string)  → require the module by name (hotreload works)
---   _lub3d_module  (table)   → use directly (playground, no hotreload)
+-- Three modes:
+--   _lub3d_script       (string)  → require the module by name (hotreload works)
+--   _lub3d_script_file  (string)  → dofile a specific file path (CLI run mode)
+--   _lub3d_module       (table)   → use directly (playground, no hotreload)
 
 ---@type string?
 local _lub3d_script = _lub3d_script ---@diagnostic disable-line: undefined-global
+---@type string?
+local _lub3d_script_file = _lub3d_script_file ---@diagnostic disable-line: undefined-global
 ---@type table?
 local _lub3d_module = _lub3d_module ---@diagnostic disable-line: undefined-global
 
@@ -25,6 +28,9 @@ local M
 if _lub3d_script then
     -- Normal path: require by module name → entry + deps all auto-watched
     M = require(_lub3d_script)
+elseif _lub3d_script_file then
+    -- CLI run path: load a specific file by path
+    M = dofile(_lub3d_script_file)
 elseif _lub3d_module then
     -- Playground path: module table already provided
     M = _lub3d_module
