@@ -48,6 +48,9 @@ rootCommand.SetAction(parseResult =>
 
     Directory.CreateDirectory(outputDir);
 
+    var allMetrics = new List<ModuleMetrics>();
+    var allUnbound = new List<UnboundReport>();
+
     // --- ヘッダグループ (Sokol) ---
     var sokolHeaders = new List<string>
     {
@@ -125,6 +128,10 @@ rootCommand.SetAction(parseResult =>
         var luaPath = LuaOutputPath(outputDir, mod.ModuleName);
         File.WriteAllText(luaPath, mod.GenerateLua(reg, prefixToModule, sourceLink));
         Console.WriteLine($"Generated: {luaPath}");
+
+        var spec = mod.BuildSpec(reg, prefixToModule, sourceLink);
+        allMetrics.Add(ModuleMetrics.Collect(mod.ModuleName, reg, spec));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(mod.ModuleName, reg, spec));
     }
 
     // --- ヘッダグループ (Miniaudio) ---
@@ -166,6 +173,10 @@ rootCommand.SetAction(parseResult =>
         var maLuaPath = LuaOutputPath(outputDir, miniaudioModule.ModuleName);
         File.WriteAllText(maLuaPath, miniaudioModule.GenerateLua(maReg, maPrefixToModule, maSourceLink));
         Console.WriteLine($"Generated: {maLuaPath}");
+
+        var maSpec = miniaudioModule.BuildSpec(maReg, maPrefixToModule, maSourceLink);
+        allMetrics.Add(ModuleMetrics.Collect(miniaudioModule.ModuleName, maReg, maSpec));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(miniaudioModule.ModuleName, maReg, maSpec));
     }
 
     // --- ヘッダグループ (Dear ImGui) ---
@@ -203,6 +214,10 @@ rootCommand.SetAction(parseResult =>
         var imguiLuaPath = LuaOutputPath(outputDir, imguiModule.ModuleName);
         File.WriteAllText(imguiLuaPath, imguiModule.GenerateLua(imguiReg, imguiPrefixToModule, imguiSourceLink));
         Console.WriteLine($"Generated: {imguiLuaPath}");
+
+        var imguiSpec = imguiModule.BuildSpec(imguiReg, imguiPrefixToModule, imguiSourceLink);
+        allMetrics.Add(ModuleMetrics.Collect(imguiModule.ModuleName, imguiReg, imguiSpec));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(imguiModule.ModuleName, imguiReg, imguiSpec));
     }
     else
     {
@@ -242,6 +257,10 @@ rootCommand.SetAction(parseResult =>
         var stbLuaPath = LuaOutputPath(outputDir, stbImageModule.ModuleName);
         File.WriteAllText(stbLuaPath, stbImageModule.GenerateLua(stbReg, stbPrefixToModule, stbSourceLink));
         Console.WriteLine($"Generated: {stbLuaPath}");
+
+        var stbSpec = stbImageModule.BuildSpec(stbReg, stbPrefixToModule, stbSourceLink);
+        allMetrics.Add(ModuleMetrics.Collect(stbImageModule.ModuleName, stbReg, stbSpec));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(stbImageModule.ModuleName, stbReg, stbSpec));
     }
 
     // --- ヘッダグループ (Box2D) ---
@@ -291,11 +310,18 @@ rootCommand.SetAction(parseResult =>
         var b2LuaPath = LuaOutputPath(outputDir, box2dModule.ModuleName);
         File.WriteAllText(b2LuaPath, box2dModule.GenerateLua(b2Reg, b2PrefixToModule, b2SourceLink));
         Console.WriteLine($"Generated: {b2LuaPath}");
+
+        var b2Spec = box2dModule.BuildSpec(b2Reg, b2PrefixToModule, b2SourceLink);
+        allMetrics.Add(ModuleMetrics.Collect(box2dModule.ModuleName, b2Reg, b2Spec));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(box2dModule.ModuleName, b2Reg, b2Spec));
     }
     else
     {
         Console.WriteLine("Skipping Box2D (deps/box2d/include/box2d/box2d.h not found)");
     }
+
+    ModuleMetrics.PrintTable(allMetrics);
+    ModuleMetrics.PrintUnbound(allUnbound);
 
     return 0;
 });

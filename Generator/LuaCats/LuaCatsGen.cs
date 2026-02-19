@@ -120,6 +120,10 @@ public static class LuaCatsGen
         {
             var fields = s.Fields.Select(f =>
                 (f.LuaName, ToLuaCatsType(f.Type)));
+            // Properties も @field として追加
+            if (s.Properties is { Count: > 0 })
+                fields = fields.Concat(s.Properties.Select(p =>
+                    (p.LuaName, ToLuaCatsType(p.Type))));
             sb += StructClass(
                 $"{spec.ModuleName}.{s.PascalName}",
                 fields,

@@ -34,7 +34,7 @@ public class StbImageModule : IModule
         "stbi_ldr_to_hdr_scale",
     ];
 
-    public ModuleSpec BuildSpec(TypeRegistry reg, SourceLink? sourceLink = null)
+    public ModuleSpec BuildSpec(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
         // Clang AST から自動生成する関数を抽出
         var funcs = new List<FuncBinding>();
@@ -85,13 +85,13 @@ public class StbImageModule : IModule
 
     public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
     {
-        var spec = BuildSpec(reg);
+        var spec = BuildSpec(reg, prefixToModule);
         return CBinding.CBindingGen.Generate(spec);
     }
 
     public string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
-        var spec = BuildSpec(reg, sourceLink);
+        var spec = BuildSpec(reg, prefixToModule, sourceLink);
         return LuaCats.LuaCatsGen.Generate(spec);
     }
 

@@ -395,4 +395,26 @@ public class LuaCatsGenSpecTests
         Assert.Contains("---@field DefaultWorldDef fun(): b2d.WorldDef", code);
         Assert.DoesNotContain("enqueueTask", code);
     }
+
+    // ===== PropertyBinding =====
+
+    [Fact]
+    public void Generate_PropertyBinding_IncludedInStructClass()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", true,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@class b2d.ChainDef", code);
+        Assert.Contains("---@field friction? number", code);
+        Assert.Contains("---@field point_count? integer", code);
+    }
 }
