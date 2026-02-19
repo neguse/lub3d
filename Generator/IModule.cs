@@ -9,4 +9,5 @@ public interface IModule
 
     string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule);
     string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null);
+    ModuleSpec BuildSpec(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null);
 }

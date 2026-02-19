@@ -49,3 +49,5 @@ reference/
 
 # Runtime cache
 bms_cache.lua
+
+deps/Box2D_v2.1.2-iforce2dTutorials

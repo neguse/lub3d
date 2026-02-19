@@ -18,6 +18,11 @@ public class Box2dModule : IModule
         "b2Vec2", "number[]",
         [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
 
+    /// <summary>const b2Vec2* → Lua table of {x, y} tables</summary>
+    private static readonly BindingType B2Vec2ArrayType = new BindingType.ValueStructArray(
+        "b2Vec2", "number[][]",
+        [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+
     /// <summary>b2CosSin → Lua table {cosine, sine}</summary>
     private static readonly BindingType B2CosSinType = new BindingType.ValueStruct(
         "b2CosSin", "number[]",
@@ -43,6 +48,12 @@ public class Box2dModule : IModule
          new BindingType.NestedFields("upperBound", ["x", "y"])],
         Settable: false);
 
+    /// <summary>b2Plane → Lua table {{nx,ny}, offset}</summary>
+    private static readonly BindingType B2PlaneType = new BindingType.ValueStruct(
+        "b2Plane", "number[]",
+        [new BindingType.NestedFields("normal", ["x", "y"]),
+         new BindingType.ScalarField("offset")]);
+
     // ===== Callback 型定義 =====
 
     /// <summary>b2OverlapResultFcn: bool callback(b2ShapeId shapeId, void* context)</summary>
@@ -54,6 +65,32 @@ public class Box2dModule : IModule
         [("shapeId", HandleType("b2ShapeId")), ("point", B2Vec2Type),
          ("normal", B2Vec2Type), ("fraction", new BindingType.Float())],
         new BindingType.Float());
+
+    /// <summary>b2Manifold* → lightuserdata (callback arg としてポインタ渡し)</summary>
+    private static readonly BindingType ManifoldPtrType =
+        new BindingType.Custom("b2Manifold*", "lightuserdata", null, null, null, null);
+
+    /// <summary>b2PreSolveFcn: bool callback(b2ShapeId shapeIdA, b2ShapeId shapeIdB, b2Manifold* manifold, void* context)</summary>
+    private BindingType PreSolveCallbackType => new BindingType.Callback(
+        [("shapeIdA", HandleType("b2ShapeId")),
+         ("shapeIdB", HandleType("b2ShapeId")),
+         ("manifold", ManifoldPtrType)],
+        new BindingType.Bool());
+
+    /// <summary>b2CustomFilterFcn: bool callback(b2ShapeId shapeIdA, b2ShapeId shapeIdB, void* context)</summary>
+    private BindingType CustomFilterCallbackType => new BindingType.Callback(
+        [("shapeIdA", HandleType("b2ShapeId")),
+         ("shapeIdB", HandleType("b2ShapeId"))],
+        new BindingType.Bool());
+
+    /// <summary>b2PlaneResultFcn: bool callback(b2ShapeId shapeId, b2PlaneResult* planeResult, void* context)</summary>
+    private BindingType PlaneResultCallbackType => new BindingType.Callback(
+        [("shapeId", HandleType("b2ShapeId")),
+         ("planeResult", new BindingType.Struct("b2PlaneResult", "b2d.PlaneResult", "b2d.PlaneResult"))],
+        new BindingType.Bool());
+
+    /// <summary>Persistent コールバック型名の判別用</summary>
+    private static readonly HashSet<string> PersistentCallbackTypeNames = ["b2PreSolveFcn", "b2CustomFilterFcn"];
 
     // ===== Handle 型 (struct userdata) =====
 
@@ -74,16 +111,14 @@ public class Box2dModule : IModule
         "b2Joint_SetUserData", "b2Joint_GetUserData",
         // Memory dump
         "b2World_DumpMemoryStats",
-        // Callback setters (need custom wrappers or skip)
-        "b2World_SetCustomFilterCallback", "b2World_SetPreSolveCallback",
-        "b2World_SetFrictionCallback", "b2World_SetRestitutionCallback",
+        // Callback setters (handled via ExtraCCode — no void* context)
         // Query functions (need Lua callback wrappers → ExtraCCode or CallbackBridge)
         "b2World_CollideMover",
         // Array output functions → ExtraCCode / ArrayAdapter
         "b2Body_GetShapes", "b2Body_GetJoints", "b2Body_GetContactData",
         "b2Shape_GetContactData", "b2Shape_GetSensorOverlaps",
         "b2Chain_GetSegments",
-        // Output param functions → ExtraCCode
+        // Output param functions → handled via manual IsOutput FuncBinding (skip auto-gen)
         "b2Joint_GetConstraintTuning",
         // Event functions → EventAdapter
         // (b2World_GetBodyEvents, b2World_GetSensorEvents, b2World_GetContactEvents are now auto-generated)
@@ -121,15 +156,13 @@ public class Box2dModule : IModule
         // DebugDraw
         "b2DebugDraw", "b2HexColor",
         // Internal
-        "b2Version", "b2Counters", "b2Profile", "b2TreeStats",
+        "b2TreeStats",
         // Collision internals
         "b2ManifoldPoint", "b2Manifold", "b2ContactData",
         "b2SimplexCache", "b2Simplex", "b2SimplexVertex",
         "b2DistanceInput", "b2DistanceOutput",
         "b2SegmentDistanceResult",
-        "b2Sweep", "b2TOIInput", "b2TOIOutput",
         "b2ShapeCastPairInput",
-        "b2CollisionPlane", "b2PlaneSolverResult", "b2PlaneResult",
         // Dynamic tree
         "b2DynamicTree",
     ];
@@ -167,6 +200,9 @@ public class Box2dModule : IModule
         "b2MassData",
         "b2RayCastInput", "b2ShapeProxy", "b2ShapeCastInput", "b2CastOutput",
         "b2RayResult",
+        "b2Version", "b2Profile", "b2Counters",
+        "b2Sweep", "b2TOIInput", "b2TOIOutput",
+        "b2PlaneResult", "b2CollisionPlane", "b2PlaneSolverResult",
     ];
 
     // ===== Struct フィールド スキップ =====
@@ -186,7 +222,7 @@ public class Box2dModule : IModule
 
     private static readonly HashSet<string> AllowedEnums =
     [
-        "b2BodyType", "b2ShapeType", "b2JointType",
+        "b2BodyType", "b2ShapeType", "b2JointType", "b2TOIState",
     ];
 
     // ===== BuildSpec =====
@@ -213,7 +249,10 @@ public class Box2dModule : IModule
             // Box2D callback typedefs (must precede generic Ptr/ConstPtr)
             Types.Ptr(Types.StructRef("b2OverlapResultFcn")) => OverlapCallbackType,
             Types.Ptr(Types.StructRef("b2CastResultFcn")) => CastCallbackType,
+            Types.Ptr(Types.StructRef("b2PreSolveFcn")) => PreSolveCallbackType,
+            Types.Ptr(Types.StructRef("b2CustomFilterFcn")) => CustomFilterCallbackType,
             Types.ConstPtr(Types.String) => new BindingType.Str(),
+            Types.ConstPtr(Types.StructRef("b2Vec2")) => B2Vec2ArrayType,
             Types.ConstPtr(var inner) => new BindingType.ConstPtr(Resolve(inner)),
             Types.Ptr(var inner) => new BindingType.Ptr(Resolve(inner)),
             // Box2D math types → Custom
@@ -221,6 +260,7 @@ public class Box2dModule : IModule
             Types.StructRef("b2Rot") => B2RotType,
             Types.StructRef("b2Transform") => B2TransformType,
             Types.StructRef("b2AABB") => B2AABBType,
+            Types.StructRef("b2Plane") => B2PlaneType,
             // Box2D typedef aliases
             Types.StructRef("uint8_t") => new BindingType.UInt32(),
             Types.StructRef("uint16_t") => new BindingType.UInt32(),
@@ -285,7 +325,8 @@ public class Box2dModule : IModule
                 $"{ModuleName}.{pascalName}",
                 hasMeta, fields,
                 GetLink(s, sourceLink),
-                IsHandleType: isHandle));
+                IsHandleType: isHandle,
+                Properties: s.Name == "b2ChainDef" ? ChainDefProperties() : null));
         }
 
         // ===== Functions =====
@@ -318,7 +359,13 @@ public class Box2dModule : IModule
                 // Callback parameter → set CallbackBridge and skip next void* context
                 if (pt is BindingType.Callback)
                 {
-                    parms.Add(new ParamBinding(p.Name, pt, CallbackBridge: CallbackBridgeMode.Immediate));
+                    var mode = p.ParsedType is Types.Ptr(Types.StructRef(var cbTypeName))
+                        && PersistentCallbackTypeNames.Contains(cbTypeName)
+                        ? CallbackBridgeMode.Persistent
+                        : CallbackBridgeMode.Immediate;
+                    parms.Add(new ParamBinding(p.Name, pt,
+                        IsOptional: mode == CallbackBridgeMode.Persistent,
+                        CallbackBridge: mode));
                     skipNextVoidPtr = true;
                     continue;
                 }
@@ -345,6 +392,14 @@ public class Box2dModule : IModule
             funcs.Add(new FuncBinding(f.Name, luaName, parms, retType, GetLink(f, sourceLink)));
         }
 
+        // ===== Manual FuncBindings (IsOutput) =====
+        funcs.Add(new FuncBinding(
+            "b2Joint_GetConstraintTuning", "joint_get_constraint_tuning",
+            [new ParamBinding("jointId", HandleType("b2JointId")),
+             new ParamBinding("hertz", new BindingType.Float(), IsOutput: true),
+             new ParamBinding("dampingRatio", new BindingType.Float(), IsOutput: true)],
+            new BindingType.Void(), null));
+
         // ===== Enums =====
         var enums = new List<EnumBinding>();
 
@@ -370,9 +425,61 @@ public class Box2dModule : IModule
         }
 
         // ===== ExtraLuaRegs + ExtraLuaFuncs =====
-        var extraRegs = new List<(string LuaName, string CFunc)>();
+        var extraRegs = new List<(string LuaName, string CFunc)>
+        {
+            ("manifold_point_count", "l_b2d_manifold_point_count"),
+            ("manifold_point", "l_b2d_manifold_point"),
+            ("manifold_normal", "l_b2d_manifold_normal"),
+            ("world_set_friction_callback", "l_b2d_world_set_friction_callback"),
+            ("world_set_restitution_callback", "l_b2d_world_set_restitution_callback"),
+            ("world_collide_mover", "l_b2d_world_collide_mover"),
+            ("clip_vector", "l_b2d_clip_vector"),
+            ("solve_planes", "l_b2d_solve_planes"),
+        };
 
-        var extraLuaFuncs = new List<FuncBinding>();
+        var frictionCbType = new BindingType.Callback(
+            [("frictionA", new BindingType.Float()), ("userMaterialIdA", new BindingType.Int()),
+             ("frictionB", new BindingType.Float()), ("userMaterialIdB", new BindingType.Int())],
+            new BindingType.Float());
+
+        var extraLuaFuncs = new List<FuncBinding>
+        {
+            new("l_b2d_manifold_point_count", "manifold_point_count",
+                [new ParamBinding("manifold", ManifoldPtrType)],
+                new BindingType.Int(), null),
+            new("l_b2d_manifold_point", "manifold_point",
+                [new ParamBinding("manifold", ManifoldPtrType),
+                 new ParamBinding("index", new BindingType.Int())],
+                B2Vec2Type, null),
+            new("l_b2d_manifold_normal", "manifold_normal",
+                [new ParamBinding("manifold", ManifoldPtrType)],
+                B2Vec2Type, null),
+            new("l_b2d_world_set_friction_callback", "world_set_friction_callback",
+                [new ParamBinding("worldId", HandleType("b2WorldId")),
+                 new ParamBinding("callback", frictionCbType, IsOptional: true)],
+                new BindingType.Void(), null),
+            new("l_b2d_world_set_restitution_callback", "world_set_restitution_callback",
+                [new ParamBinding("worldId", HandleType("b2WorldId")),
+                 new ParamBinding("callback", frictionCbType, IsOptional: true)],
+                new BindingType.Void(), null),
+            new("l_b2d_world_collide_mover", "world_collide_mover",
+                [new ParamBinding("worldId", HandleType("b2WorldId")),
+                 new ParamBinding("mover", new BindingType.ConstPtr(
+                     new BindingType.Struct("b2Capsule", "b2d.Capsule", "b2d.Capsule"))),
+                 new ParamBinding("filter", new BindingType.Struct("b2QueryFilter", "b2d.QueryFilter", "b2d.QueryFilter")),
+                 new ParamBinding("fcn", PlaneResultCallbackType)],
+                new BindingType.Void(), null),
+            new("l_b2d_clip_vector", "clip_vector",
+                [new ParamBinding("vector", B2Vec2Type),
+                 new ParamBinding("planes", new BindingType.FixedArray(
+                     new BindingType.Struct("b2CollisionPlane", "b2d.CollisionPlane", "b2d.CollisionPlane"), 0))],
+                B2Vec2Type, null),
+            new("l_b2d_solve_planes", "solve_planes",
+                [new ParamBinding("targetDelta", B2Vec2Type),
+                 new ParamBinding("planes", new BindingType.FixedArray(
+                     new BindingType.Struct("b2CollisionPlane", "b2d.CollisionPlane", "b2d.CollisionPlane"), 0))],
+                new BindingType.Struct("b2PlaneSolverResult", "b2d.PlaneSolverResult", "b2d.PlaneSolverResult"), null),
+        };
 
         // ===== PostCallPatch: b2DefaultWorldDef =====
         funcs.Add(new FuncBinding(
@@ -516,6 +623,7 @@ public class Box2dModule : IModule
         name.StartsWith("b2RayCast") ||
         name.StartsWith("b2ShapeCast") ||
         name.StartsWith("b2Collide") ||
+        name.StartsWith("b2TimeOfImpact") ||
         name.StartsWith("b2GetVersion") ||
         name.StartsWith("b2GetTicks") ||
         name.StartsWith("b2GetMilliseconds") ||
@@ -524,6 +632,72 @@ public class Box2dModule : IModule
         name == "b2ComputeCosSin" ||
         name == "b2SetLengthUnitsPerMeter" ||
         name == "b2GetLengthUnitsPerMeter";
+
+    // ===== ChainDef PropertyBindings =====
+
+    private static List<PropertyBinding> ChainDefProperties() =>
+    [
+        new PropertyBinding("points", B2Vec2ArrayType,
+            // Getter: C array → Lua table of {x,y}
+            """
+            int _count = {self}->count;
+                    const b2Vec2* _pts = {self}->points;
+                    if (_pts == NULL) { lua_pushnil(L); } else {
+                        lua_createtable(L, _count, 0);
+                        for (int _i = 0; _i < _count; _i++) {
+                            lua_createtable(L, 2, 0);
+                            lua_pushnumber(L, _pts[_i].x); lua_rawseti(L, -2, 1);
+                            lua_pushnumber(L, _pts[_i].y); lua_rawseti(L, -2, 2);
+                            lua_rawseti(L, -2, _i + 1);
+                        }
+                    }
+            """,
+            // Setter: Lua table → allocated b2Vec2 array, uservalue slot 2
+            """
+            int _n = (int)lua_rawlen(L, {value_idx});
+                    b2Vec2* _pts = (b2Vec2*)lua_newuserdatauv(L, sizeof(b2Vec2) * (_n > 0 ? _n : 1), 0);
+                    for (int _i = 0; _i < _n; _i++) {
+                        lua_rawgeti(L, {value_idx}, _i + 1);
+                        lua_rawgeti(L, -1, 1); _pts[_i].x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                        lua_rawgeti(L, -1, 2); _pts[_i].y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+                        lua_pop(L, 1);
+                    }
+                    lua_setiuservalue(L, 1, 2);
+                    {self}->points = _pts;
+                    {self}->count = _n
+            """),
+        new PropertyBinding("materials",
+            new BindingType.FixedArray(
+                new BindingType.Struct("b2SurfaceMaterial", "b2d.SurfaceMaterial", "b2d.SurfaceMaterial"), 0),
+            // Getter: C array → Lua table of b2SurfaceMaterial userdata
+            """
+            int _count = {self}->materialCount;
+                    const b2SurfaceMaterial* _mats = {self}->materials;
+                    if (_mats == NULL) { lua_pushnil(L); } else {
+                        lua_createtable(L, _count, 0);
+                        for (int _i = 0; _i < _count; _i++) {
+                            b2SurfaceMaterial* _ud = (b2SurfaceMaterial*)lua_newuserdatauv(L, sizeof(b2SurfaceMaterial), 1);
+                            *_ud = _mats[_i];
+                            luaL_setmetatable(L, "b2d.SurfaceMaterial");
+                            lua_rawseti(L, -2, _i + 1);
+                        }
+                    }
+            """,
+            // Setter: Lua table of b2SurfaceMaterial → allocated array, uservalue slot 3
+            """
+            int _n = (int)lua_rawlen(L, {value_idx});
+                    b2SurfaceMaterial* _mats = (b2SurfaceMaterial*)lua_newuserdatauv(L, sizeof(b2SurfaceMaterial) * (_n > 0 ? _n : 1), 0);
+                    for (int _i = 0; _i < _n; _i++) {
+                        lua_rawgeti(L, {value_idx}, _i + 1);
+                        b2SurfaceMaterial* _src = (b2SurfaceMaterial*)luaL_checkudata(L, -1, "b2d.SurfaceMaterial");
+                        _mats[_i] = *_src;
+                        lua_pop(L, 1);
+                    }
+                    lua_setiuservalue(L, 1, 3);
+                    {self}->materials = _mats;
+                    {self}->materialCount = _n
+            """),
+    ];
 
     // ===== ExtraCCode =====
 
@@ -540,6 +714,191 @@ public class Box2dModule : IModule
         {
             (void)userTask;
             (void)userContext;
+        }
+
+        /* Manifold accessors for PreSolve callback */
+        static int l_b2d_manifold_point_count(lua_State *L) {
+            b2Manifold* m = (b2Manifold*)lua_touserdata(L, 1);
+            lua_pushinteger(L, m->pointCount);
+            return 1;
+        }
+        static int l_b2d_manifold_point(lua_State *L) {
+            b2Manifold* m = (b2Manifold*)lua_touserdata(L, 1);
+            int i = (int)luaL_checkinteger(L, 2) - 1;
+            lua_newtable(L);
+            lua_pushnumber(L, m->points[i].point.x); lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, m->points[i].point.y); lua_rawseti(L, -2, 2);
+            return 1;
+        }
+        static int l_b2d_manifold_normal(lua_State *L) {
+            b2Manifold* m = (b2Manifold*)lua_touserdata(L, 1);
+            lua_newtable(L);
+            lua_pushnumber(L, m->normal.x); lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, m->normal.y); lua_rawseti(L, -2, 2);
+            return 1;
+        }
+
+        /* Friction callback (no void* context — manual trampoline) */
+        static lua_State* _friction_cb_L = NULL;
+        static int _friction_cb_ref = LUA_NOREF;
+
+        static float b2d_friction_trampoline(float frictionA, int matIdA, float frictionB, int matIdB) {
+            if (!_friction_cb_L || _friction_cb_ref == LUA_NOREF)
+                return frictionA * frictionB;
+            lua_rawgeti(_friction_cb_L, LUA_REGISTRYINDEX, _friction_cb_ref);
+            lua_pushnumber(_friction_cb_L, frictionA);
+            lua_pushinteger(_friction_cb_L, matIdA);
+            lua_pushnumber(_friction_cb_L, frictionB);
+            lua_pushinteger(_friction_cb_L, matIdB);
+            lua_call(_friction_cb_L, 4, 1);
+            float r = (float)lua_tonumber(_friction_cb_L, -1);
+            lua_pop(_friction_cb_L, 1);
+            return r;
+        }
+
+        static int l_b2d_world_set_friction_callback(lua_State *L) {
+            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
+            if (lua_isnil(L, 2) || lua_isnone(L, 2)) {
+                if (_friction_cb_ref != LUA_NOREF) {
+                    luaL_unref(L, LUA_REGISTRYINDEX, _friction_cb_ref);
+                    _friction_cb_ref = LUA_NOREF; _friction_cb_L = NULL;
+                }
+                b2World_SetFrictionCallback(worldId, NULL);
+            } else {
+                luaL_checktype(L, 2, LUA_TFUNCTION);
+                if (_friction_cb_ref != LUA_NOREF)
+                    luaL_unref(L, LUA_REGISTRYINDEX, _friction_cb_ref);
+                lua_pushvalue(L, 2);
+                _friction_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+                _friction_cb_L = L;
+                b2World_SetFrictionCallback(worldId, b2d_friction_trampoline);
+            }
+            return 0;
+        }
+
+        /* Restitution callback (no void* context — manual trampoline) */
+        static lua_State* _restitution_cb_L = NULL;
+        static int _restitution_cb_ref = LUA_NOREF;
+
+        static float b2d_restitution_trampoline(float restitutionA, int matIdA, float restitutionB, int matIdB) {
+            if (!_restitution_cb_L || _restitution_cb_ref == LUA_NOREF)
+                return restitutionA > restitutionB ? restitutionA : restitutionB;
+            lua_rawgeti(_restitution_cb_L, LUA_REGISTRYINDEX, _restitution_cb_ref);
+            lua_pushnumber(_restitution_cb_L, restitutionA);
+            lua_pushinteger(_restitution_cb_L, matIdA);
+            lua_pushnumber(_restitution_cb_L, restitutionB);
+            lua_pushinteger(_restitution_cb_L, matIdB);
+            lua_call(_restitution_cb_L, 4, 1);
+            float r = (float)lua_tonumber(_restitution_cb_L, -1);
+            lua_pop(_restitution_cb_L, 1);
+            return r;
+        }
+
+        static int l_b2d_world_set_restitution_callback(lua_State *L) {
+            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
+            if (lua_isnil(L, 2) || lua_isnone(L, 2)) {
+                if (_restitution_cb_ref != LUA_NOREF) {
+                    luaL_unref(L, LUA_REGISTRYINDEX, _restitution_cb_ref);
+                    _restitution_cb_ref = LUA_NOREF; _restitution_cb_L = NULL;
+                }
+                b2World_SetRestitutionCallback(worldId, NULL);
+            } else {
+                luaL_checktype(L, 2, LUA_TFUNCTION);
+                if (_restitution_cb_ref != LUA_NOREF)
+                    luaL_unref(L, LUA_REGISTRYINDEX, _restitution_cb_ref);
+                lua_pushvalue(L, 2);
+                _restitution_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+                _restitution_cb_L = L;
+                b2World_SetRestitutionCallback(worldId, b2d_restitution_trampoline);
+            }
+            return 0;
+        }
+
+        /* CollideMover callback trampoline (immediate — valid only during call) */
+        static lua_State* _collide_mover_cb_L = NULL;
+        static int _collide_mover_cb_ref = LUA_NOREF;
+
+        static bool b2d_collide_mover_trampoline(b2ShapeId shapeId, const b2PlaneResult* plane, void* context) {
+            (void)context;
+            if (!_collide_mover_cb_L || _collide_mover_cb_ref == LUA_NOREF) return false;
+            lua_rawgeti(_collide_mover_cb_L, LUA_REGISTRYINDEX, _collide_mover_cb_ref);
+            b2ShapeId* sid = (b2ShapeId*)lua_newuserdatauv(_collide_mover_cb_L, sizeof(b2ShapeId), 1);
+            *sid = shapeId;
+            luaL_setmetatable(_collide_mover_cb_L, "b2d.ShapeId");
+            b2PlaneResult* pr = (b2PlaneResult*)lua_newuserdatauv(_collide_mover_cb_L, sizeof(b2PlaneResult), 1);
+            *pr = *plane;
+            luaL_setmetatable(_collide_mover_cb_L, "b2d.PlaneResult");
+            lua_call(_collide_mover_cb_L, 2, 1);
+            bool r = lua_toboolean(_collide_mover_cb_L, -1);
+            lua_pop(_collide_mover_cb_L, 1);
+            return r;
+        }
+
+        static int l_b2d_world_collide_mover(lua_State *L) {
+            b2WorldId worldId = *(b2WorldId*)luaL_checkudata(L, 1, "b2d.WorldId");
+            const b2Capsule* mover = (const b2Capsule*)luaL_checkudata(L, 2, "b2d.Capsule");
+            b2QueryFilter filter = *(b2QueryFilter*)luaL_checkudata(L, 3, "b2d.QueryFilter");
+            luaL_checktype(L, 4, LUA_TFUNCTION);
+            lua_pushvalue(L, 4);
+            _collide_mover_cb_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+            _collide_mover_cb_L = L;
+            b2World_CollideMover(worldId, mover, filter, b2d_collide_mover_trampoline, NULL);
+            luaL_unref(L, LUA_REGISTRYINDEX, _collide_mover_cb_ref);
+            _collide_mover_cb_ref = LUA_NOREF;
+            _collide_mover_cb_L = NULL;
+            return 0;
+        }
+
+        /* b2ClipVector wrapper (takes array of b2CollisionPlane userdata) */
+        static int l_b2d_clip_vector(lua_State *L) {
+            luaL_checktype(L, 1, LUA_TTABLE);
+            b2Vec2 vector;
+            lua_rawgeti(L, 1, 1); vector.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+            lua_rawgeti(L, 1, 2); vector.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+            luaL_checktype(L, 2, LUA_TTABLE);
+            int count = (int)lua_rawlen(L, 2);
+            b2CollisionPlane planes[64];
+            luaL_argcheck(L, count <= 64, 2, "too many planes (max 64)");
+            for (int i = 0; i < count; i++) {
+                lua_rawgeti(L, 2, i + 1);
+                b2CollisionPlane* p = (b2CollisionPlane*)luaL_checkudata(L, -1, "b2d.CollisionPlane");
+                planes[i] = *p;
+                lua_pop(L, 1);
+            }
+            b2Vec2 result = b2ClipVector(vector, planes, count);
+            lua_newtable(L);
+            lua_pushnumber(L, result.x); lua_rawseti(L, -2, 1);
+            lua_pushnumber(L, result.y); lua_rawseti(L, -2, 2);
+            return 1;
+        }
+
+        /* b2SolvePlanes wrapper (takes array of b2CollisionPlane userdata, mutates push field) */
+        static int l_b2d_solve_planes(lua_State *L) {
+            luaL_checktype(L, 1, LUA_TTABLE);
+            b2Vec2 targetDelta;
+            lua_rawgeti(L, 1, 1); targetDelta.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+            lua_rawgeti(L, 1, 2); targetDelta.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);
+            luaL_checktype(L, 2, LUA_TTABLE);
+            int count = (int)lua_rawlen(L, 2);
+            b2CollisionPlane planes[64];
+            luaL_argcheck(L, count <= 64, 2, "too many planes (max 64)");
+            for (int i = 0; i < count; i++) {
+                lua_rawgeti(L, 2, i + 1);
+                b2CollisionPlane* p = (b2CollisionPlane*)luaL_checkudata(L, -1, "b2d.CollisionPlane");
+                planes[i] = *p;
+                lua_pop(L, 1);
+            }
+            b2PlaneSolverResult result = b2SolvePlanes(targetDelta, planes, count);
+            for (int i = 0; i < count; i++) {
+                lua_rawgeti(L, 2, i + 1);
+                b2CollisionPlane* p = (b2CollisionPlane*)lua_touserdata(L, -1);
+                *p = planes[i];
+                lua_pop(L, 1);
+            }
+            b2PlaneSolverResult* ud = (b2PlaneSolverResult*)lua_newuserdatauv(L, sizeof(b2PlaneSolverResult), 1);
+            *ud = result;
+            luaL_setmetatable(L, "b2d.PlaneSolverResult");
+            return 1;
         }
 
         """;

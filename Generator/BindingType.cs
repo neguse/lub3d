@@ -42,6 +42,12 @@ public abstract record BindingType
         List<ValueStructField> Fields,
         bool Settable = true) : BindingType;
 
+    /// 値型構造体の配列 — Lua table of tables ⇔ C array 変換
+    public sealed record ValueStructArray(
+        string CTypeName, string LuaCatsType,
+        List<ValueStructField> Fields,
+        int MaxElements = 64) : BindingType;
+
     public abstract record ValueStructField(string CAccessor);
     public sealed record ScalarField(string CAccessor) : ValueStructField(CAccessor);
     public sealed record NestedFields(string CAccessor, List<string> SubAccessors) : ValueStructField(CAccessor);

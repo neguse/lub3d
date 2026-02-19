@@ -770,6 +770,289 @@ public class CBindingGenSpecTests
         Assert.Contains("luaL_checktype(L, 3, LUA_TTABLE)", code);
     }
 
+    // ===== PropertyBinding =====
+
+    [Fact]
+    public void Generate_PropertyBinding_GetterInIndex()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", true,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("strcmp(key, \"point_count\")", code);
+        Assert.Contains("lua_pushinteger(L, self->count)", code);
+    }
+
+    [Fact]
+    public void Generate_PropertyBinding_SetterInNewindex()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", true,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)",
+                        "{self}->count = (int)luaL_checkinteger(L, {value_idx})")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("self->count = (int)luaL_checkinteger(L, 3)", code);
+    }
+
+    [Fact]
+    public void Generate_PropertyBinding_ReadOnly_ErrorInNewindex()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", true,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("read-only property: %s", code);
+    }
+
+    [Fact]
+    public void Generate_PropertyBinding_IncludedInPairs()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", true,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // __pairs fields 配列に property 名が含まれる
+        var pairsStart = code.IndexOf("__pairs_next");
+        var fieldsSection = code.Substring(pairsStart, code.IndexOf("}", pairsStart) - pairsStart);
+        Assert.Contains("\"point_count\"", fieldsSection);
+        // nfields がフィールド数 + プロパティ数
+        Assert.Contains("nfields = 2", code);
+    }
+
+    [Fact]
+    public void Generate_PropertyBinding_NotInConstructor()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", false,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // コンストラクタ内で "point_count" の lua_getfield は生成されない
+        // (friction の lua_getfield は生成される)
+        Assert.Contains("lua_getfield(L, 1, \"friction\")", code);
+        Assert.DoesNotContain("lua_getfield(L, 1, \"point_count\")", code);
+    }
+
+    // ===== PropertyBinding uservalue slots =====
+
+    [Fact]
+    public void Generate_PropertyBinding_WithSetter_IncreasesUservalueSlots()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", false,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("points", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)",
+                        "{self}->count = (int)luaL_checkinteger(L, {value_idx})"),
+                    new PropertyBinding("materials", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->materialCount)",
+                        "{self}->materialCount = (int)luaL_checkinteger(L, {value_idx})")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // 1 base + 2 setters = 3 uservalue slots
+        Assert.Contains("lua_newuserdatauv(L, sizeof(b2ChainDef), 3)", code);
+    }
+
+    [Fact]
+    public void Generate_PropertyBinding_ReadOnly_NoExtraUservalueSlots()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", false,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // Read-only property → still 1 uservalue slot
+        Assert.Contains("lua_newuserdatauv(L, sizeof(b2ChainDef), 1)", code);
+    }
+
+    // ===== C モード Output param =====
+
+    [Fact]
+    public void Generate_OutputIntParam_DeclaresLocalAndPassesPointer()
+    {
+        var spec = new ModuleSpec(
+            "stb.image", "stbi_", ["stb_image.h"], null, [],
+            [new FuncBinding("stbi_info", "Info",
+                [new ParamBinding("filename", new BindingType.Str()),
+                 new ParamBinding("width", new BindingType.Int(), IsOutput: true),
+                 new ParamBinding("height", new BindingType.Int(), IsOutput: true)],
+                new BindingType.Bool(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("int width_val", code);
+        Assert.Contains("int height_val", code);
+        Assert.Contains("&width_val", code);
+        Assert.Contains("&height_val", code);
+    }
+
+    [Fact]
+    public void Generate_OutputParam_PushesAfterCall()
+    {
+        var spec = new ModuleSpec(
+            "stb.image", "stbi_", ["stb_image.h"], null, [],
+            [new FuncBinding("stbi_info", "Info",
+                [new ParamBinding("filename", new BindingType.Str()),
+                 new ParamBinding("width", new BindingType.Int(), IsOutput: true)],
+                new BindingType.Bool(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        // Push output value after call
+        Assert.Contains("lua_pushinteger(L, width_val)", code);
+    }
+
+    [Fact]
+    public void Generate_OutputParam_ReturnCountIncludesOutputs()
+    {
+        var spec = new ModuleSpec(
+            "stb.image", "stbi_", ["stb_image.h"], null, [],
+            [new FuncBinding("stbi_info", "Info",
+                [new ParamBinding("filename", new BindingType.Str()),
+                 new ParamBinding("width", new BindingType.Int(), IsOutput: true),
+                 new ParamBinding("height", new BindingType.Int(), IsOutput: true)],
+                new BindingType.Bool(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        // bool return + 2 output params = return 3
+        Assert.Contains("return 3;", code);
+    }
+
+    [Fact]
+    public void Generate_OutputFloatParam_DeclaresFloat()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_get_value", "GetValue",
+                [new ParamBinding("result", new BindingType.Float(), IsOutput: true)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("float result_val", code);
+        Assert.Contains("&result_val", code);
+        Assert.Contains("lua_pushnumber(L, result_val)", code);
+        Assert.Contains("return 1;", code);
+    }
+
+    [Fact]
+    public void Generate_OutputBoolParam_DeclaresBool()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_check", "Check",
+                [new ParamBinding("ok", new BindingType.Bool(), IsOutput: true)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        Assert.Contains("bool ok_val", code);
+        Assert.Contains("&ok_val", code);
+        Assert.Contains("lua_pushboolean(L, ok_val)", code);
+    }
+
+    [Fact]
+    public void Generate_VoidReturnWithOutputParam_ReturnCountIsOutputCount()
+    {
+        var spec = new ModuleSpec(
+            "sokol.test", "stest_", ["sokol_test.h"], null, [],
+            [new FuncBinding("stest_get_dims", "GetDims",
+                [new ParamBinding("w", new BindingType.Int(), IsOutput: true),
+                 new ParamBinding("h", new BindingType.Int(), IsOutput: true)],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        // void return + 2 output params = return 2
+        Assert.Contains("return 2;", code);
+    }
+
+    // ===== Custom 型 InitCode =====
+
+    [Fact]
+    public void Generate_CustomField_UsesInitCodeInConstructor()
+    {
+        var customType = new BindingType.Custom(
+            "b2Vec2", "number[]",
+            "if (!lua_isnil(L, -1)) {\n            luaL_checktype(L, -1, LUA_TTABLE);\n            lua_rawgeti(L, -1, 1); ud->{fieldName}.x = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n            lua_rawgeti(L, -1, 2); ud->{fieldName}.y = (float)lua_tonumber(L, -1); lua_pop(L, 1);\n        }\n        lua_pop(L, 1);",
+            null, null, null);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", false,
+                [new FieldBinding("position", "position", customType)],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // InitCode should be expanded with {fieldName} → position
+        Assert.Contains("ud->position.x", code);
+        Assert.Contains("ud->position.y", code);
+    }
+
+    [Fact]
+    public void Generate_CustomFieldWithoutInitCode_JustPops()
+    {
+        var customType = new BindingType.Custom(
+            "b2Vec2", "number[]", null, null,
+            "lua_newtable(L);\n        return 1",
+            null);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2BodyDef", "BodyDef", "b2d.BodyDef", false,
+                [new FieldBinding("position", "position", customType)],
+                null)],
+            [], [], []);
+        var code = CBindingGen.Generate(spec);
+        // Without InitCode, should just pop
+        Assert.Contains("lua_getfield(L, 1, \"position\")", code);
+        Assert.Contains("lua_pop(L, 1)", code);
+    }
+
     // ===== Callback / FixedArray バリデーション =====
 
     [Fact]
@@ -978,6 +1261,32 @@ public class CBindingGenSpecTests
         Assert.Contains("lua_pushnumber(L, _v.x); lua_rawseti(L, -2, 1)", code);
         Assert.Contains("lua_pushnumber(L, _v.y); lua_rawseti(L, -2, 2)", code);
         Assert.Contains("return 1", code);
+    }
+
+    [Fact]
+    public void Generate_ValueStructArrayParam()
+    {
+        var vsaType = new BindingType.ValueStructArray("b2Vec2", "number[][]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2ComputeHull", "ComputeHull",
+                [new ParamBinding("points", vsaType),
+                 new ParamBinding("count", new BindingType.Int())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = CBindingGen.Generate(spec);
+        // テーブル入力
+        Assert.Contains("luaL_checktype(L, 1, LUA_TTABLE)", code);
+        // 固定バッファ
+        Assert.Contains("b2Vec2 _points_buf[64]", code);
+        // ループ読み取り
+        Assert.Contains("_points_buf[_i].x = (float)lua_tonumber", code);
+        Assert.Contains("_points_buf[_i].y = (float)lua_tonumber", code);
+        // ポインタ代入
+        Assert.Contains("const b2Vec2* points = _points_buf", code);
+        // count バリデーション
+        Assert.Contains("count >= 0 && count <= _points_len", code);
     }
 
     [Fact]
@@ -1218,6 +1527,59 @@ public class CBindingGenSpecTests
                 new BindingType.Void(), null)],
             [], []);
         Assert.Throws<InvalidOperationException>(() => CBindingGen.Generate(spec));
+    }
+
+    // ===== Persistent Callback Bridge =====
+
+    private static ModuleSpec SpecWithPersistentCallback()
+    {
+        var cbType = new BindingType.Callback(
+            [("shapeIdA", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+             ("shapeIdB", new BindingType.Struct("b2ShapeId", "b2d.ShapeId", "b2d.ShapeId")),
+             ("manifold", new BindingType.Custom("b2Manifold*", "lightuserdata", null, null, null, null))],
+            new BindingType.Bool());
+        return new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2World_SetPreSolveCallback", "world_set_pre_solve_callback",
+                [new ParamBinding("worldId", new BindingType.Struct("b2WorldId", "b2d.WorldId", "b2d.WorldId")),
+                 new ParamBinding("fcn", cbType, CallbackBridge: CallbackBridgeMode.Persistent)],
+                new BindingType.Void(), null)],
+            [], []);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesStaticContext()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("b2World_SetPreSolveCallback_cb_ctx", code);
+        Assert.Contains("callback_ref", code);
+        Assert.Contains("_b2World_SetPreSolveCallback_static_ctx", code);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesTrampoline()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("b2World_SetPreSolveCallback_trampoline", code);
+        Assert.Contains("lua_rawgeti(ctx->L, LUA_REGISTRYINDEX, ctx->callback_ref)", code);
+        Assert.Contains("LUA_NOREF", code);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesNilUnregister()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("luaL_unref(L, LUA_REGISTRYINDEX", code);
+        Assert.Contains("lua_isnil(L, 2)", code);
+        Assert.Contains("b2World_SetPreSolveCallback(worldId, NULL, NULL)", code);
+    }
+
+    [Fact]
+    public void PersistentCallback_GeneratesFunctionRegister()
+    {
+        var code = CBindingGen.Generate(SpecWithPersistentCallback());
+        Assert.Contains("luaL_ref(L, LUA_REGISTRYINDEX)", code);
+        Assert.Contains("b2World_SetPreSolveCallback(worldId, b2World_SetPreSolveCallback_trampoline, NULL)", code);
     }
 
     // ===== ArrayAdapter =====

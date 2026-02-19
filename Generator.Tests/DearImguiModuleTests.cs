@@ -105,7 +105,7 @@ public class DearImguiModuleTests
     public void BuildSpec_IsCppTrue()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         Assert.True(spec.IsCpp);
     }
 
@@ -113,7 +113,7 @@ public class DearImguiModuleTests
     public void BuildSpec_EntryPoint()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         Assert.Equal("luaopen_imgui_gen", spec.EntryPoint);
     }
 
@@ -121,7 +121,7 @@ public class DearImguiModuleTests
     public void BuildSpec_StructsEmpty()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         Assert.Empty(spec.Structs);
     }
 
@@ -129,7 +129,7 @@ public class DearImguiModuleTests
     public void BuildSpec_ContainsBegin()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         Assert.Contains(spec.Funcs, f => f.CName == "Begin" && f.CppNamespace == "ImGui");
     }
 
@@ -137,7 +137,7 @@ public class DearImguiModuleTests
     public void BuildSpec_SkipsVarargs()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         // TextColored has varargs → skipped (Text does too but should be in skip list or handled)
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "TextColored");
     }
@@ -146,7 +146,7 @@ public class DearImguiModuleTests
     public void BuildSpec_SkipsGetIO()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "GetIO");
     }
 
@@ -154,7 +154,7 @@ public class DearImguiModuleTests
     public void BuildSpec_OverloadSuffix()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var pushIds = spec.Funcs.Where(f => f.LuaName.StartsWith("push_id")).ToList();
         Assert.Equal(2, pushIds.Count);
         Assert.True(pushIds[0].LuaName != pushIds[1].LuaName,
@@ -165,7 +165,7 @@ public class DearImguiModuleTests
     public void BuildSpec_Vec2Required()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var setCursor = spec.Funcs.First(f => f.CName == "SetCursorPos");
         Assert.IsType<BindingType.Vec2>(setCursor.Params[0].Type);
         Assert.False(setCursor.Params[0].IsOptional);
@@ -175,7 +175,7 @@ public class DearImguiModuleTests
     public void BuildSpec_Vec2Optional()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var button = spec.Funcs.First(f => f.CName == "Button");
         Assert.IsType<BindingType.Vec2>(button.Params[1].Type);
         Assert.True(button.Params[1].IsOptional);
@@ -185,7 +185,7 @@ public class DearImguiModuleTests
     public void BuildSpec_Vec2Return()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var getCursor = spec.Funcs.First(f => f.CName == "GetCursorPos");
         Assert.IsType<BindingType.Vec2>(getCursor.ReturnType);
     }
@@ -194,7 +194,7 @@ public class DearImguiModuleTests
     public void BuildSpec_Vec4Return()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var getStyle = spec.Funcs.First(f => f.CName == "GetStyleColorVec4");
         Assert.IsType<BindingType.Vec4>(getStyle.ReturnType);
     }
@@ -203,7 +203,7 @@ public class DearImguiModuleTests
     public void BuildSpec_FloatArrayHeuristic()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var colorEdit = spec.Funcs.First(f => f.CName == "ColorEdit4");
         // col param should be FloatArray(4)
         Assert.IsType<BindingType.FloatArray>(colorEdit.Params[1].Type);
@@ -214,7 +214,7 @@ public class DearImguiModuleTests
     public void BuildSpec_FloatArrayOutput()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var colorEdit = spec.Funcs.First(f => f.CName == "ColorEdit4");
         Assert.True(colorEdit.Params[1].IsOutput);
     }
@@ -223,7 +223,7 @@ public class DearImguiModuleTests
     public void BuildSpec_DragFloatArray()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var drag = spec.Funcs.First(f => f.CName == "DragFloat2");
         // v param should be FloatArray(2)
         Assert.IsType<BindingType.FloatArray>(drag.Params[1].Type);
@@ -234,7 +234,7 @@ public class DearImguiModuleTests
     public void BuildSpec_OutputBoolParam()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var checkbox = spec.Funcs.First(f => f.CName == "Checkbox");
         Assert.True(checkbox.Params[1].IsOutput);
         Assert.IsType<BindingType.Bool>(checkbox.Params[1].Type);
@@ -244,7 +244,7 @@ public class DearImguiModuleTests
     public void BuildSpec_OutputIntParam()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var slider = spec.Funcs.First(f => f.CName == "SliderInt");
         Assert.True(slider.Params[1].IsOutput);
         Assert.IsType<BindingType.Int>(slider.Params[1].Type);
@@ -254,7 +254,7 @@ public class DearImguiModuleTests
     public void BuildSpec_IsOptionalScalar()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var begin = spec.Funcs.First(f => f.CName == "Begin");
         // flags has HasDefault → IsOptional
         var flagsParam = begin.Params.First(p => p.Name == "flags");
@@ -265,7 +265,7 @@ public class DearImguiModuleTests
     public void BuildSpec_EnumPrefixStripping()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var winFlags = spec.Enums.First(e => e.CName == "ImGuiWindowFlags_");
         Assert.Equal("WindowFlags", winFlags.FieldName);
         Assert.Contains(winFlags.Items, i => i.LuaName == "NONE");
@@ -276,7 +276,7 @@ public class DearImguiModuleTests
     public void BuildSpec_EnumCName()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         Assert.Contains(spec.Enums, e => e.CName == "ImGuiCol_");
     }
 
@@ -284,7 +284,7 @@ public class DearImguiModuleTests
     public void BuildSpec_SliderFloatOutputParam()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         var slider = spec.Funcs.First(f => f.CName == "SliderFloat");
         // v is float* → output float param
         Assert.True(slider.Params[1].IsOutput);
@@ -341,7 +341,7 @@ public class DearImguiModuleTests
     public void BuildSpec_TextSkippedAsVararg()
     {
         var mod = new ImguiModule();
-        var spec = mod.BuildSpec(MakeRegistry());
+        var spec = mod.BuildSpec(MakeRegistry(), new Dictionary<string, string>());
         // Text has varargs "void (const char *, ...)" → should be skipped
         Assert.DoesNotContain(spec.Funcs, f => f.CName == "Text");
     }

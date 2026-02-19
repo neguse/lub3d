@@ -11,6 +11,7 @@ LIBRARY_INFO = {
     "glslang": {"type": "BSD-3-Clause/MIT/Apache-2.0"},  # Multi-license
     "tint-extract": {"name": "Tint"},  # Better display name
     "3d-game-shaders-for-beginners": {"skip": True},  # Hardcoded above
+    "iforce2d-advanced-topics": {"skip": True},  # Hardcoded below
 }
 
 def detect_license_type(text):
@@ -157,6 +158,31 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."""
     })
+
+    # iforce2d Box2D tutorials (zlib, no LICENSE file in repo)
+    iforce2d_dir = os.path.join(root_dir, "deps/iforce2d-advanced-topics")
+    if os.path.isdir(iforce2d_dir):
+        licenses.append({
+            "name": "iforce2d Box2D tutorials",
+            "type": "zlib",
+            "url": "https://www.iforce2d.net/b2dtut/",
+            "text": """Copyright (c) 2006-2011 Erin Catto http://www.box2d.org
+Author: Chris Campbell - www.iforce2d.net
+
+This software is provided 'as-is', without any express or implied
+warranty.  In no event will the authors be held liable for any damages
+arising from the use of this software.
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+1. The origin of this software must not be misrepresented; you must not
+claim that you wrote the original software. If you use this software
+in a product, an acknowledgment in the product documentation would be
+appreciated but is not required.
+2. Altered source versions must be plainly marked as such, and must not be
+misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution."""
+        })
 
     # Walk deps directory for LICENSE files
     deps_dir = os.path.join(root_dir, "deps")

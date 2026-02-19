@@ -290,6 +290,24 @@ public class LuaCatsGenSpecTests
         Assert.Contains("fun(bodyId: b2d.BodyId): number[]", code);
     }
 
+    // ===== ValueStructArray =====
+
+    [Fact]
+    public void Generate_ValueStructArray_Type()
+    {
+        var vsaType = new BindingType.ValueStructArray("b2Vec2", "number[][]",
+            [new BindingType.ScalarField("x"), new BindingType.ScalarField("y")]);
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null, [],
+            [new FuncBinding("b2ComputeHull", "ComputeHull",
+                [new ParamBinding("points", vsaType),
+                 new ParamBinding("count", new BindingType.Int())],
+                new BindingType.Void(), null)],
+            [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("fun(points: number[][], count: integer)", code);
+    }
+
     // ===== ArrayAdapter =====
 
     [Fact]
@@ -376,5 +394,27 @@ public class LuaCatsGenSpecTests
         var code = LuaCatsGen.Generate(spec);
         Assert.Contains("---@field DefaultWorldDef fun(): b2d.WorldDef", code);
         Assert.DoesNotContain("enqueueTask", code);
+    }
+
+    // ===== PropertyBinding =====
+
+    [Fact]
+    public void Generate_PropertyBinding_IncludedInStructClass()
+    {
+        var spec = new ModuleSpec(
+            "b2d", "b2", ["box2d.h"], null,
+            [new StructBinding("b2ChainDef", "ChainDef", "b2d.ChainDef", true,
+                [new FieldBinding("friction", "friction", new BindingType.Float())],
+                null,
+                Properties:
+                [
+                    new PropertyBinding("point_count", new BindingType.Int(),
+                        "lua_pushinteger(L, {self}->count)")
+                ])],
+            [], [], []);
+        var code = LuaCatsGen.Generate(spec);
+        Assert.Contains("---@class b2d.ChainDef", code);
+        Assert.Contains("---@field friction? number", code);
+        Assert.Contains("---@field point_count? integer", code);
     }
 }

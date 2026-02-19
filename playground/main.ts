@@ -21,6 +21,7 @@ app.innerHTML = `
         <option value="hakonotaiatari/init">Hakonotaiatari</option>
         <option value="cna/init">Cut'n'Align</option>
         <option value="sjadm/init">Super Jump And Dash Man</option>
+        <option value="b2d_tutorial/init">Box2D Tutorial</option>
       </select>
       <select id="resolution-select">
         <option value="320x240">320x240</option>

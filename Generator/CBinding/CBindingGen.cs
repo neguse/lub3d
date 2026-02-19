@@ -76,12 +76,15 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の new 関数
     /// </summary>
-    private static string StructNew(string structName, string metatable, IEnumerable<FieldBinding> fields, Dictionary<string, StructBinding> structBindings)
+    private static string StructNew(string structName, string metatable, IEnumerable<FieldBinding> fields,
+        Dictionary<string, StructBinding> structBindings, IEnumerable<PropertyBinding>? properties = null)
     {
         var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, structBindings)));
+        var extraUV = (properties ?? []).Count(p => p.SetterCode != null);
+        var nuvalue = 1 + extraUV;
         return $$"""
             static int l_{{structName}}_new(lua_State *L) {
-                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 1);
+                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), {{nuvalue}});
                 memset(ud, 0, sizeof({{structName}}));
                 luaL_setmetatable(L, "{{metatable}}");
                 if (lua_istable(L, 1)) {
@@ -142,16 +145,19 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __index メタメソッド生成
     /// </summary>
-    private static string StructIndex(string structName, string metatable, IEnumerable<FieldBinding> fields)
+    private static string StructIndex(string structName, string metatable, IEnumerable<FieldBinding> fields,
+        IEnumerable<PropertyBinding>? properties = null)
     {
         var branches = fields
             .Where(f => f.Type is not BindingType.Callback)
             .Select(f => $"    if (strcmp(key, \"{f.LuaName}\") == 0) {{ {GenBindingPush(f)}; return 1; }}");
+        var propBranches = (properties ?? [])
+            .Select(p => $"    if (strcmp(key, \"{p.LuaName}\") == 0) {{ {p.GetterCode.Replace("{self}", "self")}; return 1; }}");
         return $$"""
             static int l_{{structName}}__index(lua_State *L) {
                 {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
                 const char* key = luaL_checkstring(L, 2);
-            {{string.Join("\n", branches)}}
+            {{string.Join("\n", branches.Concat(propBranches))}}
                 return 0;
             }
 
@@ -161,11 +167,16 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __pairs メタメソッド生成 (next関数 + イテレータ)
     /// </summary>
-    private static string StructPairs(string structName, string metatable, IEnumerable<FieldBinding> fields)
+    private static string StructPairs(string structName, string metatable, IEnumerable<FieldBinding> fields,
+        IEnumerable<PropertyBinding>? properties = null)
     {
         var accessibleFields = fields.Where(f => f.Type is not BindingType.Callback).ToList();
         var fieldEntries = accessibleFields.Select(f =>
             $"        \"{f.LuaName}\"").ToList();
+        // プロパティ名も列挙に含める
+        foreach (var prop in properties ?? [])
+            fieldEntries.Add($"        \"{prop.LuaName}\"");
+        var totalCount = fieldEntries.Count;
         // Avoid empty array initializer (triggers MSVC ICE)
         if (fieldEntries.Count == 0) fieldEntries.Add("        NULL");
         var fieldNames = string.Join(",\n", fieldEntries);
@@ -174,7 +185,7 @@ public static class CBindingGen
                 static const char* fields[] = {
             {{fieldNames}}
                 };
-                static const int nfields = {{accessibleFields.Count}};
+                static const int nfields = {{totalCount}};
                 {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
                 int idx = 0;
                 if (!lua_isnil(L, 2)) {
@@ -204,16 +215,21 @@ public static class CBindingGen
     /// <summary>
     /// 構造体の __newindex メタメソッド生成
     /// </summary>
-    private static string StructNewindex(string structName, string metatable, IEnumerable<FieldBinding> fields, Dictionary<string, StructBinding> structBindings)
+    private static string StructNewindex(string structName, string metatable, IEnumerable<FieldBinding> fields,
+        Dictionary<string, StructBinding> structBindings, IEnumerable<PropertyBinding>? properties = null)
     {
         var branches = fields
             .Where(f => f.Type is not BindingType.Callback)
             .Select(f => $"    if (strcmp(key, \"{f.LuaName}\") == 0) {{ {GenBindingSet(f, structBindings)}; return 0; }}");
+        var propBranches = (properties ?? [])
+            .Select(p => p.SetterCode != null
+                ? $"    if (strcmp(key, \"{p.LuaName}\") == 0) {{ {p.SetterCode.Replace("{self}", "self").Replace("{value_idx}", "3")}; return 0; }}"
+                : $"    if (strcmp(key, \"{p.LuaName}\") == 0) return luaL_error(L, \"read-only property: %s\", key);");
         return $$"""
             static int l_{{structName}}__newindex(lua_State *L) {
                 {{structName}}* self = ({{structName}}*)luaL_checkudata(L, 1, "{{metatable}}");
                 const char* key = luaL_checkstring(L, 2);
-            {{string.Join("\n", branches)}}
+            {{string.Join("\n", branches.Concat(propBranches))}}
                 return luaL_error(L, "unknown field: %s", key);
             }
 
@@ -333,14 +349,14 @@ public static class CBindingGen
         foreach (var s in spec.Structs)
         {
             if (s.AllowStringInit)
-                sb += SgRangeNew(s.CName, s.Metatable, s.Fields, structBindings);
+                sb += SgRangeNew(s.CName, s.Metatable, s.Fields, structBindings, s.Properties);
             else
-                sb += StructNew(s.CName, s.Metatable, s.Fields, structBindings);
+                sb += StructNew(s.CName, s.Metatable, s.Fields, structBindings, s.Properties);
             if (s.HasMetamethods)
             {
-                sb += StructIndex(s.CName, s.Metatable, s.Fields);
-                sb += StructNewindex(s.CName, s.Metatable, s.Fields, structBindings);
-                sb += StructPairs(s.CName, s.Metatable, s.Fields);
+                sb += StructIndex(s.CName, s.Metatable, s.Fields, s.Properties);
+                sb += StructNewindex(s.CName, s.Metatable, s.Fields, structBindings, s.Properties);
+                sb += StructPairs(s.CName, s.Metatable, s.Fields, s.Properties);
             }
             if (s.ExtraMetamethods != null)
             {
@@ -361,6 +377,8 @@ public static class CBindingGen
         {
             if (f.Params.Any(p => p.CallbackBridge == CallbackBridgeMode.Immediate))
                 sb += GenCallbackBridgeCode(f);
+            else if (f.Params.Any(p => p.CallbackBridge == CallbackBridgeMode.Persistent))
+                sb += GenPersistentCallbackCode(f);
             else
                 sb += GenBindingFunc(f);
         }
@@ -766,12 +784,15 @@ public static class CBindingGen
     /// <summary>
     /// AllowStringInit 構造体コンストラクタ (string / table 両対応)
     /// </summary>
-    private static string SgRangeNew(string structName, string metatable, IEnumerable<FieldBinding> fields, Dictionary<string, StructBinding> structBindings)
+    private static string SgRangeNew(string structName, string metatable, IEnumerable<FieldBinding> fields,
+        Dictionary<string, StructBinding> structBindings, IEnumerable<PropertyBinding>? properties = null)
     {
         var fieldInits = string.Join("\n", fields.Select(f => GenBindingFieldInit(f, structBindings)));
+        var extraUV = (properties ?? []).Count(p => p.SetterCode != null);
+        var nuvalue = 1 + extraUV;
         return $$"""
             static int l_{{structName}}_new(lua_State *L) {
-                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), 1);
+                {{structName}}* ud = ({{structName}}*)lua_newuserdatauv(L, sizeof({{structName}}), {{nuvalue}});
                 memset(ud, 0, sizeof({{structName}}));
                 luaL_setmetatable(L, "{{metatable}}");
                 if (lua_isstring(L, 1)) {
@@ -982,6 +1003,8 @@ public static class CBindingGen
             $"    {cName} {p.Name} = *({cName}*)luaL_checkudata(L, {idx}, \"{mt}\");",
         BindingType.ValueStruct(var cType, _, var vsFields, _) =>
             GenValueStructParamDecl(p.Name, idx, cType, vsFields),
+        BindingType.ValueStructArray(var cType, _, var vsFields, var maxElems) =>
+            GenValueStructArrayParamDecl(p.Name, idx, cType, vsFields, maxElems),
         BindingType.Ptr(BindingType.ValueStruct(var cName, _, _, _)) =>
             $"    {cName}* {p.Name} = ({cName}*)luaL_checkudata(L, {idx}, \"\");",
         BindingType.ConstPtr(BindingType.ValueStruct(var cName, _, _, _)) =>
@@ -1023,9 +1046,27 @@ public static class CBindingGen
 
     private static string GenBindingFunc(FuncBinding f)
     {
+        // Output param がある場合は専用パスへ
+        if (f.Params.Any(p => p.IsOutput))
+            return GenBindingFuncWithOutput(f);
+
         var paramDecls = string.Join("\n", f.Params.Select((p, i) =>
             GenBindingParamDecl(p, i + 1)).Where(s => s != ""));
         var argNames = string.Join(", ", f.Params.Select(p => p.Name));
+
+        // ValueStructArray + Int count バリデーション
+        var countChecks = new List<string>();
+        for (int i = 0; i < f.Params.Count - 1; i++)
+        {
+            if (f.Params[i].Type is BindingType.ValueStructArray && f.Params[i + 1].Type is BindingType.Int)
+            {
+                var arrName = f.Params[i].Name;
+                var cntName = f.Params[i + 1].Name;
+                var cntIdx = i + 2; // 1-based Lua index
+                countChecks.Add($"    luaL_argcheck(L, {cntName} >= 0 && {cntName} <= _{arrName}_len, {cntIdx}, \"count out of range\");");
+            }
+        }
+        var countCheckStr = countChecks.Count > 0 ? "\n" + string.Join("\n", countChecks) : "";
 
         // PostCallPatch: Struct return の場合、*ud = result と luaL_setmetatable の間にパッチを挿入
         if (f.PostCallPatches is { Count: > 0 } && f.ReturnType is BindingType.Struct(var retCName, var retMt, _))
@@ -1034,7 +1075,7 @@ public static class CBindingGen
                 $"    ud->{p.FieldName} = {p.CExpression};"));
             return $$"""
                 static int l_{{f.CName}}(lua_State *L) {
-                {{paramDecls}}
+                {{paramDecls}}{{countCheckStr}}
                     {{retCName}} result = {{f.CName}}({{argNames}});
                     {{retCName}}* ud = ({{retCName}}*)lua_newuserdatauv(L, sizeof({{retCName}}), 0);
                     *ud = result;
@@ -1050,12 +1091,135 @@ public static class CBindingGen
 
         return $$"""
             static int l_{{f.CName}}(lua_State *L) {
-            {{paramDecls}}
+            {{paramDecls}}{{countCheckStr}}
             {{call}}
             }
 
             """;
     }
+
+    /// <summary>
+    /// IsOutput パラメータを含む C モード関数バインディング
+    /// </summary>
+    private static string GenBindingFuncWithOutput(FuncBinding f)
+    {
+        var sb = $"static int l_{f.CName}(lua_State *L) {{\n";
+        var argNames = new List<string>();
+        var outputParams = new List<(string name, BindingType type)>();
+        var idx = 1;
+
+        foreach (var p in f.Params)
+        {
+            if (p.IsOutput)
+            {
+                sb += GenCOutputParamDecl(p, idx, out var argExpr);
+                argNames.Add(argExpr);
+                outputParams.Add((p.Name, p.Type));
+                idx++;
+            }
+            else
+            {
+                var decl = GenBindingParamDecl(p, idx);
+                if (decl != "") sb += decl + "\n";
+                argNames.Add(p.Name);
+                idx++;
+            }
+        }
+
+        var callExpr = $"{f.CName}({string.Join(", ", argNames)})";
+        var retCount = 0;
+
+        // Return value handling
+        if (f.ReturnType is not BindingType.Void)
+        {
+            sb += GenCReturnCapture(f.ReturnType, callExpr);
+            retCount++;
+        }
+        else
+        {
+            sb += $"    {callExpr};\n";
+        }
+
+        // Output params push
+        foreach (var (name, type) in outputParams)
+        {
+            sb += GenCOutputPush(name, type);
+            retCount++;
+        }
+
+        sb += $"    return {retCount};\n}}\n\n";
+        return sb;
+    }
+
+    /// <summary>
+    /// C モード output param 宣言: ローカル変数宣言 + Lua スタックから初期値読み取り
+    /// </summary>
+    private static string GenCOutputParamDecl(ParamBinding p, int idx, out string argExpr)
+    {
+        switch (p.Type)
+        {
+            case BindingType.Bool:
+                argExpr = $"&{p.Name}_val";
+                return $"    bool {p.Name}_val = lua_toboolean(L, {idx});\n";
+            case BindingType.Int:
+                argExpr = $"&{p.Name}_val";
+                return $"    int {p.Name}_val = (int)luaL_optinteger(L, {idx}, 0);\n";
+            case BindingType.Float:
+                argExpr = $"&{p.Name}_val";
+                return $"    float {p.Name}_val = (float)luaL_optnumber(L, {idx}, 0.0);\n";
+            case BindingType.UInt32:
+                argExpr = $"&{p.Name}_val";
+                return $"    unsigned int {p.Name}_val = (unsigned int)luaL_optinteger(L, {idx}, 0);\n";
+            case BindingType.Double:
+                argExpr = $"&{p.Name}_val";
+                return $"    double {p.Name}_val = (double)luaL_optnumber(L, {idx}, 0.0);\n";
+            default:
+                argExpr = p.Name;
+                return $"    /* unsupported output param type for {p.Name} */\n";
+        }
+    }
+
+    /// <summary>
+    /// C モード output param push: 関数呼び出し後に output 値を Lua スタックへ push
+    /// </summary>
+    private static string GenCOutputPush(string name, BindingType type) => type switch
+    {
+        BindingType.Bool => $"    lua_pushboolean(L, {name}_val);\n",
+        BindingType.Int => $"    lua_pushinteger(L, {name}_val);\n",
+        BindingType.UInt32 => $"    lua_pushinteger(L, {name}_val);\n",
+        BindingType.Float => $"    lua_pushnumber(L, {name}_val);\n",
+        BindingType.Double => $"    lua_pushnumber(L, {name}_val);\n",
+        _ => $"    /* unsupported output push for {name} */\n"
+    };
+
+    /// <summary>
+    /// C モード戻り値キャプチャ: 関数呼び出し結果を変数に格納 + Lua スタックへ push
+    /// </summary>
+    private static string GenCReturnCapture(BindingType ret, string callExpr) => ret switch
+    {
+        BindingType.Int => $"    lua_pushinteger(L, {callExpr});\n",
+        BindingType.Int64 or BindingType.UInt32 or BindingType.UInt64 or BindingType.Size
+            or BindingType.UIntPtr or BindingType.IntPtr
+            => $"    lua_pushinteger(L, (lua_Integer){callExpr});\n",
+        BindingType.Bool => $"    lua_pushboolean(L, {callExpr});\n",
+        BindingType.Float => $"    lua_pushnumber(L, {callExpr});\n",
+        BindingType.Double => $"    lua_pushnumber(L, (lua_Number){callExpr});\n",
+        BindingType.Str or BindingType.ConstPtr(BindingType.Str)
+            => $"    lua_pushstring(L, {callExpr});\n",
+        BindingType.VoidPtr or BindingType.Ptr(BindingType.Void) or BindingType.ConstPtr(BindingType.Void)
+            => $"    lua_pushlightuserdata(L, (void*){callExpr});\n",
+        BindingType.Enum(_, _) => $"    lua_pushinteger(L, (lua_Integer){callExpr});\n",
+        BindingType.Struct(var cName, var mt, _) =>
+            $"    {cName} _result = {callExpr};\n" +
+            $"    {cName}* ud = ({cName}*)lua_newuserdatauv(L, sizeof({cName}), 0);\n" +
+            $"    *ud = _result;\n" +
+            $"    luaL_setmetatable(L, \"{mt}\");\n",
+        BindingType.ValueStruct(var cType, _, var vsFields, _) =>
+            GenValueStructReturnCapture(callExpr, cType, vsFields),
+        BindingType.Custom(_, _, _, _, var pushCode, _) when pushCode != null =>
+            $"    {pushCode.Replace("{value}", callExpr)}\n",
+        _ => $"    {callExpr};\n"
+    };
 
     // ===== Immediate Callback Bridge =====
 
@@ -1076,12 +1240,14 @@ public static class CBindingGen
         return sb;
     }
 
-    private static string GenContextStruct(string ctxName) => $$"""
-        typedef struct { lua_State* L; int callback_idx; } {{ctxName}};
+    private static string GenContextStruct(string ctxName, bool isPersistent = false)
+    {
+        var field = isPersistent ? "callback_ref" : "callback_idx";
+        return $"typedef struct {{ lua_State* L; int {field}; }} {ctxName};\n\n";
+    }
 
-        """;
-
-    private static string GenTrampolineFunc(string funcName, string ctxName, string trampolineName, BindingType.Callback cbType)
+    private static string GenTrampolineFunc(string funcName, string ctxName, string trampolineName,
+        BindingType.Callback cbType, bool isPersistent = false)
     {
         var retCType = cbType.Ret switch
         {
@@ -1097,8 +1263,20 @@ public static class CBindingGen
         cParams.Add("void* context");
 
         var sb = $"static {retCType} {trampolineName}({string.Join(", ", cParams)}) {{\n";
-        sb += $"    {ctxName}* ctx = ({ctxName}*)context;\n";
-        sb += "    lua_pushvalue(ctx->L, ctx->callback_idx);\n";
+
+        if (isPersistent)
+        {
+            var defaultRet = cbType.Ret is BindingType.Float ? "1.0f" : "true";
+            sb += "    (void)context;\n";
+            sb += $"    {ctxName}* ctx = &_{funcName}_static_ctx;\n";
+            sb += $"    if (!ctx->L || ctx->callback_ref == LUA_NOREF) return {defaultRet};\n";
+            sb += "    lua_rawgeti(ctx->L, LUA_REGISTRYINDEX, ctx->callback_ref);\n";
+        }
+        else
+        {
+            sb += $"    {ctxName}* ctx = ({ctxName}*)context;\n";
+            sb += "    lua_pushvalue(ctx->L, ctx->callback_idx);\n";
+        }
 
         // Push each callback argument onto Lua stack
         foreach (var (name, type) in cbType.Params)
@@ -1180,6 +1358,71 @@ public static class CBindingGen
             "    lua_pop(ctx->L, 1);\n" +
             "    return _cb_ret;\n"
     };
+
+    // ===== Persistent Callback Bridge =====
+
+    /// <summary>
+    /// Persistent callback bridge: static context + trampoline + setter 関数を生成
+    /// </summary>
+    private static string GenPersistentCallbackCode(FuncBinding f)
+    {
+        var cbParam = f.Params.First(p => p.CallbackBridge == CallbackBridgeMode.Persistent);
+        var cbType = (BindingType.Callback)cbParam.Type;
+        var ctxName = $"{f.CName}_cb_ctx";
+        var trampolineName = $"{f.CName}_trampoline";
+
+        var sb = "";
+        sb += GenContextStruct(ctxName, isPersistent: true);
+        sb += $"static {ctxName} _{f.CName}_static_ctx = {{ NULL, LUA_NOREF }};\n\n";
+        sb += GenTrampolineFunc(f.CName, ctxName, trampolineName, cbType, isPersistent: true);
+        sb += GenPersistentSetter(f, cbParam, ctxName, trampolineName);
+        return sb;
+    }
+
+    /// <summary>
+    /// Persistent callback setter: nil → unregister, function → register + C setter 呼び出し
+    /// </summary>
+    private static string GenPersistentSetter(FuncBinding f, ParamBinding cbParam, string ctxName, string trampolineName)
+    {
+        var sb = $"static int l_{f.CName}(lua_State *L) {{\n";
+        var preCallbackArgs = new List<string>();
+        var idx = 1;
+
+        // Non-callback parameters before the callback
+        foreach (var p in f.Params)
+        {
+            if (p.CallbackBridge == CallbackBridgeMode.Persistent)
+                break;
+            sb += GenBindingParamDecl(p, idx) + "\n";
+            preCallbackArgs.Add(p.Name);
+            idx++;
+        }
+
+        // Unref previous callback if any
+        sb += $"    if (_{f.CName}_static_ctx.callback_ref != LUA_NOREF) {{\n";
+        sb += $"        luaL_unref(L, LUA_REGISTRYINDEX, _{f.CName}_static_ctx.callback_ref);\n";
+        sb += $"        _{f.CName}_static_ctx.callback_ref = LUA_NOREF;\n";
+        sb += $"        _{f.CName}_static_ctx.L = NULL;\n";
+        sb += "    }\n";
+
+        // Build arg list strings
+        var preArgs = preCallbackArgs.Count > 0 ? string.Join(", ", preCallbackArgs) + ", " : "";
+
+        // nil branch → unregister
+        sb += $"    if (lua_isnil(L, {idx}) || lua_isnone(L, {idx})) {{\n";
+        sb += $"        {f.CName}({preArgs}NULL, NULL);\n";
+        sb += "    } else {\n";
+
+        // function branch → register
+        sb += $"        luaL_checktype(L, {idx}, LUA_TFUNCTION);\n";
+        sb += $"        lua_pushvalue(L, {idx});\n";
+        sb += $"        _{f.CName}_static_ctx.callback_ref = luaL_ref(L, LUA_REGISTRYINDEX);\n";
+        sb += $"        _{f.CName}_static_ctx.L = L;\n";
+        sb += $"        {f.CName}({preArgs}{trampolineName}, NULL);\n";
+        sb += "    }\n";
+        sb += "    return 0;\n}\n\n";
+        return sb;
+    }
 
     /// <summary>callback 付き binding 関数を生成</summary>
     private static string GenBindingFuncWithCallback(FuncBinding f, ParamBinding cbParam, string ctxName, string trampolineName)
@@ -1423,6 +1666,8 @@ public static class CBindingGen
         BindingType.Enum(var cName, _) => cName,
         BindingType.Struct(var cName, _, _) => cName,
         BindingType.ValueStruct(var cName, _, _, _) => cName,
+        BindingType.Ptr(var inner) => $"{BindingTypeToString(inner)}*",
+        BindingType.ConstPtr(var inner) => $"const {BindingTypeToString(inner)}*",
         BindingType.Custom(var cName, _, _, _, _, _) => cName,
         _ => throw new ArgumentException($"Unknown BindingType: {bt}")
     };
@@ -1454,6 +1699,10 @@ public static class CBindingGen
                 => $"lua_pushstring(L, self->{f.CName})",
             BindingType.Enum(_, _)
                 => $"lua_pushinteger(L, (lua_Integer)self->{f.CName})",
+            BindingType.FixedArray(BindingType.ValueStruct(_, _, var vsFields, _), var vsLen) =>
+                GenFixedArrayOfValueStructPush(f.CName, vsFields, vsLen),
+            BindingType.FixedArray(BindingType.Struct(var arrCName, var arrMt, _), var sLen) =>
+                GenFixedArrayOfStructPush(f.CName, arrCName, arrMt, sLen),
             _ => $"lua_pushnil(L)"
         };
     }
@@ -1518,7 +1767,9 @@ public static class CBindingGen
             BindingType.ValueStruct(_, _, var vsFields, _) =>
                 GenValueStructFieldInit(getField, cName, vsFields),
 
-            // Custom type: just pop (Custom fields use PushCode/SetCode in index/newindex only)
+            // Custom type: if InitCode is provided, use it with {fieldName} expansion; otherwise just pop
+            BindingType.Custom(_, _, var initCode, _, _, _) when initCode != null =>
+                $"{getField}\n        {initCode.Replace("{fieldName}", cName)}",
             BindingType.Custom(_, _, _, _, _, _) =>
                 $"{getField}\n        lua_pop(L, 1);",
 
@@ -1672,7 +1923,57 @@ public static class CBindingGen
         return string.Join("\n", lines);
     }
 
+    private static string GenValueStructArrayParamDecl(string name, int idx, string cType,
+        List<BindingType.ValueStructField> fields, int maxElems)
+    {
+        var lines = new List<string>
+        {
+            $"    luaL_checktype(L, {idx}, LUA_TTABLE);",
+            $"    int _{name}_len = (int)lua_rawlen(L, {idx});",
+            $"    luaL_argcheck(L, _{name}_len <= {maxElems}, {idx}, \"array too large (max {maxElems})\");",
+            $"    {cType} _{name}_buf[{maxElems}];",
+            $"    for (int _i = 0; _i < _{name}_len; _i++) {{",
+            $"        lua_rawgeti(L, {idx}, _i + 1);",
+            $"        luaL_checktype(L, -1, LUA_TTABLE);"
+        };
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    lines.Add($"        lua_rawgeti(L, -1, {fi}); _{name}_buf[_i].{acc} = (float)lua_tonumber(L, -1); lua_pop(L, 1);");
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    lines.Add($"        lua_rawgeti(L, -1, {fi}); luaL_checktype(L, -1, LUA_TTABLE);");
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        lines.Add($"        lua_rawgeti(L, -1, {si}); _{name}_buf[_i].{acc}.{sub} = (float)lua_tonumber(L, -1); lua_pop(L, 1);");
+                        si++;
+                    }
+                    lines.Add("        lua_pop(L, 1);");
+                    break;
+            }
+            fi++;
+        }
+        lines.Add("        lua_pop(L, 1);");
+        lines.Add("    }");
+        lines.Add($"    const {cType}* {name} = _{name}_buf;");
+        return string.Join("\n", lines);
+    }
+
     private static string GenValueStructReturnPush(string callExpr, string cType, List<BindingType.ValueStructField> fields)
+    {
+        var sb = GenValueStructReturnCapture(callExpr, cType, fields);
+        sb += "    return 1;";
+        return sb;
+    }
+
+    /// <summary>
+    /// ValueStruct 戻り値をキャプチャして Lua テーブルへ push (return 文なし — output param 併用時用)
+    /// </summary>
+    private static string GenValueStructReturnCapture(string callExpr, string cType, List<BindingType.ValueStructField> fields)
     {
         var sb = $"    {cType} _v = {callExpr};\n";
         sb += "    lua_newtable(L);\n";
@@ -1697,7 +1998,6 @@ public static class CBindingGen
             }
             fi++;
         }
-        sb += "    return 1;";
         return sb;
     }
 
@@ -1727,6 +2027,50 @@ public static class CBindingGen
         }
         sb += "        return 1";
         return sb;
+    }
+
+    private static string GenFixedArrayOfValueStructPush(string fieldName, List<BindingType.ValueStructField> fields, int length)
+    {
+        var sb = $"lua_newtable(L);\n";
+        sb += $"        for (int _i = 0; _i < {length}; _i++) {{\n";
+        sb += "            lua_newtable(L);\n";
+        var fi = 1;
+        foreach (var field in fields)
+        {
+            switch (field)
+            {
+                case BindingType.ScalarField(var acc):
+                    sb += $"            lua_pushnumber(L, self->{fieldName}[_i].{acc}); lua_rawseti(L, -2, {fi});\n";
+                    break;
+                case BindingType.NestedFields(var acc, var subs):
+                    sb += "            lua_newtable(L);\n";
+                    var si = 1;
+                    foreach (var sub in subs)
+                    {
+                        sb += $"            lua_pushnumber(L, self->{fieldName}[_i].{acc}.{sub}); lua_rawseti(L, -2, {si});\n";
+                        si++;
+                    }
+                    sb += $"            lua_rawseti(L, -2, {fi});\n";
+                    break;
+            }
+            fi++;
+        }
+        sb += "            lua_rawseti(L, -2, _i + 1);\n";
+        sb += "        }\n";
+        sb += "        return 1";
+        return sb;
+    }
+
+    private static string GenFixedArrayOfStructPush(string fieldName, string cName, string metatable, int length)
+    {
+        return $"lua_newtable(L);\n" +
+            $"        for (int _i = 0; _i < {length}; _i++) {{\n" +
+            $"            {cName}* _ud = ({cName}*)lua_newuserdatauv(L, sizeof({cName}), 0);\n" +
+            $"            *_ud = self->{fieldName}[_i];\n" +
+            $"            luaL_setmetatable(L, \"{metatable}\");\n" +
+            $"            lua_rawseti(L, -2, _i + 1);\n" +
+            $"        }}\n" +
+            $"        return 1";
     }
 
     private static string GenValueStructSetCode(string fieldName, List<BindingType.ValueStructField> fields)

@@ -44,13 +44,26 @@ public record StructBinding(
     /// true にすると Lua 文字列を受け取り ptr/size に展開するコンストラクタを生成する。
     /// ptr (const void*) + size (size_t) を持つ構造体にのみ適用可能 (例: sg_range)。
     /// </summary>
-    bool AllowStringInit = false
+    bool AllowStringInit = false,
+    List<PropertyBinding>? Properties = null
 );
 
 public record FieldBinding(
     string CName,
     string LuaName,
     BindingType Type
+);
+
+/// <summary>
+/// 計算プロパティ — 複数の C フィールドを1つの Lua プロパティとして露出する。
+/// GetterCode/SetterCode 内の {self} は構造体ポインタに展開される。
+/// SetterCode 内の {value_idx} は Lua スタック上の値インデックスに展開される。
+/// </summary>
+public record PropertyBinding(
+    string LuaName,
+    BindingType Type,
+    string GetterCode,
+    string? SetterCode = null
 );
 
 public record FuncBinding(
@@ -64,7 +77,7 @@ public record FuncBinding(
     List<PostCallPatch>? PostCallPatches = null
 );
 
-public enum CallbackBridgeMode { None, Immediate }
+public enum CallbackBridgeMode { None, Immediate, Persistent }
 
 public record ParamBinding(
     string Name,

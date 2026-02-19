@@ -51,7 +51,7 @@ public class ImguiModule : IModule
     private static readonly HashSet<string> FloatArrayParamNames =
         ["col", "v", "color", "values", "ref_col"];
 
-    public ModuleSpec BuildSpec(TypeRegistry reg)
+    public ModuleSpec BuildSpec(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
         var funcs = reg.AllDecls.OfType<Funcs>()
             .Where(f => f.Namespace == "ImGui")
@@ -130,13 +130,13 @@ public class ImguiModule : IModule
 
     public string GenerateC(TypeRegistry reg, Dictionary<string, string> prefixToModule)
     {
-        var spec = BuildSpec(reg);
+        var spec = BuildSpec(reg, prefixToModule);
         return CBinding.CBindingGen.Generate(spec);
     }
 
     public string GenerateLua(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)
     {
-        var spec = BuildSpec(reg);
+        var spec = BuildSpec(reg, prefixToModule, sourceLink);
         return LuaCats.LuaCatsGen.Generate(spec);
     }
 

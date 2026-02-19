@@ -120,6 +120,10 @@ public static class LuaCatsGen
         {
             var fields = s.Fields.Select(f =>
                 (f.LuaName, ToLuaCatsType(f.Type)));
+            // Properties も @field として追加
+            if (s.Properties is { Count: > 0 })
+                fields = fields.Concat(s.Properties.Select(p =>
+                    (p.LuaName, ToLuaCatsType(p.Type))));
             sb += StructClass(
                 $"{spec.ModuleName}.{s.PascalName}",
                 fields,
@@ -247,6 +251,8 @@ public static class LuaCatsGen
         BindingType.Vec4 => new Type.Primitive("number[]"),
         BindingType.FloatArray(_) => new Type.Primitive("number[]"),
         BindingType.ValueStruct(_, var luaCatsType, _, _)
+            => new Type.Primitive(luaCatsType),
+        BindingType.ValueStructArray(_, var luaCatsType, _, _)
             => new Type.Primitive(luaCatsType),
         BindingType.Custom(_, var luaCatsType, _, _, _, _)
             => new Type.Primitive(luaCatsType),
