@@ -247,4 +247,9 @@ function M.get_player()
     return player
 end
 
+-- Get enemies (for external access)
+function M.get_enemies()
+    return enemies
+end
+
 return M

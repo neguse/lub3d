@@ -12,10 +12,12 @@ local glm = require("lib.glm")
 -- Game modules
 local const = require("examples.hakonotaiatari.const")
 local renderer = require("examples.hakonotaiatari.renderer")
+local pathtracer = require("examples.hakonotaiatari.pathtracer")
 local font = require("examples.hakonotaiatari.font")
 local input = require("examples.hakonotaiatari.input")
 local Camera = require("examples.hakonotaiatari.camera")
 local field = require("examples.hakonotaiatari.field")
+local particle = require("examples.hakonotaiatari.particle")
 local audio = require("examples.hakonotaiatari.audio")
 
 -- State modules
@@ -149,34 +151,89 @@ function M:frame()
         end
     end
 
-    -- Begin render pass (use renderer to handle both wireframe and shaded modes)
-    renderer.begin_frame()
-
     -- Setup projection and view matrices (original game is 1:1 aspect ratio)
     local aspect = 1.0 -- Force square aspect ratio like original 240x240
     local eye = camera:get_eye()
     local lookat = camera:get_lookat()
 
-    -- For render functions that need mat4
-    local proj = camera:get_proj(aspect)
-    local view = camera:get_view()
+    if renderer.get_mode() == renderer.MODE_PATHTRACED then
+        -- Path tracing mode: collect scene and render via pathtracer
+        local cubes = {}
+        if current_state == const.GAME_STATE_GAME then
+            local p = game.get_player()
+            if p and not p:is_dead() then
+                local is_dashing = (p.stat == const.P_ST_DASH)
+                local p_emission = is_dashing and 4.0 or 1.0
+                local p_color = is_dashing and const.P_COL_DASH_PT or p.color
+                table.insert(cubes, {
+                    pos = p.pos, length = p.length, angle = p.angle,
+                    color = p_color, material = 1, emission = p_emission,
+                })
+            end
+            for _, e in ipairs(game.get_enemies()) do
+                if not e:is_dead() then
+                    local is_dashing = (e.stat == const.E_ST_DASH)
+                    local is_boss = (e.type == const.C_TYPE_DASH_ENEMY)
+                    local e_emission = 0
+                    if is_dashing then
+                        e_emission = 4.0
+                    elseif is_boss then
+                        e_emission = 0.8
+                    end
+                    table.insert(cubes, {
+                        pos = e.pos, length = e.length, angle = e.angle,
+                        color = e.color, material = 1, emission = e_emission,
+                    })
+                end
+            end
+        end
 
-    -- Setup camera for current render mode
-    renderer.set_camera_lookat(eye, lookat, aspect)
+        -- Render path traced image + open swapchain pass for UI overlay
+        pathtracer.render(cubes, camera, renderer.get_gakugaku(), current_state)
 
-    -- Render field
-    field.render()
+        -- 3D overlay: particles (PT has its own ground plane, no field grid needed)
+        renderer.set_camera_lookat(eye, lookat, aspect)
+        local vx, vy, vw, vh = renderer.get_viewport()
+        gfx.apply_viewport(vx, vy, vw, vh, true)
+        gfx.apply_scissor_rect(0, 0, math.floor(app.widthf()), math.floor(app.heightf()), true)
 
-    -- Render 3D content based on state
-    if current_state == const.GAME_STATE_GAME then
-        game.render(proj, view)
+        -- Rasterize cube depth for particle occlusion
+        if current_state == const.GAME_STATE_GAME and #cubes > 0 then
+            local proj = camera:get_proj(aspect)
+            local view = camera:get_view()
+            renderer.draw_cubes_depth_only(cubes, proj, view)
+        end
+
+        if current_state == const.GAME_STATE_GAME then
+            particle.render()
+        end
+
+        -- Setup UI projection for overlay on top of path traced image
+        renderer.setup_ui_projection()
+    else
+        -- Wireframe / Shaded mode (unchanged)
+        renderer.begin_frame()
+
+        -- For render functions that need mat4
+        local proj = camera:get_proj(aspect)
+        local view = camera:get_view()
+
+        -- Setup camera for current render mode
+        renderer.set_camera_lookat(eye, lookat, aspect)
+
+        -- Render field
+        field.render()
+
+        -- Render 3D content based on state
+        if current_state == const.GAME_STATE_GAME then
+            game.render(proj, view)
+        end
+
+        -- Setup orthographic projection for UI
+        renderer.setup_ui_projection()
     end
 
-    -- Setup orthographic projection for UI (includes loading wireframe pipeline)
-    -- Note: gl.draw() is called once at the end to render both 3D and UI
-    renderer.setup_ui_projection()
-
-    -- Render UI based on state
+    -- Render UI based on state (drawn on top of all modes)
     if current_state == const.GAME_STATE_TITLE then
         title.render()
     elseif current_state == const.GAME_STATE_TUTORIAL then
@@ -203,8 +260,9 @@ function M:event(ev)
         if ev.key_code == app.Keycode.Q then
             app.quit()
         elseif ev.key_code == app.Keycode.TAB then
-            renderer.toggle_mode()
-            log.info("Render mode: " .. (renderer.get_mode() == renderer.MODE_WIREFRAME and "WIREFRAME" or "SHADED"))
+            local mode = renderer.toggle_mode()
+            local names = { [1] = "WIREFRAME", [2] = "SHADED", [3] = "PATHTRACED" }
+            log.info("Render mode: " .. (names[mode] or "UNKNOWN"))
         end
     end
 end

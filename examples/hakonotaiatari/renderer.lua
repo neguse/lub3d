@@ -10,12 +10,14 @@ local util = require("lib.util")
 local glm = require("lib.glm")
 local log = require("lib.log")
 local const = require("examples.hakonotaiatari.const")
+local pathtracer = require("examples.hakonotaiatari.pathtracer")
 
 local M = {}
 
 -- Rendering mode
 M.MODE_WIREFRAME = 1
 M.MODE_SHADED = 2
+M.MODE_PATHTRACED = 3
 local current_mode = M.MODE_WIREFRAME
 
 -- Graphics resources for shaded mode
@@ -27,6 +29,10 @@ local shaded_pipeline = nil
 local shaded_vbuf = nil
 ---@type sokol.gfx.Buffer?
 local shaded_ibuf = nil
+
+-- Graphics resources for depth-only mode (PT particle occlusion)
+---@type sokol.gfx.Pipeline?
+local depth_only_pipeline = nil
 
 -- Graphics resources for wireframe mode (using sokol.gl)
 ---@type sokol.gl.Pipeline?
@@ -289,6 +295,26 @@ function M.init()
         return false
     end
 
+    -- Create depth-only pipeline (for PT particle occlusion)
+    depth_only_pipeline = gfx.make_pipeline(gfx.PipelineDesc({
+        shader = shaded_shader,
+        layout = {
+            attrs = {
+                { format = gfx.VertexFormat.FLOAT3 }, -- pos
+                { format = gfx.VertexFormat.FLOAT3 }, -- normal
+            }
+        },
+        index_type = gfx.IndexType.UINT16,
+        cull_mode = gfx.CullMode.FRONT,
+        depth = {
+            compare = gfx.CompareFunc.LESS_EQUAL,
+            write_enabled = true,
+        },
+        color_count = 1,
+        colors = { { write_mask = gfx.ColorMask.NONE } },
+        primitive_type = gfx.PrimitiveType.TRIANGLES,
+    }))
+
     -- Create vertex buffer
     local vertices = make_cube_vertices()
     shaded_vbuf = gfx.make_buffer(gfx.BufferDesc({
@@ -302,12 +328,16 @@ function M.init()
         data = gfx.Range(pack_indices(indices))
     }))
 
+    -- Initialize path tracer
+    pathtracer.init()
+
     log.info("Renderer initialized")
     return true
 end
 
 -- Cleanup renderer
 function M.cleanup()
+    pathtracer.cleanup()
     gl.shutdown()
 end
 
@@ -321,13 +351,9 @@ function M.get_mode()
     return current_mode
 end
 
--- Toggle rendering mode
+-- Toggle rendering mode (3 modes: wireframe → shaded → pathtraced → wireframe)
 function M.toggle_mode()
-    if current_mode == M.MODE_WIREFRAME then
-        current_mode = M.MODE_SHADED
-    else
-        current_mode = M.MODE_WIREFRAME
-    end
+    current_mode = (current_mode % 3) + 1
     return current_mode
 end
 
@@ -465,6 +491,25 @@ function M.draw_cube_shaded(pos, size, angle, r, g, b, proj, view)
 
     gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, r, g, b, 1.0)))
     gfx.draw(0, 36, 1)
+end
+
+-- Draw cubes depth-only for PT particle occlusion
+-- cubes: array of {pos=vec2, length=number, angle=number}
+function M.draw_cubes_depth_only(cubes, proj, view)
+    if not depth_only_pipeline or not shaded_vbuf then return end
+    gfx.apply_pipeline(depth_only_pipeline)
+    gfx.apply_bindings(gfx.Bindings({
+        vertex_buffers = { shaded_vbuf },
+        index_buffer = shaded_ibuf,
+    }))
+    for _, cube in ipairs(cubes) do
+        local pos3d = glm.vec3(cube.pos.x, cube.length, cube.pos.y)
+        local size3d = glm.vec3(cube.length * 2, cube.length * 2, cube.length * 2)
+        local model = glm.translate(pos3d) * glm.rotate(-cube.angle, glm.vec3(0, 1, 0)) * glm.scale(size3d)
+        local mvp = proj * view * model
+        gfx.apply_uniforms(0, gfx.Range(pack_uniforms(mvp, model, 0, 0, 0, 0)))
+        gfx.draw(0, 36, 1)
+    end
 end
 
 -- Draw a line between two points (uses sokol.gl in both modes)
