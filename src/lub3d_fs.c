@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Optional pack data lookup (set by CLI at startup) */
+lub3d_fs_pack_find_fn lub3d_fs_pack_find = NULL;
+
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -172,6 +175,14 @@ static int l_fs_dir(lua_State *L)
 static int l_fs_read(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
+    if (lub3d_fs_pack_find) {
+        unsigned int pack_size;
+        const unsigned char *pack_data = lub3d_fs_pack_find(path, &pack_size);
+        if (pack_data) {
+            lua_pushlstring(L, (const char *)pack_data, pack_size);
+            return 1;
+        }
+    }
     FILE *f = fopen(path, "rb");
     if (!f) {
         lua_pushnil(L);
@@ -229,6 +240,13 @@ static int l_fs_mtime(lua_State *L)
 static int l_fs_exists(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
+    if (lub3d_fs_pack_find) {
+        unsigned int pack_size;
+        if (lub3d_fs_pack_find(path, &pack_size)) {
+            lua_pushboolean(L, 1);
+            return 1;
+        }
+    }
     struct stat st;
     lua_pushboolean(L, stat(path, &st) == 0);
     return 1;
