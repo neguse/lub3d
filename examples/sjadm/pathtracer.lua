@@ -16,13 +16,17 @@ local M = {}
 
 -- Max boxes in scene (platforms + kills visible on screen)
 local MAX_BOXES <const> = 80
+local MAX_SHADOWS <const> = 16
 
 -- Uniform block layout:
--- Header: 10 vec4 = 40 floats
+-- Header: 11 vec4 = 44 floats
+-- Shadows: MAX_SHADOWS vec4 = 16 vec4 = 64 floats
 -- Boxes: MAX_BOXES * 2 vec4 = 160 vec4 = 640 floats
-local HEADER_SIZE <const> = 10 * 4 -- 40 floats
+local HEADER_SIZE <const> = 11 * 4 -- 44 floats
+local SHADOW_STRIDE <const> = 4    -- 4 floats per shadow (x, y, hw, hh)
+local SHADOW_SECTION <const> = MAX_SHADOWS * SHADOW_STRIDE -- 64 floats
 local BOX_STRIDE <const> = 2 * 4   -- 8 floats per box
-local UNIFORM_FLOATS <const> = HEADER_SIZE + MAX_BOXES * BOX_STRIDE
+local UNIFORM_FLOATS <const> = HEADER_SIZE + SHADOW_SECTION + MAX_BOXES * BOX_STRIDE
 local UNIFORM_SIZE <const> = UNIFORM_FLOATS * 4 -- bytes
 
 -- Resources
@@ -44,6 +48,12 @@ local prev_lookat = nil
 
 -- Coordinate scale: game units → world units
 local SCALE <const> = 1.0 / 1000.0
+
+-- Tunable parameters (exposed for ImGui)
+M.exposure = 1.5
+M.gamma = 2.2
+M.max_accum_moving = 4
+M.max_accum_still = 32
 
 -- ============================================================
 -- Path tracing shader
@@ -73,9 +83,11 @@ layout(binding=0) uniform fs_params {
     vec4 frame_params;      // x=frame, y=accum, z=time, w=fov_scale
     vec4 scene_info;        // x=num_boxes, y=num_kills_start, z=num_items, w=0
     vec4 player_pos;        // x=px, y=py, z=hw, w=hh
-    vec4 player_ext;        // x=depth, y=alive, z=0, w=0
+    vec4 player_ext;        // x=depth, y=alive, z=dash_time, w=dead_timer
     vec4 light_params;      // xyz=pos, w=radius
     vec4 light_color;       // xyz=color, w=intensity
+    vec4 shadow_info;       // x=num_shadows, y=0, z=0, w=0
+    vec4 shadow_data[]] .. tostring(MAX_SHADOWS) .. [[]; // xy=pos, zw=hw,hh (scaled)
     vec4 box_data[]] .. tostring(MAX_BOXES * 2) .. [[];
 };
 
@@ -251,6 +263,20 @@ bool trace_scene(vec3 ro, vec3 rd, out HitInfo hit) {
         found = true;
     }
 
+    // Background wall at z = -2 (behind the scene)
+    {
+        float t_bg = (-2.0 - ro.z) / rd.z;
+        if (t_bg > EPS && t_bg < hit.t) {
+            hit.t = t_bg;
+            hit.normal = vec3(0.0, 0.0, 1.0);
+            hit.albedo = vec3(0.9, 0.9, 0.92);
+            hit.material = MAT_DIFF;
+            hit.roughness = 1.0;
+            hit.emission = vec3(0.0);
+            found = true;
+        }
+    }
+
     // Platforms and kill zones (box_data)
     for (int i = 0; i < num_boxes && i < ]] .. tostring(MAX_BOXES) .. [[; i++) {
         vec4 b0 = box_data[i * 2 + 0]; // cx, cy, hw, hh
@@ -283,10 +309,18 @@ bool trace_scene(vec3 ro, vec3 rd, out HitInfo hit) {
                 hit.material = MAT_EMISSIVE;
                 hit.emission = vec3(1.0, 0.8, 0.2) * 2.0;
             } else if (box_type == BOX_CHECKPOINT) {
-                // Checkpoints: cyan glow
-                hit.albedo = vec3(0.3, 0.9, 1.0);
-                hit.material = MAT_EMISSIVE;
-                hit.emission = vec3(0.2, 0.6, 0.8);
+                float is_active = b1.w;
+                if (is_active > 0.5) {
+                    // Active checkpoint: bright cyan glow
+                    hit.albedo = vec3(0.4, 1.0, 1.0);
+                    hit.material = MAT_EMISSIVE;
+                    hit.emission = vec3(1.5, 4.0, 5.0);
+                } else {
+                    // Inactive checkpoint: dim
+                    hit.albedo = vec3(0.2, 0.4, 0.5);
+                    hit.material = MAT_DIFF;
+                    hit.emission = vec3(0.0);
+                }
             } else {
                 // Platform: white/grey
                 hit.albedo = vec3(0.8, 0.8, 0.85);
@@ -297,19 +331,80 @@ bool trace_scene(vec3 ro, vec3 rd, out HitInfo hit) {
     }
 
     // Player box
+    float p_dash = player_ext.z;   // dash_time (0.5 → 0)
+    float p_dead = player_ext.w;   // dead_timer (1.5 → 0)
+
     if (player_ext.y > 0.5) {
+        // Alive: normal or dashing
         vec3 p_center = vec3(player_pos.x, player_pos.y, 0.0);
         vec3 p_half = vec3(player_pos.z, player_pos.w, player_ext.x);
+
+        // Dash: stretch horizontally
+        if (p_dash > 0.0) {
+            float stretch = 1.0 + p_dash * 3.0;
+            p_half.x *= stretch;
+        }
+
         float t_p;
         vec3 n_p;
         if (intersect_rotated_box(ro, rd, p_center, p_half, 0.0, t_p, n_p)
             && t_p > EPS && t_p < hit.t) {
             hit.t = t_p;
             hit.normal = n_p;
-            hit.albedo = vec3(0.9, 0.95, 1.0);
-            hit.material = MAT_GLOSSY;
-            hit.emission = vec3(0.4, 0.5, 0.7);
-            hit.roughness = 0.15;
+            if (p_dash > 0.0) {
+                // Dashing: bright blue-white burst
+                float intensity = p_dash * 2.0;
+                hit.albedo = vec3(0.7, 0.85, 1.0);
+                hit.material = MAT_EMISSIVE;
+                hit.emission = vec3(3.0, 5.0, 8.0) * intensity;
+            } else {
+                hit.albedo = vec3(0.9, 0.95, 1.0);
+                hit.material = MAT_GLOSSY;
+                hit.emission = vec3(2.0, 2.5, 3.5);
+                hit.roughness = 0.15;
+            }
+            found = true;
+        }
+    } else if (p_dead > 0.0) {
+        // Dead: expanding glowing sphere
+        vec3 p_center = vec3(player_pos.x, player_pos.y, 0.0);
+        float expand = (1.5 - p_dead) / 1.5;  // 0 → 1
+        float radius = mix(0.005, 0.08, expand);
+        float t_s = INF;
+        vec3 oc = ro - p_center;
+        float b = dot(oc, rd);
+        float c = dot(oc, oc) - radius * radius;
+        float disc = b * b - c;
+        if (disc > 0.0) {
+            t_s = -b - sqrt(disc);
+            if (t_s > EPS && t_s < hit.t) {
+                hit.t = t_s;
+                hit.normal = normalize(ro + rd * t_s - p_center);
+                float fade = p_dead / 1.5;  // 1 → 0
+                hit.albedo = vec3(1.0, 0.3, 0.1);
+                hit.material = MAT_EMISSIVE;
+                hit.emission = vec3(8.0, 2.0, 0.5) * fade;
+                found = true;
+            }
+        }
+    }
+
+    // Shadow trail (afterimages)
+    int num_shadows = int(shadow_info.x);
+    for (int si = 0; si < num_shadows && si < ]] .. tostring(MAX_SHADOWS) .. [[; si++) {
+        vec4 sd = shadow_data[si];
+        vec3 s_center = vec3(sd.x, sd.y, 0.0);
+        vec3 s_half = vec3(sd.z, sd.w, sd.z * 0.5);
+        float t_s;
+        vec3 n_s;
+        if (intersect_rotated_box(ro, rd, s_center, s_half, 0.0, t_s, n_s)
+            && t_s > EPS && t_s < hit.t) {
+            hit.t = t_s;
+            hit.normal = n_s;
+            float fade = 1.0 - float(si) / float(max(num_shadows, 1));
+            hit.albedo = vec3(0.5, 0.7, 1.0);
+            hit.material = MAT_EMISSIVE;
+            hit.emission = vec3(1.0, 2.0, 4.0) * fade * fade;
             found = true;
         }
     }
@@ -422,8 +517,9 @@ void main() {
     // Camera ray
     vec2 screen = pixel * 2.0 - 1.0;
     vec3 ro = camera_origin.xyz;
+    float aspect = res.x / res.y;
     vec3 rd = normalize(camera_forward.xyz * fov_scale
-                        + screen.x * camera_right.xyz
+                        + screen.x * aspect * camera_right.xyz
                         + screen.y * camera_up.xyz);
 
     // Path trace
@@ -713,8 +809,8 @@ function M.pack_scene(boxes, player_info, camera_eye, camera_lookat, items, chec
     local p_depth = math.min(player_info.hw, player_info.hh) * 0.3 * SCALE
     data[29] = p_depth
     data[30] = player_info.alive and 1.0 or 0.0
-    data[31] = 0
-    data[32] = 0
+    data[31] = player_info.dash_time or 0
+    data[32] = player_info.dead_timer or 0
 
     -- light_params (vec4): area light above scene, following camera
     data[33] = camera_eye.x
@@ -727,8 +823,30 @@ function M.pack_scene(boxes, player_info, camera_eye, camera_lookat, items, chec
     data[39] = 0.85
     data[40] = 4.0  -- intensity
 
+    -- shadow_info (vec4)
+    local shadows = player_info.shadows or {}
+    local num_shadows = math.min(math.max(#shadows - 1, 0), MAX_SHADOWS)
+    data[41] = num_shadows
+    data[42] = 0
+    data[43] = 0
+    data[44] = 0
+
+    -- shadow_data (MAX_SHADOWS vec4) — newest first, skip last (= current pos)
+    local shadow_base = HEADER_SIZE  -- 44
+    local total_shadows = #shadows
+    for i = 1, num_shadows do
+        local s = shadows[total_shadows - i]  -- skip current pos, newest first
+        if s then
+            local idx = shadow_base + (i - 1) * SHADOW_STRIDE
+            data[idx + 1] = s.x * SCALE
+            data[idx + 2] = s.y * SCALE
+            data[idx + 3] = (player_info.hw or 12.5) * SCALE
+            data[idx + 4] = (player_info.hh or 25) * SCALE
+        end
+    end
+
     -- Box data
-    local base = HEADER_SIZE
+    local base = HEADER_SIZE + SHADOW_SECTION
     local bi = 0
 
     -- Platform/kill boxes
@@ -778,7 +896,7 @@ function M.pack_scene(boxes, player_info, camera_eye, camera_lookat, items, chec
         data[idx + 5] = 0
         data[idx + 6] = r
         data[idx + 7] = 3  -- BOX_CHECKPOINT
-        data[idx + 8] = 0
+        data[idx + 8] = cp.active and 1.0 or 0.0
         bi = bi + 1
     end
 
@@ -807,33 +925,25 @@ function M.render(boxes, player_info, camera_params, items, checkpoints)
         create_render_targets(w, h)
     end
 
-    -- Camera motion detection → reset accumulation
+    -- Camera motion detection
     local eye = glm.vec3(camera_params.eye.x, camera_params.eye.y, camera_params.eye.z)
     local lookat = glm.vec3(camera_params.target.x, camera_params.target.y, camera_params.target.z)
-    local should_reset = false
+    local camera_moving = false
 
     if prev_eye then
         local eye_dist = glm.length(eye - prev_eye)
         local lookat_dist = glm.length(lookat - prev_lookat)
-        if eye_dist > 0.01 or lookat_dist > 0.01 then
-            should_reset = true
+        if eye_dist > 0.001 or lookat_dist > 0.001 then
+            camera_moving = true
         end
-    else
-        should_reset = true
     end
     prev_eye = eye
     prev_lookat = lookat
 
-    -- Dynamic scene: cap accumulation low since player moves
-    local max_accum = should_reset and 0 or 32
-    if accum_count >= 4 then
-        -- With moving player, cap at 4
-        -- When camera is still, allow more
-        if not should_reset then
-            max_accum = 32
-        end
-    end
-    if should_reset or accum_count >= max_accum then
+    -- Cap accumulation: short when moving (keeps responsiveness),
+    -- longer when still (reduces noise)
+    local max_accum = camera_moving and M.max_accum_moving or M.max_accum_still
+    if accum_count >= max_accum then
         accum_count = 0
     end
 
@@ -879,8 +989,8 @@ function M.render(boxes, player_info, camera_params, items, checkpoints)
         samplers = { tex_sampler.handle },
     }))
     gfx.apply_uniforms(0, gfx.Range(util.pack_floats({
-        1.5, 2.2, 0, 0,    -- exposure, gamma, pad, pad
-        0, 0, 0, 0,        -- pad
+        M.exposure, M.gamma, 0, 0,
+        0, 0, 0, 0,
     })))
     gfx.draw(0, 4, 1)
     -- Pass left OPEN for sdtx overlay

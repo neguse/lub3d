@@ -56,13 +56,17 @@ end
 
 -- Derive 3D camera parameters for path tracer
 -- Returns eye and target positions in scaled world coordinates (1/1000)
+-- Tunable parameters (exposed for ImGui)
+camera.dist_factor = 0.8
+camera.eye_y_offset = 2.0
+
 function camera:get_3d_params()
     local scale = 1.0 / 1000.0
     local cx = self.x * scale
     local cy = self.y * scale
-    local dist = 5.0 / self.s  -- farther when zoomed out
+    local dist = camera.dist_factor / self.s  -- farther when zoomed out
     return {
-        eye = { x = cx, y = cy + 1.0, z = dist },
+        eye = { x = cx, y = cy + camera.eye_y_offset, z = dist },
         target = { x = cx, y = cy, z = 0 },
     }
 end
