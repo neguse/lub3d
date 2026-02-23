@@ -5,13 +5,15 @@
 ### T07: Add Jolt Physics binding ✓ (2026-02-23)
 - Added Jolt Physics v5.5.0 Lua binding with JoltWorld opaque type wrapping PhysicsSystem + JobSystem + TempAllocator
 - 15 Lua API functions: init, destroy, set_gravity, get_gravity, update, optimize, create_box, create_sphere, remove_body, get_position, get_rotation, set_linear_velocity, add_impulse, is_active, body_count
-- CMake integration: `LUB3D_BUILD_JOLT` option, `add_subdirectory(deps/JoltPhysics/Build)`, separate jolt_lua static library
+- CMake integration: `LUB3D_BUILD_JOLT` option, `add_subdirectory(deps/JoltPhysics/Build)`, separate jolt_lua static library, static MSVC CRT (`/MT`) for all targets
 - Generator: JoltModule.cs (IModule, LuaCATS-only — no clang parsing), 15 xUnit tests
 - Demo: `examples/jolt_hello.lua` — 3D wireframe falling boxes with sokol.gl, orbit camera, spawn on click/key
-- Files: CMakeLists.txt, src/jolt_lua.cpp, src/lub3d_lua.c, Generator/Modules/Jolt/JoltModule.cs, Generator/Program.cs, Generator.Tests/JoltModuleTests.cs, gen/jolt.lua, examples/jolt_hello.lua
+- Playground: `jolt_hello` をサンプルセレクトに追加
+- `check.py`: モジュールレベル UPPER_CASE 定数の命名規則許可を追加
+- Files: CMakeLists.txt, src/jolt_lua.cpp, src/lub3d_lua.c, Generator/Modules/Jolt/JoltModule.cs, Generator/Program.cs, Generator.Tests/JoltModuleTests.cs, gen/jolt.lua, examples/jolt_hello.lua, playground/main.ts, scripts/check.py
 - What went well: Hand-written C++ binding + Generator LuaCATS annotation hybrid approach — pragmatic and fast
-- Decisions: BodyID as Lua integer (lightweight handle), fixed 2-layer broadphase (NON_MOVING/MOVING), no clang++ auto-generation (Jolt is class-based C++, current ClangAst handles namespace-level only)
-- Remaining: Generator ClangAst extension for C++ CXXRecordDecl/CXXMethodDecl (deferred)
+- Decisions: BodyID as Lua integer (lightweight handle), fixed 2-layer broadphase (NON_MOVING/MOVING), no clang++ auto-generation (Jolt is class-based C++, current ClangAst handles namespace-level only), static CRT for game distribution
+- Remaining: 拡張バインディング (constraints, raycasting, shapes, body properties)
 
 ### T06-impl: Implement Generator ownership abstractions ✓ (2026-02-23)
 - Added `DependencyBinding` record to `ModuleSpec.cs` for parent-child lifetime tracking via Lua uservalue slots (sol3 `self_dependency` pattern)
