@@ -4,6 +4,9 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  pull-requests: write
+
 jobs:
   lua-lint:
     runs-on: ubuntu-latest
