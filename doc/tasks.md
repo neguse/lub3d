@@ -12,21 +12,6 @@
 
 <!-- ==================== Phase 3: New bindings (benefits from T06 ownership model) ==================== -->
 
-### T07: Add Jolt Physics binding
-- Background: Box2D is 2D only. For 3D physics (sjadm, hakonotaiatari path tracer scenes, future 3D examples), a 3D physics engine is needed. Jolt Physics is a modern, high-performance 3D physics library (used in Horizon Forbidden West). The native API is C++.
-- Requirements: Add a JoltModule to Generator that produces C++ bindings + LuaCATS annotations. Core API coverage: PhysicsSystem creation, body creation (static/dynamic/kinematic), shapes (box/sphere/capsule/convex hull/mesh), constraints, raycasting, collision queries. At least one working 3D physics example in examples/.
-- Approach: Bind Jolt's C++ API directly, similar to how ImguiModule handles C++ (clang++ parsing with -std=c++17). Add deps/jolt submodule. Implement JoltModule as IModule with C++ namespace-based generation. Handle Jolt's RefCounted/Ref<T> ownership model (informed by T06). Start with rigid body basics, expand later.
-- Alternatives rejected: JoltC (C wrapper) — adds an unnecessary indirection layer; the Generator already supports C++ binding via ImguiModule. Bullet Physics — older, less maintained. PhysX — heavy, complex build.
-- Depends on: T06 (ownership model informs Ref<T> handling)
-- Goal: Falling boxes demo running in examples/.
-- Stages:
-  1. Add deps/jolt submodule, verify CMake integration builds
-  2. Implement JoltModule skeleton — clang++ parse Jolt headers, generate empty bindings
-  3. Bind core: PhysicsSystem, BodyInterface, Body creation with basic shapes
-  4. Bind queries: raycasting, collision detection
-  5. Example: falling boxes with ground plane
-  6. Bind constraints, expand shape types
-
 ### T08: Add ozz-animation binding
 - Background: No skeletal animation support exists. ozz-animation is a lightweight, high-performance runtime animation library (C++) with offline tools for converting glTF/FBX to optimized runtime formats. Needed for character animation in 3D examples.
 - Requirements: Add an OzzModule to Generator that produces C++ bindings + LuaCATS annotations. Core API coverage: skeleton loading, animation loading, sampling (SamplingJob), blending (BlendingJob), local-to-model transform (LocalToModelJob). At least one working skeletal animation example in examples/.
@@ -46,7 +31,7 @@
 
 ```
 Phase 0-2 (completed):         T09, T05, T02, T01, T03, T04, T06, T10, T06-impl
-Phase 3 (next):                 T07 → T08
+Phase 3 (completed/next):       T07 ✓ → T08
 ```
 
 Phase 3 tasks are ordered: Jolt before ozz, since Jolt is simpler C++ binding (no SoA) and lessons learned carry over.
