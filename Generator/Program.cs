@@ -8,6 +8,7 @@ using Generator.Modules.Miniaudio;
 using Generator.Modules.Imgui;
 using Generator.Modules.Stb;
 using Generator.Modules.Box2d;
+using Generator.Modules.Jolt;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -34,7 +35,6 @@ rootCommand.SetAction(parseResult =>
     var outputDir = parseResult.GetValue(outputDirArg)!.FullName;
     var depsDir = parseResult.GetValue(depsOption)?.FullName ?? FindDepsDir();
     var clangPath = parseResult.GetValue(clangOption)?.FullName ?? FindClang();
-
     if (depsDir == null)
     {
         Console.Error.WriteLine("Error: deps directory not found. Use --deps or place deps/ relative to Generator.");
@@ -323,6 +323,23 @@ rootCommand.SetAction(parseResult =>
     else
     {
         Console.WriteLine("Skipping Box2D (deps/box2d/include/box2d/box2d.h not found)");
+    }
+
+    // --- Jolt Physics (LuaCATS only — C++ binding is hand-written) ---
+    {
+        var joltModule = new JoltModule();
+        var joltEmptyModule = new Generator.ClangAst.Module(joltModule.ModuleName, joltModule.Prefix, [], []);
+        var joltReg = TypeRegistry.FromModule(joltEmptyModule);
+        var joltPrefixToModule = new Dictionary<string, string> { [joltModule.Prefix] = joltModule.ModuleName };
+
+        var joltLuaPath = LuaOutputPath(outputDir, joltModule.ModuleName);
+        File.WriteAllText(joltLuaPath, joltModule.GenerateLua(joltReg, joltPrefixToModule));
+        Console.WriteLine($"Generated: {joltLuaPath}");
+
+        var joltSpec = joltModule.BuildSpec(joltReg, joltPrefixToModule);
+        var joltSkip = ((IModule)joltModule).CollectSkips(joltReg);
+        allMetrics.Add(ModuleMetrics.Collect(joltModule.ModuleName, joltReg, joltSpec, joltSkip));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(joltModule.ModuleName, joltReg, joltSpec, joltSkip));
     }
 
     ModuleMetrics.PrintTable(allMetrics);

@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 project(lub3d C CXX)
 
 # Auto-detect sccache (use if available)
@@ -33,6 +34,7 @@ option(LUB3D_BACKEND_METAL "Use Metal backend" OFF)
 option(LUB3D_BACKEND_WGPU "Use WebGPU backend" OFF)
 option(LUB3D_BACKEND_DUMMY "Use Dummy backend for headless testing" OFF)
 option(LUB3D_BUILD_BOX2D "Build Box2D physics integration" ON)
+option(LUB3D_BUILD_JOLT "Build Jolt Physics integration" ON)
 option(LUB3D_BUILD_TESTS "Build test runner" OFF)
 
 # Lua 5.5
@@ -505,6 +507,36 @@ if(LUB3D_BUILD_BOX2D)
     target_compile_definitions(lub3d PUBLIC LUB3D_HAS_BOX2D)
     target_link_libraries(lub3d PUBLIC box2d)
 
+endif()
+
+# Jolt Physics (optional)
+if(LUB3D_BUILD_JOLT)
+    set(JOLT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/deps/JoltPhysics)
+
+    # Jolt build options: disable tests/samples, enable C++17
+    set(TARGET_HELLO_WORLD OFF CACHE BOOL "" FORCE)
+    set(TARGET_UNIT_TESTS OFF CACHE BOOL "" FORCE)
+    set(TARGET_PERFORMANCE_TEST OFF CACHE BOOL "" FORCE)
+    set(TARGET_SAMPLES OFF CACHE BOOL "" FORCE)
+    set(TARGET_VIEWER OFF CACHE BOOL "" FORCE)
+    set(ENABLE_ALL_WARNINGS OFF CACHE BOOL "" FORCE)
+    set(OVERRIDE_CXX_FLAGS OFF CACHE BOOL "" FORCE)
+    set(INTERPROCEDURAL_OPTIMIZATION OFF CACHE BOOL "" FORCE)
+    set(ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+
+    add_subdirectory(${JOLT_DIR}/Build ${CMAKE_CURRENT_BINARY_DIR}/jolt)
+
+    # Jolt Lua bindings (C++)
+    add_library(jolt_lua STATIC src/jolt_lua.cpp)
+    target_include_directories(jolt_lua
+        PRIVATE ${JOLT_DIR}
+        PRIVATE ${LUA_INCLUDE}
+    )
+    target_link_libraries(jolt_lua PUBLIC Jolt ${LUA_TARGET})
+    set_target_properties(jolt_lua PROPERTIES CXX_STANDARD 17)
+
+    target_link_libraries(lub3d PUBLIC jolt_lua)
+    target_compile_definitions(lub3d PUBLIC LUB3D_HAS_JOLT)
 endif()
 
 # BC7 encoder library (optional)

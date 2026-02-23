@@ -15,6 +15,7 @@ app.innerHTML = `
         <option value="triangle">Triangle</option>
         <option value="imgui_test">ImGui</option>
         <option value="b2d_hello">Box2D</option>
+        <option value="jolt_hello">Jolt Physics</option>
         <option value="raytracer">Raytracer</option>
         <option value="miniaudio_test">Miniaudio</option>
         <option value="breakout">Breakout</option>
