@@ -2,6 +2,16 @@
 
 <!-- Add newest entries at the top -->
 
+### T06: Research ownership models (sol3, WASI) and improve Generator abstractions ✓ (2026-02-23)
+- sol3 の ownership モデル (value/reference/smart pointer semantics) と WASI Component Model の resource モデル (own/borrow ハンドル) を調査
+- 現行 Generator の ValueStruct / OpaqueType / HandleType と sol3 / WASI の対応関係を整理
+- ギャップ分析: 依存ライフタイム追跡 (高)、明示的 destroy (中)、パラメータ ownership (低) を特定
+- Generator 改善の設計指針を策定: `DependencyBinding` (sol3 self_dependency 方式)、`HasExplicitDestroy` (WASI resource.drop 方式)
+- Files: `doc/ownership-research.md` (調査結果), `doc/ownership-design.md` (設計指針)
+- What went well: sol3 の uservalue 参照保持パターンが Lua 5.5 の `lua_setiuservalue` に直接マッピングできる
+- Decisions: WASI の `num_lends` カウンタは過剰と判断、sol3 方式の uservalue 参照保持を採用。ParamOwnership は将来 T07/T08 で実装
+- Remaining: ModuleSpec / CBindingGen / LuaCatsGen の実装、miniaudio PoC (設計指針 doc に詳細記載)
+
 ### T09 + T01-T05: Skip-aware metrics + full audit of all modules (2026-02-23)
 - Added `SkipEntry`/`SkipReport` records to `Metrics.cs` for declaring intentionally skipped declarations with reasons
 - Added `CollectSkips()` default method to `IModule` interface and `virtual` method to `SokolModule` base class
