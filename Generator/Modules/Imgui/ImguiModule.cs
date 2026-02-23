@@ -305,6 +305,158 @@ public class ImguiModule : IModule
         _ => "X"
     };
 
+    // ===== Skip declarations =====
+
+    /// <summary>
+    /// Reason-by-name for items in SkipFunctions (explicit skip in BuildSpec)
+    /// </summary>
+    private static readonly Dictionary<string, string> SkipReasons = new()
+    {
+        // Context/internal management
+        ["GetIO"] = "internal: IO struct managed by framework",
+        ["GetPlatformIO"] = "internal: platform IO managed by framework",
+        ["GetStyle"] = "internal: style struct access not exposed",
+        ["GetDrawData"] = "internal: draw data managed by render pipeline",
+        ["GetCurrentContext"] = "internal: context managed by framework",
+        ["SetCurrentContext"] = "internal: context managed by framework",
+        ["CreateContext"] = "internal: context managed by framework",
+        ["DestroyContext"] = "internal: context managed by framework",
+        ["NewFrame"] = "internal: called by imgui.new_frame wrapper",
+        ["Render"] = "internal: called by imgui.render wrapper",
+        ["EndFrame"] = "internal: called by imgui.render wrapper",
+        ["GetMainViewport"] = "internal: viewport managed by framework",
+        ["SetAllocatorFunctions"] = "internal: allocator managed by framework",
+        ["GetAllocatorFunctions"] = "internal: allocator managed by framework",
+        ["MemAlloc"] = "internal: use Lua memory management",
+        ["MemFree"] = "internal: use Lua memory management",
+        ["GetStateStorage"] = "internal: state storage not exposed",
+        ["SetStateStorage"] = "internal: state storage not exposed",
+        ["SaveIniSettingsToMemory"] = "internal: ini management not exposed",
+        ["LoadIniSettingsFromMemory"] = "internal: ini management not exposed",
+        // Draw list / font
+        ["GetWindowDrawList"] = "draw list API: complex pointer type, not exposed",
+        ["GetBackgroundDrawList"] = "draw list API: complex pointer type, not exposed",
+        ["GetForegroundDrawList"] = "draw list API: complex pointer type, not exposed",
+        ["GetFont"] = "font API: complex pointer type, not exposed",
+        ["GetFontBaked"] = "font API: complex pointer type, not exposed",
+        ["PushFont"] = "font API: font pointers not exposed",
+        ["PopFont"] = "font API: font pointers not exposed",
+        // Texture / image (requires ImTextureID)
+        ["Image"] = "ImTextureID: texture handle binding not implemented",
+        ["ImageWithBg"] = "ImTextureID: texture handle binding not implemented",
+        ["ImageButton"] = "ImTextureID: texture handle binding not implemented",
+        // Input text (callback-based)
+        ["InputText"] = "callback: requires ImGuiInputTextCallback, complex binding",
+        ["InputTextMultiline"] = "callback: requires ImGuiInputTextCallback",
+        ["InputTextWithHint"] = "callback: requires ImGuiInputTextCallback",
+        // Complex widget APIs
+        ["ColorPicker4"] = "complex: many params, float array + callback",
+        ["ColorConvertRGBtoHSV"] = "output pointers: use Lua math instead",
+        ["ColorConvertHSVtoRGB"] = "output pointers: use Lua math instead",
+        ["ListBox"] = "callback/array overloads: complex binding",
+        ["Combo"] = "callback/array overloads: complex binding",
+        ["PlotLines"] = "callback/array overloads: complex binding",
+        ["PlotHistogram"] = "callback/array overloads: complex binding",
+        // Multi-select
+        ["BeginMultiSelect"] = "multi-select API: complex pointer return type",
+        ["EndMultiSelect"] = "multi-select API: complex pointer return type",
+        ["SetNextItemSelectionUserData"] = "multi-select API: selection data not exposed",
+        // Style
+        ["ShowStyleEditor"] = "style editor: debug tool, not needed in production",
+        ["StyleColorsDark"] = "style: managed by framework setup",
+        ["StyleColorsLight"] = "style: managed by framework setup",
+        ["StyleColorsClassic"] = "style: managed by framework setup",
+        // Constraints / shortcuts
+        ["SetNextWindowSizeConstraints"] = "callback: requires custom resize callback",
+        ["Shortcut"] = "shortcut API: ImGuiKeyChord binding not implemented",
+        ["SetNextItemShortcut"] = "shortcut API: ImGuiKeyChord binding not implemented",
+        // Mouse
+        ["IsMousePosValid"] = "pointer param: optional ImVec2* not supported",
+        // Debug
+        ["DebugLog"] = "internal: debug logging not exposed",
+        ["DebugLogV"] = "varargs: internal debug logging",
+    };
+
+    /// <summary>
+    /// Reasons for functions filtered by IsVararg/HasUnsupportedParam
+    /// </summary>
+    private static readonly Dictionary<string, string> DynamicSkipReasons = new()
+    {
+        // varargs format functions
+        ["Text"] = "varargs: Lua has string.format",
+        ["TextV"] = "varargs: va_list variant",
+        ["TextColored"] = "varargs: Lua has string.format",
+        ["TextColoredV"] = "varargs: va_list variant",
+        ["TextDisabled"] = "varargs: Lua has string.format",
+        ["TextDisabledV"] = "varargs: va_list variant",
+        ["TextWrapped"] = "varargs: Lua has string.format",
+        ["TextWrappedV"] = "varargs: va_list variant",
+        ["BulletText"] = "varargs: Lua has string.format",
+        ["BulletTextV"] = "varargs: va_list variant",
+        ["LabelText"] = "varargs: Lua has string.format",
+        ["LabelTextV"] = "varargs: va_list variant",
+        ["SetTooltip"] = "varargs: Lua has string.format",
+        ["SetTooltipV"] = "varargs: va_list variant",
+        ["SetItemTooltip"] = "varargs: Lua has string.format",
+        ["SetItemTooltipV"] = "varargs: va_list variant",
+        ["LogText"] = "varargs: Lua has string.format",
+        ["LogTextV"] = "varargs: va_list variant",
+        ["TreeNodeV"] = "varargs: va_list variant of TreeNode",
+        ["TreeNodeExV"] = "varargs: va_list variant of TreeNodeEx",
+        // void* / generic scalar
+        ["DragScalar"] = "void* data: type-specific DragFloat/DragInt already bound",
+        ["DragScalarN"] = "void* data: type-specific variants already bound",
+        ["SliderScalar"] = "void* data: type-specific SliderFloat/SliderInt already bound",
+        ["SliderScalarN"] = "void* data: type-specific variants already bound",
+        ["VSliderScalar"] = "void* data: type-specific VSliderFloat/VSliderInt already bound",
+        ["InputScalar"] = "void* data: type-specific InputFloat/InputInt already bound",
+        ["InputScalarN"] = "void* data: type-specific variants already bound",
+        // Complex return types
+        ["AcceptDragDropPayload"] = "pointer return: ImGuiPayload* not exposed",
+        ["GetDragDropPayload"] = "pointer return: ImGuiPayload* not exposed",
+        ["SetDragDropPayload"] = "void* data: payload data binding not implemented",
+        ["TableGetSortSpecs"] = "pointer return: ImGuiTableSortSpecs* not exposed",
+        ["GetDrawListSharedData"] = "pointer return: internal shared data",
+    };
+
+    SkipReport IModule.CollectSkips(TypeRegistry reg)
+    {
+        var funcs = reg.AllDecls.OfType<Funcs>()
+            .Where(f => f.Namespace == "ImGui")
+            .ToList();
+
+        // Check each individual overload (not just unique names)
+        var skipFuncs = new List<SkipEntry>();
+        foreach (var f in funcs)
+        {
+            // Same filters as BuildSpec — if this overload passes, it's bound
+            if (!SkipFunctions.Contains(f.Name) && !IsVararg(f) && !HasUnsupportedParam(f))
+                continue;
+            var reason = SkipReasons.GetValueOrDefault(f.Name)
+                ?? DynamicSkipReasons.GetValueOrDefault(f.Name)
+                ?? "unsupported parameter or return type";
+            skipFuncs.Add(new SkipEntry(f.Name, reason));
+        }
+
+        // Enum skips: track unique bound names, skip duplicates and non-ImGui enums
+        var boundEnumNames = reg.AllDecls.OfType<Enums>()
+            .Where(e => e.Name.StartsWith("ImGui"))
+            .GroupBy(e => e.Name).Select(g => g.First())
+            .Select(e => e.Name).ToHashSet();
+        var seenEnumNames = new HashSet<string>();
+        var skipEnums = new List<SkipEntry>();
+        foreach (var e in reg.OwnEnums)
+        {
+            if (boundEnumNames.Contains(e.Name) && seenEnumNames.Add(e.Name)) continue;
+            var reason = e.Name.StartsWith("ImGui")
+                ? "duplicate enum declaration"
+                : "non-ImGui enum: internal draw/font/texture type";
+            skipEnums.Add(new SkipEntry(e.Name, reason));
+        }
+
+        return new SkipReport(ModuleName, skipFuncs, [], skipEnums);
+    }
+
     private EnumBinding ConvertEnum(Enums e)
     {
         var fieldName = StripImGuiPrefix(e.Name);

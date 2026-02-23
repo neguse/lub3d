@@ -199,6 +199,48 @@ public class StbImageModule : IModule
 
         """;
 
+    // ===== Skip declarations =====
+
+    private static readonly List<SkipEntry> SkippedFuncs = [
+        // Handled by custom wrapper (l_stbi_load etc.) — stbi_load, stbi_load_from_memory, stbi_info
+        // are tracked as bound via ExtraLuaRegs name recovery
+        new("stbi_image_free", "internal: handled by l_stbi_load wrappers"),
+        new("stbi_info_from_memory", "output pointer params: use l_stbi_info with file path"),
+        // Callback-based I/O
+        new("stbi_load_from_callbacks", "callback I/O: Lua has lub3d.fs, use load/load_from_memory"),
+        new("stbi_info_from_callbacks", "callback I/O: not useful from Lua"),
+        new("stbi_is_hdr_from_callbacks", "callback I/O: not useful from Lua"),
+        new("stbi_is_16_bit_from_callbacks", "callback I/O: not useful from Lua"),
+        new("stbi_loadf_from_callbacks", "callback I/O: not useful from Lua"),
+        new("stbi_load_16_from_callbacks", "callback I/O: not useful from Lua"),
+        // FILE*-based I/O (not portable to WASM)
+        new("stbi_load_from_file", "FILE* I/O: not portable to WASM, use load"),
+        new("stbi_load_from_file_16", "FILE* I/O: not portable to WASM"),
+        new("stbi_loadf_from_file", "FILE* I/O: not portable to WASM"),
+        new("stbi_info_from_file", "FILE* I/O: not portable to WASM, use info"),
+        new("stbi_is_hdr_from_file", "FILE* I/O: not portable to WASM"),
+        new("stbi_is_16_bit_from_file", "FILE* I/O: not portable to WASM"),
+        // 16-bit / HDR / GIF loading (uncommon use cases)
+        new("stbi_load_16", "16-bit loading: uncommon, not needed for game textures"),
+        new("stbi_load_16_from_memory", "16-bit loading: uncommon"),
+        new("stbi_loadf", "HDR float loading: uncommon"),
+        new("stbi_loadf_from_memory", "HDR float loading: uncommon"),
+        new("stbi_load_gif_from_memory", "GIF animation: uncommon use case"),
+        // zlib internals
+        new("stbi_zlib_decode_malloc", "zlib internal: not useful from Lua"),
+        new("stbi_zlib_decode_malloc_guesssize", "zlib internal: not useful from Lua"),
+        new("stbi_zlib_decode_malloc_guesssize_headerflag", "zlib internal: not useful from Lua"),
+        new("stbi_zlib_decode_buffer", "zlib internal: not useful from Lua"),
+        new("stbi_zlib_decode_noheader_malloc", "zlib internal: not useful from Lua"),
+        new("stbi_zlib_decode_noheader_buffer", "zlib internal: not useful from Lua"),
+    ];
+
+    private static readonly List<SkipEntry> SkippedStructs = [
+        new("stbi_io_callbacks", "callback I/O struct: not needed, use load/load_from_memory"),
+    ];
+
+    SkipReport IModule.CollectSkips(TypeRegistry reg) => new(ModuleName, SkippedFuncs, SkippedStructs, []);
+
     // ===== ヘルパー =====
 
     private static string? GetLink(Decl d, SourceLink? sourceLink)

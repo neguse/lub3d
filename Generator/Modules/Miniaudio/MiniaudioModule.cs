@@ -482,6 +482,314 @@ public class MiniaudioModule : IModule
 
         """;
 
+    // ===== Skip declarations =====
+
+    /// <summary>
+    /// Prefix-based categorization for unbound functions
+    /// </summary>
+    private static readonly (string Prefix, string Reason)[] FuncSkipRules = [
+        // Memory / allocator
+        ("ma_malloc", "low-level allocator: not useful from Lua"),
+        ("ma_free", "low-level allocator: not useful from Lua"),
+        ("ma_calloc", "low-level allocator: not useful from Lua"),
+        ("ma_realloc", "low-level allocator: not useful from Lua"),
+        ("ma_aligned_malloc", "low-level allocator: not useful from Lua"),
+        ("ma_aligned_free", "low-level allocator: not useful from Lua"),
+        // OS primitives
+        ("ma_mutex_", "OS primitive: Lua is single-threaded"),
+        ("ma_event_", "OS primitive: threading not exposed"),
+        ("ma_semaphore_", "OS primitive: threading not exposed"),
+        ("ma_spinlock_", "OS primitive: threading not exposed"),
+        ("ma_fence_", "OS primitive: threading not exposed"),
+        // PCM conversion / DSP primitives
+        ("ma_pcm_s16_to_", "PCM format conversion: low-level DSP"),
+        ("ma_pcm_s24_to_", "PCM format conversion: low-level DSP"),
+        ("ma_pcm_s32_to_", "PCM format conversion: low-level DSP"),
+        ("ma_pcm_u8_to_", "PCM format conversion: low-level DSP"),
+        ("ma_pcm_f32_to_", "PCM format conversion: low-level DSP"),
+        ("ma_pcm_convert", "PCM format conversion: low-level DSP"),
+        ("ma_pcm_rb_", "PCM ring buffer: low-level DSP"),
+        ("ma_convert_pcm_frames", "PCM format conversion: low-level DSP"),
+        ("ma_convert_frames", "frame conversion: low-level DSP"),
+        ("ma_interleave_", "PCM interleave: low-level DSP"),
+        ("ma_deinterleave_", "PCM deinterleave: low-level DSP"),
+        ("ma_mix_pcm_frames", "PCM mixing: low-level DSP"),
+        // Volume / clip / silence / copy / blend
+        ("ma_apply_volume_factor_", "volume DSP: low-level sample processing"),
+        ("ma_copy_and_apply_volume_", "volume DSP: low-level sample processing"),
+        ("ma_clip_", "sample clipping: low-level DSP"),
+        ("ma_silence_pcm_frames", "PCM silence: low-level DSP"),
+        ("ma_copy_pcm_frames", "PCM copy: low-level DSP"),
+        ("ma_blend_f32", "sample blend: low-level DSP"),
+        ("ma_offset_pcm_frames_", "PCM pointer offset: low-level DSP"),
+        // Ring buffer
+        ("ma_rb_", "ring buffer: low-level DSP infrastructure"),
+        ("ma_duplex_rb_", "duplex ring buffer: low-level device infrastructure"),
+        // Filter / DSP nodes
+        ("ma_biquad", "biquad filter: low-level DSP node"),
+        ("ma_bpf", "band-pass filter: low-level DSP node"),
+        ("ma_hpf", "high-pass filter: low-level DSP node"),
+        ("ma_lpf", "low-pass filter: low-level DSP node"),
+        ("ma_hishelf", "high-shelf filter: low-level DSP node"),
+        ("ma_loshelf", "low-shelf filter: low-level DSP node"),
+        ("ma_notch", "notch filter: low-level DSP node"),
+        ("ma_peak", "peaking EQ filter: low-level DSP node"),
+        ("ma_delay", "delay effect: low-level DSP node"),
+        // Resampler
+        ("ma_resampler_", "resampler: low-level DSP"),
+        ("ma_linear_resampler_", "linear resampler: low-level DSP"),
+        // Channel converter / map
+        ("ma_channel_converter_", "channel converter: low-level DSP"),
+        ("ma_channel_map_", "channel map: low-level DSP"),
+        ("ma_channel_position_to_string", "channel utils: low-level DSP"),
+        // Data converter
+        ("ma_data_converter_", "data converter: low-level DSP pipeline"),
+        // Data source
+        ("ma_data_source_", "data source: low-level node graph API"),
+        // Audio buffer
+        ("ma_audio_buffer_", "audio buffer: low-level DSP, engine handles internally"),
+        // Paged audio buffer
+        ("ma_paged_audio_buffer_", "paged audio buffer: low-level resource manager internal"),
+        // Panner / fader / gainer / spatializer (low-level DSP, engine handles internally)
+        ("ma_panner_", "panner: low-level DSP, engine handles spatialization"),
+        ("ma_fader_", "fader: low-level DSP, engine handles fading"),
+        ("ma_gainer_", "gainer: low-level DSP, engine handles gain"),
+        ("ma_spatializer_listener_", "spatializer listener: low-level DSP, use engine listener API"),
+        ("ma_spatializer_", "spatializer: low-level DSP, engine handles spatialization"),
+        // Waveform / noise / pulse generators
+        ("ma_waveform_", "waveform generator: low-level DSP node"),
+        ("ma_noise_", "noise generator: low-level DSP node"),
+        ("ma_pulsewave_", "pulse wave generator: low-level DSP node"),
+        // Node graph
+        ("ma_node_graph_", "node graph: low-level DSP infrastructure"),
+        ("ma_node_", "audio node: low-level DSP infrastructure"),
+        ("ma_splitter_node_", "splitter node: low-level DSP infrastructure"),
+        // Decoder / encoder
+        ("ma_decoder_", "decoder: low-level, engine handles decoding"),
+        ("ma_encoder_", "encoder: recording not exposed"),
+        ("ma_decode_", "decode helper: low-level, engine handles decoding"),
+        ("ma_decoding_backend_", "decoding backend: low-level internal"),
+        // Device / context
+        ("ma_device_", "device API: engine abstracts device management"),
+        ("ma_context_", "context API: engine abstracts context management"),
+        // Resource manager
+        ("ma_resource_manager_", "resource manager: engine handles resources internally"),
+        // Job system
+        ("ma_job_", "job system: internal threading infrastructure"),
+        // Slot allocator
+        ("ma_slot_allocator_", "slot allocator: internal memory infrastructure"),
+        // Log
+        ("ma_log_", "log API: use sokol.log instead"),
+        // VFS
+        ("ma_vfs_", "VFS API: bound via custom vfs_new wrapper"),
+        ("ma_default_vfs_", "VFS API: bound via custom vfs_new wrapper"),
+        // Async notification
+        ("ma_async_notification_", "async notification: internal threading infrastructure"),
+        // Misc utility
+        ("ma_get_backend_", "backend query: engine abstracts backends"),
+        ("ma_get_bytes_per_", "format utility: low-level DSP"),
+        ("ma_get_enabled_backends", "backend query: engine abstracts backends"),
+        ("ma_get_format_name", "format utility: low-level DSP"),
+        ("ma_is_backend_enabled", "backend query: engine abstracts backends"),
+        ("ma_is_loopback_supported", "loopback query: device-level feature"),
+        ("ma_calculate_buffer_size_", "buffer size calc: low-level device utility"),
+        ("ma_version", "version query: not useful from Lua"),
+        ("ma_result_description", "error description: use Lua error handling"),
+        ("ma_device_id_equal", "device ID comparison: device API not exposed"),
+    ];
+
+    /// <summary>
+    /// Specific function names with reasons (for items not matching prefix rules)
+    /// </summary>
+    private static readonly Dictionary<string, string> FuncSkipNames = new()
+    {
+        // Engine internals not in high-level API
+        ["ma_engine_get_device"] = "engine internal: device access not exposed",
+        ["ma_engine_get_endpoint"] = "engine internal: endpoint node not exposed",
+        ["ma_engine_get_log"] = "engine internal: use sokol.log",
+        ["ma_engine_get_node_graph"] = "engine internal: node graph not exposed",
+        ["ma_engine_get_resource_manager"] = "engine internal: resource manager not exposed",
+        ["ma_engine_get_time"] = "engine internal: raw engine time, use stm_ timing",
+        ["ma_engine_set_time"] = "engine internal: raw engine time, use stm_ timing",
+        ["ma_engine_read_pcm_frames"] = "engine internal: low-level PCM read",
+        ["ma_engine_play_sound_ex"] = "engine internal: extended play, use play_sound",
+        ["ma_engine_node_config_init"] = "engine node: internal DSP node",
+        ["ma_engine_node_get_heap_size"] = "engine node: internal DSP node",
+        ["ma_engine_node_init"] = "engine node: internal DSP node",
+        ["ma_engine_node_init_preallocated"] = "engine node: internal DSP node",
+        ["ma_engine_node_uninit"] = "engine node: internal DSP node",
+        ["ma_engine_listener_get_cone"] = "output pointer: cone get via multiple out params",
+        ["ma_engine_listener_set_cone"] = "cone set: too many params for Lua convenience",
+        // Sound internals
+        ["ma_sound_config_init"] = "sound config: init handled by sound_init_from_file wrapper",
+        ["ma_sound_config_init_2"] = "sound config: init handled by sound_init_from_file wrapper",
+        ["ma_sound_init_from_file_w"] = "wide-char variant: not needed, use UTF-8",
+        ["ma_sound_init_from_data_source"] = "data source init: low-level, use sound_init_from_file",
+        ["ma_sound_init_from_file"] = "bound via custom l_ma_sound_new ExtraCCode wrapper",
+        ["ma_sound_init_copy"] = "sound copy: complex ownership, not exposed",
+        ["ma_sound_init_ex"] = "extended init: complex config, use sound_init_from_file",
+        ["ma_sound_get_cone"] = "output pointer: cone get via multiple out params",
+        ["ma_sound_set_cone"] = "cone set: too many params for Lua convenience",
+        ["ma_sound_get_cursor_in_pcm_frames"] = "output pointer: returns ma_result + uint64 out param",
+        ["ma_sound_get_cursor_in_seconds"] = "output pointer: returns ma_result + float out param",
+        ["ma_sound_get_data_format"] = "output pointer: multiple out params",
+        ["ma_sound_get_data_source"] = "internal: data source pointer not exposed",
+        ["ma_sound_get_direction_to_listener"] = "derived value: compute in Lua if needed",
+        ["ma_sound_get_engine"] = "internal: engine pointer not exposed",
+        ["ma_sound_get_length_in_pcm_frames"] = "output pointer: returns ma_result + uint64 out param",
+        ["ma_sound_get_length_in_seconds"] = "output pointer: returns ma_result + float out param",
+        ["ma_sound_set_end_callback"] = "callback: end callback not exposed",
+        ["ma_sound_set_fade_start_in_pcm_frames"] = "advanced fade: use set_fade_in_pcm_frames",
+        ["ma_sound_set_fade_start_in_milliseconds"] = "advanced fade: use set_fade_in_milliseconds",
+        ["ma_sound_set_stop_time_with_fade_in_pcm_frames"] = "advanced fade+stop: use separate set_stop_time + set_fade",
+        ["ma_sound_set_stop_time_with_fade_in_milliseconds"] = "advanced fade+stop: use separate set_stop_time + set_fade",
+        ["ma_sound_stop_with_fade_in_pcm_frames"] = "advanced fade+stop: use set_fade + stop",
+        ["ma_sound_stop_with_fade_in_milliseconds"] = "advanced fade+stop: use set_fade + stop",
+        ["ma_sound_reset_fade"] = "advanced fade control: rarely needed",
+        ["ma_sound_reset_start_time"] = "advanced timing: rarely needed",
+        ["ma_sound_reset_stop_time"] = "advanced timing: rarely needed",
+        ["ma_sound_reset_stop_time_and_fade"] = "advanced timing: rarely needed",
+        // Sound group (parallel to sound, engine manages internally)
+        ["ma_sound_group_config_init"] = "sound group: not exposed, use engine directly",
+        ["ma_sound_group_config_init_2"] = "sound group: not exposed",
+        ["ma_sound_group_init"] = "sound group: not exposed",
+        ["ma_sound_group_init_ex"] = "sound group: not exposed",
+        ["ma_sound_group_uninit"] = "sound group: not exposed",
+        ["ma_sound_group_start"] = "sound group: not exposed",
+        ["ma_sound_group_stop"] = "sound group: not exposed",
+        ["ma_sound_group_set_volume"] = "sound group: not exposed",
+        ["ma_sound_group_get_volume"] = "sound group: not exposed",
+        ["ma_sound_group_set_pan"] = "sound group: not exposed",
+        ["ma_sound_group_get_pan"] = "sound group: not exposed",
+        ["ma_sound_group_set_pan_mode"] = "sound group: not exposed",
+        ["ma_sound_group_get_pan_mode"] = "sound group: not exposed",
+        ["ma_sound_group_set_pitch"] = "sound group: not exposed",
+        ["ma_sound_group_get_pitch"] = "sound group: not exposed",
+        ["ma_sound_group_set_spatialization_enabled"] = "sound group: not exposed",
+        ["ma_sound_group_is_spatialization_enabled"] = "sound group: not exposed",
+        ["ma_sound_group_set_pinned_listener_index"] = "sound group: not exposed",
+        ["ma_sound_group_get_pinned_listener_index"] = "sound group: not exposed",
+        ["ma_sound_group_get_listener_index"] = "sound group: not exposed",
+        ["ma_sound_group_set_position"] = "sound group: not exposed",
+        ["ma_sound_group_get_position"] = "sound group: not exposed",
+        ["ma_sound_group_set_direction"] = "sound group: not exposed",
+        ["ma_sound_group_get_direction"] = "sound group: not exposed",
+        ["ma_sound_group_set_velocity"] = "sound group: not exposed",
+        ["ma_sound_group_get_velocity"] = "sound group: not exposed",
+        ["ma_sound_group_set_attenuation_model"] = "sound group: not exposed",
+        ["ma_sound_group_get_attenuation_model"] = "sound group: not exposed",
+        ["ma_sound_group_set_positioning"] = "sound group: not exposed",
+        ["ma_sound_group_get_positioning"] = "sound group: not exposed",
+        ["ma_sound_group_set_rolloff"] = "sound group: not exposed",
+        ["ma_sound_group_get_rolloff"] = "sound group: not exposed",
+        ["ma_sound_group_set_min_gain"] = "sound group: not exposed",
+        ["ma_sound_group_get_min_gain"] = "sound group: not exposed",
+        ["ma_sound_group_set_max_gain"] = "sound group: not exposed",
+        ["ma_sound_group_get_max_gain"] = "sound group: not exposed",
+        ["ma_sound_group_set_min_distance"] = "sound group: not exposed",
+        ["ma_sound_group_get_min_distance"] = "sound group: not exposed",
+        ["ma_sound_group_set_max_distance"] = "sound group: not exposed",
+        ["ma_sound_group_get_max_distance"] = "sound group: not exposed",
+        ["ma_sound_group_set_doppler_factor"] = "sound group: not exposed",
+        ["ma_sound_group_get_doppler_factor"] = "sound group: not exposed",
+        ["ma_sound_group_get_directional_attenuation_factor"] = "sound group: not exposed",
+        ["ma_sound_group_set_directional_attenuation_factor"] = "sound group: not exposed",
+        ["ma_sound_group_set_fade_in_pcm_frames"] = "sound group: not exposed",
+        ["ma_sound_group_set_fade_in_milliseconds"] = "sound group: not exposed",
+        ["ma_sound_group_set_start_time_in_pcm_frames"] = "sound group: not exposed",
+        ["ma_sound_group_set_start_time_in_milliseconds"] = "sound group: not exposed",
+        ["ma_sound_group_set_stop_time_in_pcm_frames"] = "sound group: not exposed",
+        ["ma_sound_group_set_stop_time_in_milliseconds"] = "sound group: not exposed",
+        ["ma_sound_group_is_playing"] = "sound group: not exposed",
+        ["ma_sound_group_get_time_in_pcm_frames"] = "sound group: not exposed",
+        ["ma_sound_group_get_current_fade_volume"] = "sound group: not exposed",
+        ["ma_sound_group_get_cone"] = "sound group: not exposed",
+        ["ma_sound_group_set_cone"] = "sound group: not exposed",
+        ["ma_sound_group_get_direction_to_listener"] = "sound group: not exposed",
+        ["ma_sound_group_get_engine"] = "sound group: not exposed",
+        // Sound inlined struct
+        ["ma_sound_inlined"] = "internal: inlined sound struct",
+        // Engine config (bound via config struct)
+        ["ma_engine_config_init"] = "bound via EngineConfig struct init",
+        // Stack allocator
+        ["ma_stack"] = "internal: stack allocator",
+    };
+
+    SkipReport IModule.CollectSkips(TypeRegistry reg)
+    {
+        // Build bound func set
+        var boundFuncs = new HashSet<string>();
+        foreach (var ot in OpaqueTypeDefs)
+        {
+            if (ot.InitFunc != null) boundFuncs.Add(ot.InitFunc);
+            if (ot.UninitFunc != null) boundFuncs.Add(ot.UninitFunc);
+            if (ot.ConfigInitFunc != null) boundFuncs.Add(ot.ConfigInitFunc);
+            var whitelist = FuncWhitelist.GetValueOrDefault(ot.CName) ?? [];
+            foreach (var name in whitelist) boundFuncs.Add(name);
+        }
+
+        var skipFuncs = new List<SkipEntry>();
+        foreach (var f in reg.OwnFuncs)
+        {
+            if (boundFuncs.Contains(f.Name)) continue;
+
+            // Check name-specific reasons first
+            if (FuncSkipNames.TryGetValue(f.Name, out var nameReason))
+            {
+                skipFuncs.Add(new SkipEntry(f.Name, nameReason));
+                continue;
+            }
+
+            // Check prefix-based rules
+            var matched = false;
+            foreach (var (prefix, reason) in FuncSkipRules)
+            {
+                if (f.Name.StartsWith(prefix) || f.Name == prefix)
+                {
+                    skipFuncs.Add(new SkipEntry(f.Name, reason));
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched)
+            {
+                skipFuncs.Add(new SkipEntry(f.Name, "low-level internal: not in high-level engine API scope"));
+            }
+        }
+
+        // Build bound struct set
+        var boundStructs = new HashSet<string> { "ma_engine_config" };
+        foreach (var ot in OpaqueTypeDefs)
+            boundStructs.Add(ot.CName);
+
+        var skipStructReasons = new Dictionary<string, string>
+        {
+            ["ma_sound_config"] = "sound config: handled internally by sound_init_from_file",
+            ["ma_sound_group_config"] = "sound group: not exposed",
+            ["ma_engine_node_config"] = "engine node: internal DSP node config",
+            ["ma_engine_node"] = "engine node: internal DSP node",
+            ["ma_vec3f"] = "math type: internal 3D vector, use lib/glm.lua",
+        };
+
+        var skipStructs = new List<SkipEntry>();
+        foreach (var s in reg.OwnStructs)
+        {
+            if (boundStructs.Contains(s.Name)) continue;
+            var reason = skipStructReasons.GetValueOrDefault(s.Name, "low-level internal: not in high-level engine API scope");
+            skipStructs.Add(new SkipEntry(s.Name, reason));
+        }
+
+        // Build bound enum set
+        var skipEnums = new List<SkipEntry>();
+        foreach (var e in reg.OwnEnums)
+        {
+            if (AllowedEnums.Contains(e.Name)) continue;
+            skipEnums.Add(new SkipEntry(e.Name, "low-level internal: not in high-level engine API scope"));
+        }
+
+        return new SkipReport(ModuleName, skipFuncs, skipStructs, skipEnums);
+    }
+
     // ===== ヘルパー =====
 
     private static string? GetLink(Decl d, SourceLink? sourceLink)
