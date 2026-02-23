@@ -152,12 +152,11 @@ The executable takes a Lua module name as argv[1] (default: `examples.hello`). `
 
 ## Workflow
 
-1. Check `doc/current.md` for the current project status
-2. Pick a task from `doc/tasks.md`
-3. Design the approach (architecture, scope of impact)
-4. Implement and pass tests
-5. Move the completed task from `doc/tasks.md` to `doc/done.md`, update `doc/current.md`
-6. Create a PR — merge only after Windows build and runtime verification
+1. Pick a task from `doc/tasks.md`
+2. Design the approach (architecture, scope of impact)
+3. Implement and pass tests
+4. Move the completed task from `doc/tasks.md` to `doc/done.md`
+5. Create a PR — merge only after Windows build and runtime verification
 
 ## Task Format (tasks.md)
 
