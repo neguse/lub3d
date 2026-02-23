@@ -21,7 +21,16 @@ jobs:
         run: sudo apt-get install -y clang
 
       - name: Generate bindings (C# Generator)
-        run: dotnet run --project Generator -- gen --deps deps --clang $(which clang)
+        run: |
+          dotnet run --project Generator -- gen --deps deps --clang $(which clang) | tee /tmp/generator-output.txt
+
+      - name: Post Generator metrics to summary
+        if: always()
+        run: |
+          echo '## Generator Metrics' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          sed -n '/^=== Generator Metrics ===/,/^TOTAL/p' /tmp/generator-output.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Setup Lua Language Server
         run: |
