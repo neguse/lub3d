@@ -7,7 +7,6 @@ local app = require("sokol.app")
 local gl = require("sokol.gl")
 local glue = require("sokol.glue")
 local log = require("lib.log")
-local glm = require("lib.glm")
 
 -- Game modules
 local const = require("examples.hakonotaiatari.const")

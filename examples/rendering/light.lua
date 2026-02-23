@@ -65,7 +65,6 @@ M.animate_enabled = true
 -- Color constants (from tutorial)
 local sunlight_color0 = glm.vec4(0.612, 0.365, 0.306, 1) -- sunrise/sunset
 local sunlight_color1 = glm.vec4(0.765, 0.573, 0.400, 1) -- midday
-local moonlight_color0 = glm.vec4(0.247, 0.384, 0.404, 1)
 local moonlight_color1 = glm.vec4(0.392, 0.537, 0.571, 1)
 local window_light_color = glm.vec4(0.765, 0.573, 0.400, 1)
 

@@ -82,7 +82,7 @@ function M.next_state()
 end
 
 -- Cleanup
-function M.cleanup(audio)
+function M.cleanup(_audio)
     -- Nothing to clean up (title SE is one-shot)
 end
 

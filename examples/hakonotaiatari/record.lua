@@ -1,6 +1,5 @@
 -- hakonotaiatari result/record screen
 
-local glm = require("lib.glm")
 local const = require("examples.hakonotaiatari.const")
 local font = require("examples.hakonotaiatari.font")
 local input = require("examples.hakonotaiatari.input")

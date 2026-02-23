@@ -7,10 +7,6 @@ local function log_info(msg)
     slog.func("audio", 3, 0, msg, 0, "manager.lua", nil)
 end
 
-local function log_warn(msg)
-    slog.func("audio", 2, 0, msg, 0, "manager.lua", nil)
-end
-
 local function log_err(msg)
     slog.func("audio", 1, 0, msg, 0, "manager.lua", nil)
 end

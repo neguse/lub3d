@@ -42,15 +42,9 @@ local wireframe_pipeline = nil
 local gakugaku = 0.0
 local gakugaku_time = 0.0
 
--- Simple hash for pseudo-random (matches shader)
-local function hash(x, y)
-    local dot = x * 127.1 + y * 311.7
-    return (math.sin(dot) * 43758.5453) % 1.0
-end
-
 -- Generate gakugaku offset for a vertex (like original RandomSwing)
 -- Returns dx, dy, dz offset to add to vertex position
-local function get_gakugaku_offset(vx, vy, vz)
+local function get_gakugaku_offset(_vx, _vy, _vz)
     if gakugaku <= 0 then return 0, 0, 0 end
 
     -- Original uses rand() - truly random each call

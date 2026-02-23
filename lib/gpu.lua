@@ -9,7 +9,7 @@ local shader = require("lib.shader")
 local M = {}
 
 -- Verify table __gc support at load time (requires Lua 5.2+)
-local gc_supported = (function()
+local _ = (function()
     local test_flag = { called = false }
     local _ = setmetatable({}, {
         __gc = function() test_flag.called = true end

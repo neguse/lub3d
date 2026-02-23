@@ -1,6 +1,5 @@
 -- lib/render_pass.lua
 -- Helper for render passes with common resource management
-local gfx = require("sokol.gfx")
 local gpu = require("lib.gpu")
 
 -- Optional notify module

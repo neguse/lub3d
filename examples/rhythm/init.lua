@@ -91,10 +91,10 @@ local function init_game(bms_path)
     playfield:init_with_chart(chart)
 
     -- Set up callbacks
-    playfield.on_note_hit = function(note, judgment)
+    playfield.on_note_hit = function(note, _judgment)
         audio_manager:play(note.wav_id)
     end
-    playfield.on_note_miss = function(note)
+    playfield.on_note_miss = function(_note)
         -- Could play a miss sound
     end
     playfield.on_judgment = function(result)
@@ -213,7 +213,7 @@ local function init()
     -- If no songs loaded, scan and save cache
     if song_scanner:count() == 0 then
         print("[rhythm] Scanning for BMS files in " .. BMS_BASE_PATH .. "...")
-        local count = song_scanner:scan(function(current, path)
+        local count = song_scanner:scan(function(current, _path)
             if current % 100 == 0 then
                 print(string.format("[rhythm] Scanning... %d files", current))
             end

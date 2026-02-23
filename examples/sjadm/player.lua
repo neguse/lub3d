@@ -185,7 +185,7 @@ function player:update(dt)
         self.game_time = self.game_time + dt
     end
 
-    local ix, iy = self.input.get_axis()
+    local ix, _iy = self.input.get_axis()
 
     -- Check ground state using contact count set by init.lua
     if self.touching_walls > 0 then

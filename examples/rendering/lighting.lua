@@ -340,9 +340,9 @@ render_pass.setup(M, {
 })
 
 ---Get pass descriptor for lighting (renders to swapchain)
----@param ctx rendering.Context
+---@param _ctx rendering.Context
 ---@return any? desc Pass descriptor, nil to skip
-function M.get_pass_desc(ctx)
+function M.get_pass_desc(_ctx)
     if not M.ensure_resources() then
         return nil
     end

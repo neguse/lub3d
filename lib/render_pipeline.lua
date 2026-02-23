@@ -43,7 +43,7 @@ end
 function M.execute(ctx, frame_data)
     for _, pass in ipairs(M.passes) do
         -- Check required outputs before calling get_pass_desc
-        local req_ok, missing = check_requirements(pass, ctx)
+        local req_ok, _missing = check_requirements(pass, ctx)
         if not req_ok then
             -- Silently skip - dependency not available (e.g., previous pass failed)
             goto continue

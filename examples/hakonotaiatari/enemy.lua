@@ -358,7 +358,7 @@ function EnemyGenerator:reset()
     self:next_level()
 end
 
-function EnemyGenerator:update(dt, enemies, player_pos)
+function EnemyGenerator:update(_dt, enemies, player_pos)
     self.level_tick = self.level_tick + 1
 
     -- Count living enemies

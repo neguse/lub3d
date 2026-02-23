@@ -1,6 +1,6 @@
 -- ImGui test example (using auto-generated snake_case API)
 local gfx = require("sokol.gfx")
-local app = require("sokol.app")
+require("sokol.app")
 local glue = require("sokol.glue")
 local imgui = require("imgui")
 

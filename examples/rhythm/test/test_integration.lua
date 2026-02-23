@@ -4,7 +4,6 @@ local Conductor = require("examples.rhythm.core.conductor")
 local InputHandler = require("examples.rhythm.input.handler")
 local GameState = require("examples.rhythm.game.state")
 local Playfield = require("examples.rhythm.game.playfield")
-local const = require("examples.rhythm.const")
 
 local function test_full_chart_load()
     local chart, err = converter.load("examples/rhythm/test/fixtures/simple.bms")

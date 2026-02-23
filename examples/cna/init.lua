@@ -18,7 +18,6 @@ local BOARD_H <const> = 16
 local STONE_W <const> = 16
 local STONE_H <const> = 16
 local PICK_MAX <const> = 6
-local RESERVE_NUM <const> = 6
 local JAMMER_TURN <const> = 5
 local WAIT_ERASE_FRAME <const> = 15
 local NUMBER_W <const> = 16

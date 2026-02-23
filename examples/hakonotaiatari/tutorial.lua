@@ -12,7 +12,7 @@ local M = {}
 local tick = 0
 
 -- Initialize tutorial screen
-function M.init(camera, audio)
+function M.init(camera, _audio)
     tick = 0
 
     if camera then
@@ -76,7 +76,7 @@ function M.next_state()
 end
 
 -- Cleanup
-function M.cleanup(audio)
+function M.cleanup(_audio)
     -- Nothing to clean up
 end
 

@@ -1,7 +1,6 @@
 -- hakonotaiatari field rendering
 -- Ground plane with grid pattern
 
-local gl = require("sokol.gl")
 local glm = require("lib.glm")
 local const = require("examples.hakonotaiatari.const")
 local renderer = require("examples.hakonotaiatari.renderer")
@@ -42,7 +41,7 @@ function M.render()
 end
 
 -- Render field for title screen (with rotation)
-function M.render_title(angle)
+function M.render_title(_angle)
     local r, g, b = const.argb_to_rgb(FIELD_COLOR)
     local L <const> = const.FIELD_LF * 0.5
 
