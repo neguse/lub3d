@@ -93,6 +93,10 @@ deps/                   Git submodules
   bc7enc_rdo/           BC7 encoder
   3d-game-shaders-for-beginners/  Reference shaders/assets
 examples/               Sample Lua applications
+doc/                    Development documents
+  current.md            Current project status
+  tasks.md              Pending tasks
+  done.md               Completed task log
 ```
 
 ## Lua Modules
@@ -130,7 +134,7 @@ Conditional:
 
 Pipeline: Clang AST → TypeRegistry → ModuleSpec → C/C++ bindings + LuaCATS annotations
 
-設計原則は [Generator/README.md](Generator/README.md) を参照。
+See [Generator/README.md](Generator/README.md) for design principles.
 
 - Sokol modules: inherit `SokolModule`, override `ModuleName`/`Prefix` + hooks
 - Dear ImGui: `IModule` direct, C++ namespace-based, clang++ with `-std=c++17`
@@ -145,6 +149,46 @@ build\win-d3d11-debug\examples\lub3d-example.exe examples.triangle  # Another mo
 ```
 
 The executable takes a Lua module name as argv[1] (default: `examples.hello`). `lib/boot.lua` loads the module via `require()`, extracts `app.Desc` fields from the module table, and calls `app.Run()`.
+
+## Workflow
+
+1. Check `doc/current.md` for the current project status
+2. Pick a task from `doc/tasks.md`
+3. Design the approach (architecture, scope of impact)
+4. Implement and pass tests
+5. Record in `doc/done.md`, update `doc/current.md`
+6. Create a PR — merge only after Windows build and runtime verification
+
+## Task Format (tasks.md)
+
+```
+### Task name
+- Background: why this task exists (the problem, motivation)
+- Requirements: what "done" looks like (acceptance criteria)
+- Approach: chosen design, affected components, key trade-offs
+- Alternatives rejected: other options considered and why they were dropped
+```
+
+Keep it lightweight — a few bullet points per section is enough. Not every task needs all sections; small bug fixes can skip Approach/Alternatives.
+
+## Completed Task Format (done.md)
+
+```
+### Task name ✓ (YYYY-MM-DD)
+- What was done (bullet points)
+- Files / components changed
+- What went well: approaches worth reusing
+- Decisions: trade-offs considered, alternatives rejected and why
+- Remaining: leftover work (if any)
+```
+
+## Development Principles
+
+**Sustainability over speed.** Prioritize code that is readable, fixable, and extensible over shipping fast.
+- Reproduce bugs with real data before designing a fix. Investigate the root cause, not just the symptoms.
+- A task is not done until tests pass, design decisions are recorded, and docs are updated.
+- Finalize task names after investigation. Use a tentative title during the hypothesis phase; update tasks.md once the root cause is identified.
+- **PRs required**: Direct pushes to master are not allowed. Always branch and go through a PR, since Windows compilation and runtime verification are necessary.
 
 ## Conventions
 
