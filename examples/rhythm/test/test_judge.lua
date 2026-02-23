@@ -1,6 +1,5 @@
 --- Tests for JudgeEngine module
 local JudgeEngine = require("examples.rhythm.core.judge")
-local const = require("examples.rhythm.const")
 
 -- Helper: create a mock note
 local function make_note(lane, time_us, note_type)

@@ -191,8 +191,6 @@ function M.render_ui()
     font.draw_text("POWER", -0.95, -0.85, 0.025, 0.6, 0.6, 0.6)
 
     -- Draw gauge background
-    local gauge_width = 0.4
-    local gauge_height = 0.03
     local gauge_x = -0.95
     local gauge_y = -0.92
 

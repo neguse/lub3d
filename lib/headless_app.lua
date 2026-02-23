@@ -4,6 +4,7 @@
 local M = {}
 
 -- Configuration (can be set from C via _headless_frames global)
+---@diagnostic disable-next-line: global_usage
 M._frames = _headless_frames or 10
 M._width = 640
 M._height = 480
@@ -23,7 +24,7 @@ M.Desc = function(desc)
 end
 
 -- app.run() compatible function
-function M.run(desc)
+function M.run(_desc)
     local stm = require("sokol.time")
     stm.setup()
 
@@ -306,23 +307,23 @@ function M.cancel_quit() end
 
 function M.consume_event() end
 
-function M.show_mouse(show) end
+function M.show_mouse(_show) end
 
-function M.lock_mouse(lock) end
+function M.lock_mouse(_lock) end
 
 function M.mouse_shown() return true end
 
 function M.mouse_locked() return false end
 
-function M.set_mouse_cursor(cursor) end
+function M.set_mouse_cursor(_cursor) end
 
 function M.get_mouse_cursor() return M.MouseCursor.DEFAULT end
 
-function M.bind_mouse_cursor_image(cursor, desc) return cursor end
+function M.bind_mouse_cursor_image(cursor, _desc) return cursor end
 
-function M.unbind_mouse_cursor_image(cursor) end
+function M.unbind_mouse_cursor_image(_cursor) end
 
-function M.show_keyboard(show) end
+function M.show_keyboard(_show) end
 
 function M.keyboard_shown() return false end
 
@@ -332,17 +333,17 @@ function M.userdata() return nil end
 
 function M.query_desc() return callbacks end
 
-function M.set_clipboard_string(str) end
+function M.set_clipboard_string(_str) end
 
 function M.get_clipboard_string() return "" end
 
-function M.set_window_title(str) end
+function M.set_window_title(_str) end
 
-function M.set_icon(icon_desc) end
+function M.set_icon(_icon_desc) end
 
 function M.get_num_dropped_files() return 0 end
 
-function M.get_dropped_file_path(index) return "" end
+function M.get_dropped_file_path(_index) return "" end
 
 -- Environment/Swapchain functions (return dummy values)
 function M.get_environment()
@@ -370,11 +371,11 @@ function M.egl_get_display() return nil end
 
 function M.egl_get_context() return nil end
 
-function M.html5_ask_leave_site(ask) end
+function M.html5_ask_leave_site(_ask) end
 
-function M.html5_get_dropped_file_size(index) return 0 end
+function M.html5_get_dropped_file_size(_index) return 0 end
 
-function M.html5_fetch_dropped_file(request) end
+function M.html5_fetch_dropped_file(_request) end
 
 function M.macos_get_window() return nil end
 

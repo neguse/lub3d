@@ -1,7 +1,6 @@
 --- BMS Song Scanner
 --- Scans directories for BMS files and extracts metadata
 local fs = require("lub3d.fs")
-local parser = require("examples.rhythm.bms.parser")
 
 ---@class SongEntry
 ---@field path string BMS file path

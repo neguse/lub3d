@@ -1,7 +1,6 @@
 -- examples/rendering/ctx.lua
 -- Shared context for rendering pipeline
 local gfx = require("sokol.gfx")
-local app = require("sokol.app")
 local gpu = require("lib.gpu")
 local rt = require("lib.render_target")
 

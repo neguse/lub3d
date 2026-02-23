@@ -2,7 +2,6 @@
 -- 2D sprite batch renderer built on sokol.gfx
 -- Provides Ebiten-like DrawImage abstraction over gfx pipeline
 local gfx = require("sokol.gfx")
-local glue = require("sokol.glue")
 local gpu = require("lib.gpu")
 local shader_mod = require("lib.shader")
 local util = require("lib.util")
@@ -92,9 +91,6 @@ local function get_ibuf_data()
 end
 
 -- Shared resources (lazily created, shared across batches)
--- Keep gpu-wrapped refs to prevent GC
-local shared_shader_ref = nil   -- gpu.Shader (prevents GC)
-local shared_pipeline_ref = nil -- gpu.Pipeline (prevents GC)
 local shared_shader = nil       -- raw handle for pipeline creation
 ---@type sokol.gfx.Pipeline? raw handle for draw calls
 local shared_pipeline = nil

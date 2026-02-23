@@ -277,10 +277,10 @@ local function load_model()
             local tx = f * (duv2v * e1x - duv1v * e2x)
             local ty = f * (duv2v * e1y - duv1v * e2y)
             local tz = f * (duv2v * e1z - duv1v * e2z)
-            local t1, t2, t3 = tangents[i1], tangents[i2], tangents[i3]
-            t1[1], t1[2], t1[3] = t1[1] + tx, t1[2] + ty, t1[3] + tz
-            t2[1], t2[2], t2[3] = t2[1] + tx, t2[2] + ty, t2[3] + tz
-            t3[1], t3[2], t3[3] = t3[1] + tx, t3[2] + ty, t3[3] + tz
+            local tan1, tan2, tan3 = tangents[i1], tangents[i2], tangents[i3]
+            tan1[1], tan1[2], tan1[3] = tan1[1] + tx, tan1[2] + ty, tan1[3] + tz
+            tan2[1], tan2[2], tan2[3] = tan2[1] + tx, tan2[2] + ty, tan2[3] + tz
+            tan3[1], tan3[2], tan3[3] = tan3[1] + tx, tan3[2] + ty, tan3[3] + tz
         end
         t_tangent = t_tangent + (os.clock() - t1)
 
