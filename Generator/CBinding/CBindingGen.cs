@@ -398,6 +398,7 @@ public static class CBindingGen
             if (ot.InitFunc != null)
                 sb += OpaqueConstructor(ot, structBindings);
             sb += OpaqueDestructor(ot);
+            sb += OpaqueDestroyMethod(ot);
             foreach (var m in ot.Methods)
                 sb += OpaqueMethod(ot, m);
             sb += OpaqueMethodTable(ot);
@@ -863,15 +864,22 @@ public static class CBindingGen
                     }
                 """
             : "";
+        var nuv = ot.Dependencies.Count;
+        var depCode = "";
+        foreach (var dep in ot.Dependencies)
+        {
+            depCode += $"    lua_pushvalue(L, {dep.ConstructorArgIndex});\n";
+            depCode += $"    lua_setiuservalue(L, -2, {dep.UservalueSlot});\n";
+        }
         return $$"""
             static int l_{{ot.CName}}_new(lua_State *L) {
                 {{ot.CName}}* p = ({{ot.CName}}*)malloc(sizeof({{ot.CName}}));
                 memset(p, 0, sizeof({{ot.CName}}));
             {{configInit}}{{initCall}}
-                {{ot.CName}}** pp = ({{ot.CName}}**)lua_newuserdatauv(L, sizeof({{ot.CName}}*), 0);
+                {{ot.CName}}** pp = ({{ot.CName}}**)lua_newuserdatauv(L, sizeof({{ot.CName}}*), {{nuv}});
                 *pp = p;
                 luaL_setmetatable(L, "{{ot.Metatable}}");
-                return 1;
+            {{depCode}}    return 1;
             }
 
             """;
@@ -884,6 +892,23 @@ public static class CBindingGen
             : "";
         return $$"""
             static int l_{{ot.CName}}_gc(lua_State *L) {
+                {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
+                if (*pp != NULL) {
+            {{uninitCall}}        free(*pp);
+                    *pp = NULL;
+                }
+                return 0;
+            }
+
+            """;
+    }
+
+    private static string OpaqueDestroyMethod(OpaqueTypeBinding ot)
+    {
+        if (ot.UninitFunc == null) return "";
+        var uninitCall = $"        {ot.UninitFunc}(*pp);\n";
+        return $$"""
+            static int l_{{ot.CName}}_destroy(lua_State *L) {
                 {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
                 if (*pp != NULL) {
             {{uninitCall}}        free(*pp);
@@ -923,10 +948,13 @@ public static class CBindingGen
 
     private static string OpaqueMethodTable(OpaqueTypeBinding ot)
     {
-        var entries = ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},");
+        var allEntries = new List<string>();
+        if (ot.UninitFunc != null)
+            allEntries.Add($"    {{\"destroy\", l_{ot.CName}_destroy}},");
+        allEntries.AddRange(ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},"));
         return $$"""
             static const luaL_Reg {{ot.CName}}_methods[] = {
-            {{string.Join("\n", entries)}}
+            {{string.Join("\n", allEntries)}}
                 {NULL, NULL}
             };
 

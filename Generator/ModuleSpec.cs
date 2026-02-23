@@ -101,6 +101,16 @@ public record EnumItemBinding(
     int? Value
 );
 
+/// <summary>
+/// 親子ライフタイム依存: コンストラクタ引数を uservalue スロットに保持し、
+/// 親が子より先に GC されるのを防ぐ (sol3 self_dependency 相当)
+/// </summary>
+public record DependencyBinding(
+    int ConstructorArgIndex,  // コンストラクタでの Lua スタック位置 (1-indexed)
+    int UservalueSlot,        // uservalue スロット番号 (1-indexed)
+    string Name               // 可読名 ("engine" 等)
+);
+
 public record OpaqueTypeBinding(
     string CName,
     string PascalName,
@@ -111,8 +121,12 @@ public record OpaqueTypeBinding(
     string? ConfigType,
     string? ConfigInitFunc,
     List<MethodBinding> Methods,
-    string? SourceLink
-);
+    string? SourceLink,
+    List<DependencyBinding>? Dependencies = null
+)
+{
+    public List<DependencyBinding> Dependencies { get; init; } = Dependencies ?? [];
+}
 
 public record MethodBinding(
     string CName,

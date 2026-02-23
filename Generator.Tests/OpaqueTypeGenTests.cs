@@ -182,4 +182,63 @@ public class OpaqueTypeGenTests
         var code = LuaCatsGen.Generate(spec);
         Assert.DoesNotContain("---@class sokol.test.Engine", code);
     }
+
+    // ===== destroy method generation =====
+
+    [Fact]
+    public void C_UninitFunc_GeneratesDestroyMethod()
+    {
+        var code = CBindingGen.Generate(OpaqueSpec());
+        Assert.Contains("l_ma_engine_destroy", code);
+        Assert.Contains("ma_engine_uninit(*pp)", code);
+    }
+
+    [Fact]
+    public void C_UninitFunc_MethodTableContainsDestroy()
+    {
+        var code = CBindingGen.Generate(OpaqueSpec());
+        Assert.Contains("{\"destroy\", l_ma_engine_destroy}", code);
+    }
+
+    [Fact]
+    public void Lua_UninitFunc_ContainsDestroyField()
+    {
+        var code = LuaCatsGen.Generate(OpaqueSpec());
+        Assert.Contains("---@field destroy fun(self: miniaudio.Engine)", code);
+    }
+
+    // ===== dependency uservalue slots =====
+
+    private static ModuleSpec OpaqueSpecWithDeps() => new(
+        "miniaudio", "ma_",
+        ["miniaudio.h"],
+        null,
+        [], [], [],
+        [],
+        OpaqueTypes:
+        [
+            new OpaqueTypeBinding(
+                "ma_sound", "Sound", "miniaudio.Sound", "miniaudio.Sound",
+                InitFunc: "ma_sound_init",
+                UninitFunc: "ma_sound_uninit",
+                ConfigType: null,
+                ConfigInitFunc: null,
+                Methods: [],
+                SourceLink: null,
+                Dependencies:
+                [
+                    new DependencyBinding(1, 1, "engine")
+                ]
+            )
+        ]
+    );
+
+    [Fact]
+    public void C_Dependencies_GeneratesUservalueSlots()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithDeps());
+        Assert.Contains("lua_newuserdatauv(L, sizeof(ma_sound*), 1)", code);
+        Assert.Contains("lua_pushvalue(L, 1)", code);
+        Assert.Contains("lua_setiuservalue(L, -2, 1)", code);
+    }
 }
