@@ -185,6 +185,7 @@ Keep it concise — a few bullet points per section is enough. Always fill in al
 ## Development Principles
 
 **Sustainability over speed.** Prioritize code that is readable, fixable, and extensible over shipping fast.
+- **No backward compatibility burden.** Don't spend effort preserving old interfaces. Focus on long-term essential value; break and fix callers in place.
 - Reproduce bugs with real data before designing a fix. Investigate the root cause, not just the symptoms.
 - A task is not done until tests pass, design decisions are recorded, and docs are updated.
 - Finalize task names after investigation. Use a tentative title during the hypothesis phase; update tasks.md once the root cause is identified.
