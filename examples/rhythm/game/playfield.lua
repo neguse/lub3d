@@ -68,7 +68,7 @@ end
 
 --- Update playfield logic
 ---@param current_time_us integer
----@param current_beat number
+---@param _current_beat number
 function Playfield:update(current_time_us, _current_beat)
     if not self.state.chart then
         return

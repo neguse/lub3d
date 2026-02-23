@@ -4,7 +4,6 @@
 local M = {}
 
 -- Configuration (can be set from C via _headless_frames global)
----@diagnostic disable-next-line: global_usage
 M._frames = _headless_frames or 10
 M._width = 640
 M._height = 480
