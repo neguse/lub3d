@@ -142,6 +142,8 @@ public static class LuaCatsGen
                 return FuncField(m.LuaName, allParams, ret, m.SourceLink);
             });
             sb += SourceComment(ot.SourceLink) + $"---@class {ot.LuaClassName}\n";
+            if (ot.UninitFunc != null)
+                sb += $"---@field destroy fun(self: {ot.LuaClassName})\n";
             sb += string.Join("\n", methodFields) + "\n\n";
         }
 

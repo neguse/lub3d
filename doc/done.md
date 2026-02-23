@@ -2,30 +2,34 @@
 
 <!-- Add newest entries at the top -->
 
-### T06: Research ownership models (sol3, WASI) and improve Generator abstractions ✓ (2026-02-23)
-- sol3 の ownership モデル (value/reference/smart pointer semantics) と WASI Component Model の resource モデル (own/borrow ハンドル) を調査
-- 現行 Generator の ValueStruct / OpaqueType / HandleType と sol3 / WASI の対応関係を整理
-- ギャップ分析: 依存ライフタイム追跡 (高)、明示的 destroy (中)、パラメータ ownership (低) を特定
-- Generator 改善の設計指針を策定: `DependencyBinding` (sol3 self_dependency 方式)、`HasExplicitDestroy` (WASI resource.drop 方式)
-- Files: `doc/ownership-research.md` (調査結果), `doc/ownership-design.md` (設計指針)
-- What went well: sol3 の uservalue 参照保持パターンが Lua 5.5 の `lua_setiuservalue` に直接マッピングできる
-- Decisions: WASI の `num_lends` カウンタは過剰と判断、sol3 方式の uservalue 参照保持を採用。ParamOwnership は将来 T07/T08 で実装
-- Remaining: ModuleSpec / CBindingGen / LuaCatsGen の実装、miniaudio PoC (設計指針 doc に詳細記載)
+### T10: Fix lubs check warnings (60 items) ✓ (2026-02-23)
+- Fixed 60 warnings from lubs check: removed unused requires (9), renamed unused params with `_` prefix (26), removed/cleaned unused variables (14), removed dead GC anchor declarations in sprite.lua (2), renamed shadowed variable in rendering/init.lua (1), suppressed global_usage in headless_app.lua (1)
+- lua-language-server `name-style-check` rejected `_` prefix as non-snake-case; fixed by adding `^_[a-z][a-z0-9_]*$` pattern to `function_param_name_style` and `local_name_style` in `.luarc.json`
+- Fixed `@param` annotation mismatches (lighting.lua ctx→_ctx, playfield.lua current_beat→_current_beat)
+- Removed invalid `global_usage` diagnostic suppress — it's a lubs-only code; lua-language-server uses `diagnostics.globals` instead
+- Files: 28 Lua files, `.luarc.json`
+- Tests: CI lua-lint + headless-test pass
+- What went well: discovered lubs vs lua-language-server diagnostic code differences — useful for future lint work
+- Decisions: allowed `_` prefix via `.luarc.json` pattern rather than reverting to original names. 3 lubs-side type precision issues left unfixed (not our problem)
+- Remaining: none
 
-### T09 + T01-T05: Skip-aware metrics + full audit of all modules (2026-02-23)
-- Added `SkipEntry`/`SkipReport` records to `Metrics.cs` for declaring intentionally skipped declarations with reasons
-- Added `CollectSkips()` default method to `IModule` interface and `virtual` method to `SokolModule` base class
-- Extended `ModuleMetrics` with `SkippedFuncs/SkippedStructs/SkippedEnums` counts and `AudCov` column (`Bound / (Parsed - Skipped)`)
-- `CollectUnbound()` now returns `(UnboundReport, SkipReport?)` tuple; `PrintUnbound()` separates "Unhandled" from "Intentionally Skipped"
-- Wired `CollectSkips()` in all 5 module generation sections of `Program.cs`
-- Implemented `CollectSkips` with reason-annotated skip lists in all modules:
-  - **Sokol** (10 modules): Time (1 func), DebugText (3 funcs), Gl (4 funcs), Shape (2 funcs), Imgui (2 structs)
-  - **StbImage**: 25 funcs + 1 struct (callback I/O, FILE* I/O, 16-bit/HDR/GIF, zlib internals)
-  - **ImGui**: Dynamic skip generation for 99 func overloads + 4 enum duplicates (varargs, unsupported params, context management)
-  - **Miniaudio**: Dynamic skip generation for 851 funcs + 178 structs + 42 enums with prefix-based rules (~60 categories)
-  - **Box2D**: Dynamic skip generation for 126 funcs + 30 structs + 1 enum with explicit reasons
-- All 14 modules show **100% AudCov** with 0 unhandled declarations
-- Files changed: `IModule.cs`, `Metrics.cs`, `Program.cs`, `SokolModule.cs`, `Time.cs`, `DebugText.cs`, `Gl.cs`, `Shape.cs`, `Imgui.cs` (Sokol), `ImguiModule.cs`, `MiniaudioModule.cs`, `Box2dModule.cs`, `StbImageModule.cs`
-- What went well: Dynamic skip generation (iterating parsed AST against bound set) worked well for large modules — avoids maintaining static lists that can get stale
-- Decisions: AudCov capped at 100% to handle items both bound (via custom wrappers counted in BoundFuncs) and skipped (with reason). UninitFunc/ConfigInitFunc now counted in BoundFuncs. Overload-aware skip counting for ImGui.
-- Remaining: None — all modules fully audited
+### T06: Research ownership models (sol3, WASI) ✓ (2026-02-23)
+- Researched sol3 ownership model (value/reference/smart pointer semantics) and WASI Component Model resource model (own/borrow handles)
+- Mapped current Generator patterns (ValueStruct/OpaqueType/HandleType) to sol3/WASI equivalents
+- Gap analysis: dependency lifetime tracking (high priority), explicit destroy (medium), parameter ownership (low)
+- Designed Generator improvements: `DependencyBinding` (sol3 self_dependency approach), destroy auto-generation (WASI resource.drop approach)
+- Files: `doc/ownership-research.md`, `doc/ownership-design.md`
+- Tests: none (research/documentation task)
+- What went well: sol3's uservalue reference pattern maps directly to Lua 5.5 `lua_setiuservalue`
+- Decisions: rejected WASI `num_lends` counter as overkill for single-threaded Lua; adopted sol3 uservalue approach. ParamOwnership deferred to T07/T08
+- Remaining: implementation phase (tracked as T06-impl)
+
+### T09 + T01-T05: Skip-aware metrics + full module audit ✓ (2026-02-23)
+- Added `SkipEntry`/`SkipReport` to `Metrics.cs` for declaring intentionally skipped declarations with reasons
+- Extended `ModuleMetrics` with `AudCov` column (`Bound / (Parsed - Skipped)`)
+- Implemented `CollectSkips` across all modules: Sokol (10), StbImage, ImGui, Miniaudio, Box2D — all 14 modules at 100% AudCov
+- Files: `IModule.cs`, `Metrics.cs`, `Program.cs`, `SokolModule.cs`, 5 Sokol modules, `ImguiModule.cs`, `MiniaudioModule.cs`, `Box2dModule.cs`, `StbImageModule.cs`
+- Tests: 338 Generator.Tests pass
+- What went well: dynamic skip generation (iterating parsed AST against bound set) avoids maintaining static skip lists that go stale
+- Decisions: AudCov capped at 100% for items both bound and skipped. Overload-aware skip counting for ImGui
+- Remaining: none

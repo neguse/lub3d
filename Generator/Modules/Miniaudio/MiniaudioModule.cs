@@ -325,9 +325,11 @@ public class MiniaudioModule : IModule
                 free(p);
                 return luaL_error(L, "ma_sound_init_from_file failed: %d", result);
             }
-            ma_sound** pp = (ma_sound**)lua_newuserdatauv(L, sizeof(ma_sound*), 0);
+            ma_sound** pp = (ma_sound**)lua_newuserdatauv(L, sizeof(ma_sound*), 1);
             *pp = p;
             luaL_setmetatable(L, "miniaudio.Sound");
+            lua_pushvalue(L, 1);
+            lua_setiuservalue(L, -2, 1);
             return 1;
         }
 

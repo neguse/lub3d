@@ -459,4 +459,16 @@ public class MiniaudioModuleTests
         Assert.Contains("---@class miniaudio", code);
         Assert.Contains("---@field engine_init fun(config?: miniaudio.EngineConfig): miniaudio.Engine", code);
     }
+
+    // ===== ownership: sound → engine dependency =====
+
+    [Fact]
+    public void GenerateC_Sound_StoresEngineReference()
+    {
+        var reg = TypeRegistry.FromJson(MiniaudioJson);
+        var mod = new MiniaudioModule();
+        var code = mod.GenerateC(reg, PrefixToModule);
+        // l_ma_sound_new should store engine in uservalue slot 1
+        Assert.Contains("lua_setiuservalue(L, -2, 1)", code);
+    }
 }

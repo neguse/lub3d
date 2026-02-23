@@ -156,7 +156,7 @@ The executable takes a Lua module name as argv[1] (default: `examples.hello`). `
 2. Pick a task from `doc/tasks.md`
 3. Design the approach (architecture, scope of impact)
 4. Implement and pass tests
-5. Record in `doc/done.md`, update `doc/current.md`
+5. Move the completed task from `doc/tasks.md` to `doc/done.md`, update `doc/current.md`
 6. Create a PR — merge only after Windows build and runtime verification
 
 ## Task Format (tasks.md)
@@ -177,6 +177,7 @@ Keep it concise — a few bullet points per section is enough. Always fill in al
 ### Task name ✓ (YYYY-MM-DD)
 - What was done (bullet points)
 - Files / components changed
+- Tests: what tests were added or run, with counts
 - What went well: approaches worth reusing
 - Decisions: trade-offs considered, alternatives rejected and why
 - Remaining: leftover work (if any)
