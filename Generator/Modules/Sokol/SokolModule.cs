@@ -22,6 +22,10 @@ public abstract class SokolModule : IModule
     protected virtual IEnumerable<(string LuaName, string CFunc)> ExtraLuaRegs => [];
     protected virtual IEnumerable<FuncBinding> ExtraLuaFuncs => [];
 
+    // ===== CollectSkips =====
+
+    public virtual SkipReport CollectSkips(TypeRegistry reg) => new(ModuleName, [], [], []);
+
     // ===== BuildSpec =====
 
     public ModuleSpec BuildSpec(TypeRegistry reg, Dictionary<string, string> prefixToModule, SourceLink? sourceLink = null)

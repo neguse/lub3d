@@ -903,6 +903,195 @@ public class Box2dModule : IModule
 
         """;
 
+    // ===== Skip declarations =====
+
+    /// <summary>
+    /// Reasons for explicitly skipped functions (in SkipFuncs)
+    /// </summary>
+    private static readonly Dictionary<string, string> FuncSkipReasons = new()
+    {
+        // DebugDraw
+        ["b2World_Draw"] = "debug draw: requires callback struct, not bound",
+        ["b2DefaultDebugDraw"] = "debug draw: requires callback struct, not bound",
+        // UserData (void*)
+        ["b2World_SetUserData"] = "void* userData: not useful from Lua",
+        ["b2World_GetUserData"] = "void* userData: not useful from Lua",
+        ["b2Body_SetUserData"] = "void* userData: not useful from Lua",
+        ["b2Body_GetUserData"] = "void* userData: not useful from Lua",
+        ["b2Shape_SetUserData"] = "void* userData: not useful from Lua",
+        ["b2Shape_GetUserData"] = "void* userData: not useful from Lua",
+        ["b2Joint_SetUserData"] = "void* userData: not useful from Lua",
+        ["b2Joint_GetUserData"] = "void* userData: not useful from Lua",
+        // Memory dump
+        ["b2World_DumpMemoryStats"] = "debug tool: memory stats not exposed",
+        // Custom wrapper functions (bound via ExtraCCode)
+        ["b2World_CollideMover"] = "bound via custom ExtraCCode wrapper",
+        ["b2World_SetFrictionCallback"] = "bound via custom ExtraCCode wrapper",
+        ["b2World_SetRestitutionCallback"] = "bound via custom ExtraCCode wrapper",
+        ["b2ClipVector"] = "bound via custom ExtraCCode wrapper",
+        ["b2SolvePlanes"] = "bound via custom ExtraCCode wrapper",
+        // Array output (bound via ArrayAdapters)
+        ["b2Body_GetShapes"] = "bound via ArrayAdapter wrapper",
+        ["b2Body_GetJoints"] = "bound via ArrayAdapter wrapper",
+        ["b2Shape_GetSensorOverlaps"] = "bound via ArrayAdapter wrapper",
+        ["b2Chain_GetSegments"] = "bound via ArrayAdapter wrapper",
+        ["b2Body_GetContactData"] = "contact data: complex output struct array",
+        ["b2Shape_GetContactData"] = "contact data: complex output struct array",
+        // Output param (bound via manual FuncBinding)
+        ["b2Joint_GetConstraintTuning"] = "bound via manual IsOutput FuncBinding",
+        // PostCallPatch
+        ["b2DefaultWorldDef"] = "bound via PostCallPatch in BuildSpec",
+        // Allocator / Assert
+        ["b2SetAllocator"] = "allocator: internal memory management",
+        ["b2SetAssertFcn"] = "assert: internal error handling",
+        // Internal
+        ["b2World_EnableSpeculative"] = "internal: speculative contact control",
+        // Serialization
+        ["b2StoreWorldId"] = "ID serialization: internal persistence",
+        ["b2LoadWorldId"] = "ID serialization: internal persistence",
+        ["b2StoreBodyId"] = "ID serialization: internal persistence",
+        ["b2LoadBodyId"] = "ID serialization: internal persistence",
+        ["b2StoreShapeId"] = "ID serialization: internal persistence",
+        ["b2LoadShapeId"] = "ID serialization: internal persistence",
+        ["b2StoreChainId"] = "ID serialization: internal persistence",
+        ["b2LoadChainId"] = "ID serialization: internal persistence",
+        ["b2StoreJointId"] = "ID serialization: internal persistence",
+        ["b2LoadJointId"] = "ID serialization: internal persistence",
+        // Timer
+        ["b2GetMillisecondsAndReset"] = "output pointer: timer uses mutable pointer param",
+        // Yield
+        ["b2Yield"] = "OS primitive: threading yield",
+        // Internal assert
+        ["b2InternalAssertFcn"] = "internal: assertion handler",
+        // Hash
+        ["b2Hash"] = "internal: hash utility",
+        // Spring damper
+        ["b2SpringDamper"] = "internal: spring damper solver",
+        // Collision functions with unsupported param types (ConstPtr to unresolved struct)
+        ["b2CollideChainSegmentAndCapsule"] = "low-level collision: internal narrow-phase, complex params",
+        ["b2CollideChainSegmentAndPolygon"] = "low-level collision: internal narrow-phase, complex params",
+        ["b2ShapeCast"] = "low-level collision: complex input/output struct params",
+        ["b2ShapeDistance"] = "low-level collision: complex input/output struct params",
+        // Functions whose params resolve to unsupported types in BuildSpec
+        ["b2TransformPoint"] = "inline math: b2Transform param resolves to non-settable ValueStruct",
+        ["b2GetSweepTransform"] = "inline math: b2Sweep param resolves to void in BuildSpec",
+        ["b2SegmentDistance"] = "inline math: output pointer params",
+        ["b2PlaneSeparation"] = "inline math: b2Plane param handling",
+    };
+
+    /// <summary>
+    /// Reasons for struct skips (in SkipStructs)
+    /// </summary>
+    private static readonly Dictionary<string, string> StructSkipReasons = new()
+    {
+        // Math types → custom ValueStruct
+        ["b2Vec2"] = "math type: bound as ValueStruct {x,y} table",
+        ["b2Rot"] = "math type: bound as ValueStruct {c,s} table",
+        ["b2Transform"] = "math type: bound as ValueStruct {{px,py},{c,s}} table",
+        ["b2AABB"] = "math type: bound as ValueStruct {{lx,ly},{ux,uy}} table",
+        ["b2CosSin"] = "math type: bound as ValueStruct {cosine,sine} table",
+        ["b2Mat22"] = "math type: 2x2 matrix, use lib/glm.lua",
+        ["b2Plane"] = "math type: bound as ValueStruct {normal,offset} table",
+        // Event containers (bound via EventAdapters)
+        ["b2BodyEvents"] = "event container: bound via EventAdapter",
+        ["b2SensorEvents"] = "event container: bound via EventAdapter",
+        ["b2ContactEvents"] = "event container: bound via EventAdapter",
+        ["b2SensorBeginTouchEvent"] = "event element: bound via EventAdapter fields",
+        ["b2SensorEndTouchEvent"] = "event element: bound via EventAdapter fields",
+        ["b2ContactBeginTouchEvent"] = "event element: bound via EventAdapter fields",
+        ["b2ContactEndTouchEvent"] = "event element: bound via EventAdapter fields",
+        ["b2ContactHitEvent"] = "event element: bound via EventAdapter fields",
+        ["b2BodyMoveEvent"] = "event element: bound via EventAdapter fields",
+        // DebugDraw
+        ["b2DebugDraw"] = "debug draw: callback struct not bound",
+        // Internal
+        ["b2TreeStats"] = "internal: DynamicTree statistics",
+        ["b2DynamicTree"] = "internal: broad-phase DynamicTree",
+        // Collision internals
+        ["b2ManifoldPoint"] = "collision internal: accessed via manifold_point wrapper",
+        ["b2Manifold"] = "collision internal: accessed via manifold_* wrappers",
+        ["b2ContactData"] = "collision internal: complex contact data struct",
+        ["b2SimplexCache"] = "collision internal: GJK algorithm data",
+        ["b2Simplex"] = "collision internal: GJK algorithm data",
+        ["b2SimplexVertex"] = "collision internal: GJK algorithm data",
+        ["b2DistanceInput"] = "collision internal: distance query input",
+        ["b2DistanceOutput"] = "collision internal: distance query output",
+        ["b2SegmentDistanceResult"] = "collision internal: segment distance result",
+        ["b2ShapeCastPairInput"] = "collision internal: shape cast input",
+    };
+
+    SkipReport IModule.CollectSkips(TypeRegistry reg)
+    {
+        // Build bound func set (replicate BuildSpec filtering logic)
+        var boundFuncs = new HashSet<string>();
+        foreach (var f in reg.OwnFuncs)
+        {
+            if (SkipFuncs.Contains(f.Name)) continue;
+            if (FuncSkipReasons.ContainsKey(f.Name)) continue;
+            if (SkipFuncPrefixes.Any(p => f.Name.StartsWith(p))) continue;
+            if (f.Name.StartsWith("b2") && !f.Name.Contains("_") && !IsTopLevelFunc(f.Name)) continue;
+            boundFuncs.Add(f.Name);
+        }
+
+        var skipFuncs = new List<SkipEntry>();
+        foreach (var f in reg.OwnFuncs)
+        {
+            if (boundFuncs.Contains(f.Name)) continue;
+
+            // Check explicit reason
+            if (FuncSkipReasons.TryGetValue(f.Name, out var reason))
+            {
+                skipFuncs.Add(new SkipEntry(f.Name, reason));
+                continue;
+            }
+
+            // DynamicTree prefix
+            if (f.Name.StartsWith("b2DynamicTree_"))
+            {
+                skipFuncs.Add(new SkipEntry(f.Name, "DynamicTree: internal broad-phase API"));
+                continue;
+            }
+
+            // Inline math functions (no underscore, not top-level)
+            if (f.Name.StartsWith("b2") && !f.Name.Contains("_"))
+            {
+                skipFuncs.Add(new SkipEntry(f.Name, "inline math: use lib/glm.lua or Lua math"));
+                continue;
+            }
+
+            // Collision functions
+            if (f.Name.StartsWith("b2Collide"))
+            {
+                skipFuncs.Add(new SkipEntry(f.Name, "low-level collision: internal narrow-phase"));
+                continue;
+            }
+
+            skipFuncs.Add(new SkipEntry(f.Name, "not in bound API scope"));
+        }
+
+        // Struct skips
+        var boundStructNames = DefStructs.Union(HandleStructs).Union(GeometryStructs).ToHashSet();
+        var skipStructs = new List<SkipEntry>();
+        foreach (var s in reg.OwnStructs)
+        {
+            if (boundStructNames.Contains(s.Name)) continue;
+            var reason = StructSkipReasons.GetValueOrDefault(s.Name, "internal: not in bound API scope");
+            skipStructs.Add(new SkipEntry(s.Name, reason));
+        }
+
+        // Enum skips
+        var skipEnums = new List<SkipEntry>();
+        foreach (var e in reg.OwnEnums)
+        {
+            if (AllowedEnums.Contains(e.Name)) continue;
+            skipEnums.Add(new SkipEntry(e.Name, e.Name == "b2HexColor"
+                ? "debug draw: color constants for debug visualization"
+                : "internal: not in bound API scope"));
+        }
+
+        return new SkipReport(ModuleName, skipFuncs, skipStructs, skipEnums);
+    }
+
     // ===== ヘルパー =====
 
     private static string? GetLink(Decl d, SourceLink? sourceLink)

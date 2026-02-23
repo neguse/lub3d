@@ -49,7 +49,7 @@ rootCommand.SetAction(parseResult =>
     Directory.CreateDirectory(outputDir);
 
     var allMetrics = new List<ModuleMetrics>();
-    var allUnbound = new List<UnboundReport>();
+    var allUnbound = new List<(UnboundReport Unhandled, SkipReport? Skipped)>();
 
     // --- ヘッダグループ (Sokol) ---
     var sokolHeaders = new List<string>
@@ -130,8 +130,9 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {luaPath}");
 
         var spec = mod.BuildSpec(reg, prefixToModule, sourceLink);
-        allMetrics.Add(ModuleMetrics.Collect(mod.ModuleName, reg, spec));
-        allUnbound.Add(ModuleMetrics.CollectUnbound(mod.ModuleName, reg, spec));
+        var skip = mod.CollectSkips(reg);
+        allMetrics.Add(ModuleMetrics.Collect(mod.ModuleName, reg, spec, skip));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(mod.ModuleName, reg, spec, skip));
     }
 
     // --- ヘッダグループ (Miniaudio) ---
@@ -175,8 +176,9 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {maLuaPath}");
 
         var maSpec = miniaudioModule.BuildSpec(maReg, maPrefixToModule, maSourceLink);
-        allMetrics.Add(ModuleMetrics.Collect(miniaudioModule.ModuleName, maReg, maSpec));
-        allUnbound.Add(ModuleMetrics.CollectUnbound(miniaudioModule.ModuleName, maReg, maSpec));
+        var maSkip = ((IModule)miniaudioModule).CollectSkips(maReg);
+        allMetrics.Add(ModuleMetrics.Collect(miniaudioModule.ModuleName, maReg, maSpec, maSkip));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(miniaudioModule.ModuleName, maReg, maSpec, maSkip));
     }
 
     // --- ヘッダグループ (Dear ImGui) ---
@@ -216,8 +218,9 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {imguiLuaPath}");
 
         var imguiSpec = imguiModule.BuildSpec(imguiReg, imguiPrefixToModule, imguiSourceLink);
-        allMetrics.Add(ModuleMetrics.Collect(imguiModule.ModuleName, imguiReg, imguiSpec));
-        allUnbound.Add(ModuleMetrics.CollectUnbound(imguiModule.ModuleName, imguiReg, imguiSpec));
+        var imguiSkip = ((IModule)imguiModule).CollectSkips(imguiReg);
+        allMetrics.Add(ModuleMetrics.Collect(imguiModule.ModuleName, imguiReg, imguiSpec, imguiSkip));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(imguiModule.ModuleName, imguiReg, imguiSpec, imguiSkip));
     }
     else
     {
@@ -259,8 +262,9 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {stbLuaPath}");
 
         var stbSpec = stbImageModule.BuildSpec(stbReg, stbPrefixToModule, stbSourceLink);
-        allMetrics.Add(ModuleMetrics.Collect(stbImageModule.ModuleName, stbReg, stbSpec));
-        allUnbound.Add(ModuleMetrics.CollectUnbound(stbImageModule.ModuleName, stbReg, stbSpec));
+        var stbSkip = ((IModule)stbImageModule).CollectSkips(stbReg);
+        allMetrics.Add(ModuleMetrics.Collect(stbImageModule.ModuleName, stbReg, stbSpec, stbSkip));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(stbImageModule.ModuleName, stbReg, stbSpec, stbSkip));
     }
 
     // --- ヘッダグループ (Box2D) ---
@@ -312,8 +316,9 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine($"Generated: {b2LuaPath}");
 
         var b2Spec = box2dModule.BuildSpec(b2Reg, b2PrefixToModule, b2SourceLink);
-        allMetrics.Add(ModuleMetrics.Collect(box2dModule.ModuleName, b2Reg, b2Spec));
-        allUnbound.Add(ModuleMetrics.CollectUnbound(box2dModule.ModuleName, b2Reg, b2Spec));
+        var b2Skip = ((IModule)box2dModule).CollectSkips(b2Reg);
+        allMetrics.Add(ModuleMetrics.Collect(box2dModule.ModuleName, b2Reg, b2Spec, b2Skip));
+        allUnbound.Add(ModuleMetrics.CollectUnbound(box2dModule.ModuleName, b2Reg, b2Spec, b2Skip));
     }
     else
     {

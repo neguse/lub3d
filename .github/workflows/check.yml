@@ -4,6 +4,9 @@ on:
     branches: [master]
   pull_request:
 
+permissions:
+  pull-requests: write
+
 jobs:
   lua-lint:
     runs-on: ubuntu-latest
@@ -21,7 +24,32 @@ jobs:
         run: sudo apt-get install -y clang
 
       - name: Generate bindings (C# Generator)
-        run: dotnet run --project Generator -- gen --deps deps --clang $(which clang)
+        run: |
+          dotnet run --project Generator -- gen --deps deps --clang $(which clang) | tee /tmp/generator-output.txt
+
+      - name: Post Generator metrics to summary
+        if: always()
+        run: |
+          {
+            echo '## Generator Metrics'
+            echo '```'
+            sed -n '/^=== Generator Metrics ===/,/^TOTAL/p' /tmp/generator-output.txt
+            echo '```'
+          } | tee /tmp/metrics-comment.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment metrics on PR
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          # Delete previous bot comment if exists
+          gh api "repos/${{ github.repository }}/issues/${PR}/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | startswith("## Generator Metrics"))) | .id' \
+          | while read id; do
+              gh api -X DELETE "repos/${{ github.repository }}/issues/comments/${id}"
+            done
+          gh pr comment "${PR}" --body-file /tmp/metrics-comment.md
 
       - name: Setup Lua Language Server
         run: |
