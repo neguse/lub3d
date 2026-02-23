@@ -169,7 +169,7 @@ The executable takes a Lua module name as argv[1] (default: `examples.hello`). `
 - Alternatives rejected: other options considered and why they were dropped
 ```
 
-Keep it lightweight — a few bullet points per section is enough. Not every task needs all sections; small bug fixes can skip Approach/Alternatives.
+Keep it concise — a few bullet points per section is enough. Always fill in all sections; even for small fixes, recording the reasoning prevents "no idea what happened here" when reading logs later.
 
 ## Completed Task Format (done.md)
 
