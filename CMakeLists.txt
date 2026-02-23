@@ -219,6 +219,25 @@ if(Python3_FOUND)
     )
 endif()
 
+# Pack data generator (Python) - embeds lib/*.lua, examples, and assets
+if(Python3_FOUND)
+    file(GLOB_RECURSE PACK_LIB_LUA "${CMAKE_CURRENT_SOURCE_DIR}/lib/*.lua")
+    file(GLOB_RECURSE PACK_EXAMPLE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/examples/*")
+    add_custom_command(
+        OUTPUT ${GEN_DIR}/pack.c
+        COMMAND ${CMAKE_COMMAND} -E env PYTHONUTF8=1
+            ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_pack.py
+            --root ${CMAKE_CURRENT_SOURCE_DIR}
+            --output ${GEN_DIR}/pack.c
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_pack.py
+            ${PACK_LIB_LUA}
+            ${PACK_EXAMPLE_FILES}
+        COMMENT "Generating pack data..."
+    )
+endif()
+
 # lub3d sources
 set(LUB3D_SOURCES
     src/sokol_impl.c
@@ -585,5 +604,47 @@ if(LUB3D_BUILD_TESTS)
 
     if(LUB3D_BUILD_SHDC)
         target_compile_definitions(lub3d-test PRIVATE LUB3D_HAS_SHDC)
+    endif()
+endif()
+
+# CLI tool (exe with embedded pack data)
+option(LUB3D_BUILD_CLI "Build CLI tool" ON)
+if(LUB3D_BUILD_CLI AND NOT EMSCRIPTEN AND Python3_FOUND)
+    add_executable(lub3d-cli src/lub3d_cli.c ${GEN_DIR}/pack.c)
+    target_include_directories(lub3d-cli PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol
+        ${CMAKE_CURRENT_SOURCE_DIR}/deps/sokol/util
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${LUA_INCLUDE}
+    )
+    target_link_libraries(lub3d-cli lub3d)
+    set_target_properties(lub3d-cli PROPERTIES OUTPUT_NAME lub3d)
+
+    # SHDC support
+    if(LUB3D_BUILD_SHDC)
+        target_compile_definitions(lub3d-cli PRIVATE LUB3D_HAS_SHDC)
+    endif()
+
+    # Backend defines for CLI
+    if(LUB3D_BACKEND_DUMMY)
+        target_compile_definitions(lub3d-cli PRIVATE SOKOL_DUMMY_BACKEND)
+    elseif(LUB3D_BACKEND_GL)
+        target_compile_definitions(lub3d-cli PRIVATE SOKOL_GLCORE)
+    elseif(LUB3D_BACKEND_GLES3)
+        target_compile_definitions(lub3d-cli PRIVATE SOKOL_GLES3)
+    elseif(LUB3D_BACKEND_D3D11)
+        target_compile_definitions(lub3d-cli PRIVATE SOKOL_D3D11)
+    elseif(LUB3D_BACKEND_METAL)
+        target_compile_definitions(lub3d-cli PRIVATE SOKOL_METAL)
+    elseif(LUB3D_BACKEND_WGPU)
+        target_compile_definitions(lub3d-cli PRIVATE SOKOL_WGPU)
+    else()
+        if(WIN32)
+            target_compile_definitions(lub3d-cli PRIVATE SOKOL_D3D11)
+        elseif(APPLE)
+            target_compile_definitions(lub3d-cli PRIVATE SOKOL_METAL)
+        else()
+            target_compile_definitions(lub3d-cli PRIVATE SOKOL_GLCORE)
+        endif()
     endif()
 endif()

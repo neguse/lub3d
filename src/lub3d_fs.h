@@ -17,6 +17,12 @@
 /* Lua module opener */
 int luaopen_lub3d_fs(lua_State *L);
 
+/* Optional pack data lookup. If set, fs.read/fs.exists will check pack
+ * data before falling back to the filesystem.
+ * Returns pointer to data and sets *out_size, or NULL if not found. */
+typedef const unsigned char *(*lub3d_fs_pack_find_fn)(const char *path, unsigned int *out_size);
+extern lub3d_fs_pack_find_fn lub3d_fs_pack_find;
+
 #ifdef __EMSCRIPTEN__
 /* Fetch file via synchronous XHR. Caller must free() the returned buffer. */
 char *lub3d_fs_fetch_file(const char *url, size_t *out_len);
