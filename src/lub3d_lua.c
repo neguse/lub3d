@@ -57,6 +57,10 @@ extern int luaopen_bc7enc(lua_State *L);
 extern int luaopen_b2d(lua_State *L);
 #endif
 
+#ifdef LUB3D_HAS_JOLT
+extern int luaopen_jolt(lua_State *L);
+#endif
+
 /* Write float array to lightuserdata buffer (for audio stream_cb) */
 static int l_write_floats(lua_State *L)
 {
@@ -138,6 +142,11 @@ void lub3d_lua_register_all(lua_State *L)
 
 #ifdef LUB3D_HAS_BOX2D
     luaL_requiref(L, "b2d", luaopen_b2d, 0);
+    lua_pop(L, 1);
+#endif
+
+#ifdef LUB3D_HAS_JOLT
+    luaL_requiref(L, "jolt", luaopen_jolt, 0);
     lua_pop(L, 1);
 #endif
 }

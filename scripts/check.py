@@ -103,6 +103,9 @@ def check_luacats_fields() -> int:
             elif is_module and _PASCAL_RE.match(name):
                 # module enum/型参照: PascalCase OK
                 continue
+            elif is_module and _ENUM_RE.match(name):
+                # module 定数: UPPER_SNAKE_CASE OK
+                continue
             elif "fun(" in typ:
                 # struct メソッド/コールバック: snake_case
                 if _SNAKE_RE.match(name):

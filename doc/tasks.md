@@ -10,15 +10,6 @@
 - Alternatives rejected: other options and why they were dropped
 -->
 
-<!-- ==================== Phase 2-impl: Ownership model implementation (designed in T06) ==================== -->
-
-### T06-impl: Implement Generator ownership abstractions
-- Background: T06 research phase completed (doc/ownership-research.md, doc/ownership-design.md). Extend ModuleSpec / CBindingGen / LuaCatsGen based on the design guidelines.
-- Requirements: Implement `DependencyBinding` and destroy auto-generation. PoC with miniaudio module (ma_sound → ma_engine dependency tracking, destroy method generation). All existing tests + new tests pass.
-- Approach: Follow doc/ownership-design.md. Add `DependencyBinding` record to ModuleSpec.cs. Add `Dependencies` (non-nullable List) to `OpaqueTypeBinding`. Always generate destroy for types with UninitFunc. CBindingGen generates uservalue slots and destroy method. LuaCatsGen generates destroy annotations. MiniaudioModule: add engine reference retention in ma_sound_new ExtraCCode.
-- Alternatives rejected: WASI num_lends counter — overkill for single-threaded Lua
-- Depends on: T06 (completed)
-
 <!-- ==================== Phase 3: New bindings (benefits from T06 ownership model) ==================== -->
 
 ### T07: Add Jolt Physics binding
@@ -54,9 +45,8 @@
 ## Execution Order
 
 ```
-Phase 0-2 (completed):         T09, T05, T02, T01, T03, T04, T06, T10
-Phase 2-impl (next):            T06-impl
-Phase 3 (after T06-impl):      T07 → T08
+Phase 0-2 (completed):         T09, T05, T02, T01, T03, T04, T06, T10, T06-impl
+Phase 3 (next):                 T07 → T08
 ```
 
 Phase 3 tasks are ordered: Jolt before ozz, since Jolt is simpler C++ binding (no SoA) and lessons learned carry over.
