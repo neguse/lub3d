@@ -2,7 +2,7 @@
 
 ## Overview
 
-Adding path tracer to the sjadm example (feat/sjadm-pathtracer branch).
+Workflow and development process documentation added. No active feature work.
 
 ## Active Tasks
 
