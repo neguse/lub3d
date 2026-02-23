@@ -4,9 +4,8 @@ T06 の調査結果 (`doc/ownership-research.md`) に基づく、Generator の o
 
 ## 設計原則
 
-1. **後方互換**: 新フィールドはすべてデフォルト値を持ち、既存モジュールの変更不要
-2. **段階的採用**: モジュール単位でオプトイン可能
-3. **実用重視**: ゲームフレームワークであり安全クリティカルシステムではない。過剰な安全機構より開発体験を優先
+1. **粉砕前提**: 後方互換は維持しない。既存モジュールの呼び出し側はその場で直す
+2. **実用重視**: ゲームフレームワークであり安全クリティカルシステムではない。過剰な安全機構より開発体験を優先
 
 ## 提案: ModuleSpec 変更
 
@@ -23,26 +22,21 @@ public record DependencyBinding(
 );
 ```
 
-`OpaqueTypeBinding` に追加:
+`OpaqueTypeBinding` に `Dependencies` フィールドを追加 (non-nullable、空リスト = 依存なし):
 
 ```csharp
 public record OpaqueTypeBinding(
     ... 既存フィールド ...,
-    List<DependencyBinding>? Dependencies = null  // NEW: default null → 0 uservalue
+    List<DependencyBinding> Dependencies  // 空リスト = 依存なし
 );
 ```
 
+既存の全 OpaqueTypeBinding 生成箇所に `Dependencies: []` を追加。
+
 #### 生成される C コード
 
-**Before** (Dependencies なし):
-```c
-ma_sound** pp = (ma_sound**)lua_newuserdatauv(L, sizeof(ma_sound*), 0);
-*pp = p;
-luaL_setmetatable(L, "miniaudio.Sound");
-return 1;
-```
+Dependencies が空の場合は従来通り uservalue 0。Dependencies がある場合:
 
-**After** (Dependencies = [{ConstructorArgIndex: 1, UservalueSlot: 1, Name: "engine"}]):
 ```c
 ma_sound** pp = (ma_sound**)lua_newuserdatauv(L, sizeof(ma_sound*), 1);
 *pp = p;
@@ -54,24 +48,13 @@ return 1;
 
 engine は sound の uservalue に格納されるため、sound が生きている限り engine は GC されない。
 
-### B. HasExplicitDestroy (明示的 destroy メソッド)
+### B. destroy メソッドの自動生成
 
-WASI の `resource.drop` パターンを採用。`__gc` と同じ処理を Lua メソッドとしても公開する。
+`UninitFunc != null` を持つ全 OpaqueType に `destroy()` メソッドを **常に生成** する。フラグ不要。
 
-`OpaqueTypeBinding` に追加:
-
-```csharp
-public record OpaqueTypeBinding(
-    ... 既存フィールド ...,
-    List<DependencyBinding>? Dependencies = null,
-    bool HasExplicitDestroy = false  // NEW: default false
-);
-```
-
-#### 生成される C コード
+`__gc` と同じロジックを Lua メソッドとして公開:
 
 ```c
-// __gc と同じロジック
 static int l_ma_engine_destroy(lua_State *L) {
     ma_engine** pp = (ma_engine**)luaL_checkudata(L, 1, "miniaudio.Engine");
     if (*pp != NULL) {
@@ -83,7 +66,7 @@ static int l_ma_engine_destroy(lua_State *L) {
 }
 ```
 
-メソッドテーブルに追加:
+メソッドテーブルに自動追加:
 ```c
 static const luaL_Reg ma_engine_methods[] = {
     {"destroy", l_ma_engine_destroy},
@@ -93,8 +76,7 @@ static const luaL_Reg ma_engine_methods[] = {
 };
 ```
 
-#### 生成される LuaCATS
-
+LuaCATS にも自動追加:
 ```lua
 ---@class miniaudio.Engine
 ---@field destroy fun(self: miniaudio.Engine)
@@ -114,20 +96,25 @@ engine:destroy()  -- 決定的に解放 (__gc は NULL チェックで no-op に
 
 | メソッド | 変更内容 |
 |---------|---------|
-| `OpaqueConstructor()` | Dependencies に応じて uservalue スロット数変更 + `lua_setiuservalue` 生成 |
-| `OpaqueMethodTable()` | HasExplicitDestroy 時に destroy エントリ追加 |
-| (新規) `OpaqueDestroyMethod()` | destroy メソッド関数生成 |
+| `OpaqueConstructor()` | Dependencies.Count に応じて uservalue スロット数変更 + `lua_setiuservalue` 生成 |
+| `OpaqueDestructor()` | 変更なし (既存の NULL チェックで destroy 後の __gc は no-op) |
+| `OpaqueMethodTable()` | UninitFunc != null なら destroy エントリを常に追加 |
+| (新規) `OpaqueDestroyMethod()` | destroy メソッド関数生成 (__gc と同じ本体) |
 
 ### LuaCatsGen.cs
 
-opaque type class 生成セクションで、HasExplicitDestroy 時に `---@field destroy` を追加。
+opaque type class 生成セクションで、UninitFunc != null なら `---@field destroy` を常に追加。
 
-### MiniaudioModule.cs (Proof of Concept)
+### MiniaudioModule.cs
 
-1. `OpaqueTypeBinding` 生成時に `HasExplicitDestroy = true` 設定
+1. `OpaqueTypeBinding` 生成箇所に `Dependencies: []` を追加
 2. `ExtraCCode()` の `l_ma_sound_new` で:
    - `lua_newuserdatauv` の uservalue 数を 0 → 1
    - `luaL_setmetatable` 後に engine 参照を uservalue に格納
+
+### 既存モジュールの修正
+
+全ての OpaqueTypeBinding 生成箇所に `Dependencies: []` を追加。
 
 ## スコープ外 (実装しないもの)
 
