@@ -325,7 +325,7 @@ rootCommand.SetAction(parseResult =>
         Console.WriteLine("Skipping Box2D (deps/box2d/include/box2d/box2d.h not found)");
     }
 
-    // --- Jolt Physics (LuaCATS only — C++ binding is hand-written) ---
+    // --- Jolt Physics ---
     {
         var joltModule = new JoltModule();
         var joltEmptyModule = new Generator.ClangAst.Module(joltModule.ModuleName, joltModule.Prefix, [], []);
@@ -335,6 +335,10 @@ rootCommand.SetAction(parseResult =>
         var joltLuaPath = LuaOutputPath(outputDir, joltModule.ModuleName);
         File.WriteAllText(joltLuaPath, joltModule.GenerateLua(joltReg, joltPrefixToModule));
         Console.WriteLine($"Generated: {joltLuaPath}");
+
+        var joltCppPath = Path.Combine(outputDir, "jolt.cpp");
+        File.WriteAllText(joltCppPath, joltModule.GenerateC(joltReg, joltPrefixToModule));
+        Console.WriteLine($"Generated: {joltCppPath}");
 
         var joltSpec = joltModule.BuildSpec(joltReg, joltPrefixToModule);
         var joltSkip = ((IModule)joltModule).CollectSkips(joltReg);

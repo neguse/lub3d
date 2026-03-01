@@ -37,3 +37,9 @@
 [submodule "deps/HandmadeMath"]
 	path = deps/HandmadeMath
 	url = https://github.com/HandmadeMath/HandmadeMath.git
+[submodule "deps/sol2"]
+	path = deps/sol2
+	url = https://github.com/ThePhD/sol2
+[submodule "deps/LuaBridge3"]
+	path = deps/LuaBridge3
+	url = https://github.com/kunitoki/LuaBridge3

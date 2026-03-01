@@ -17,7 +17,12 @@ public record ModuleSpec(
     string? EntryPoint = null,
     List<FuncBinding>? ExtraLuaFuncs = null,
     List<ArrayAdapterBinding>? ArrayAdapters = null,
-    List<EventAdapterBinding>? EventAdapters = null
+    List<EventAdapterBinding>? EventAdapters = null,
+    /// <summary>
+    /// luaopen 内で luaL_newlib の後に挿入される追加コード。
+    /// モジュールテーブルがスタックトップにある状態で実行される。
+    /// </summary>
+    string? ExtraInitCode = null
 )
 {
     public List<OpaqueTypeBinding> OpaqueTypes { get; init; } = OpaqueTypes ?? [];
@@ -122,7 +127,12 @@ public record OpaqueTypeBinding(
     string? ConfigInitFunc,
     List<MethodBinding> Methods,
     string? SourceLink,
-    List<DependencyBinding>? Dependencies = null
+    List<DependencyBinding>? Dependencies = null,
+    /// <summary>
+    /// __gc/destroy の本体をカスタム記述する。{pp} は TYPE** ポインタ変数名に展開される。
+    /// 未指定時は従来の UninitFunc(*pp) + free(*pp) パターン。
+    /// </summary>
+    string? CustomDestructorCode = null
 )
 {
     public List<DependencyBinding> Dependencies { get; init; } = Dependencies ?? [];
@@ -133,7 +143,17 @@ public record MethodBinding(
     string LuaName,
     List<ParamBinding> Params,
     BindingType ReturnType,
-    string? SourceLink
+    string? SourceLink,
+    /// <summary>
+    /// メソッド本体の call + push 部分を置き換えるカスタムコード。
+    /// {self} は self ポインタ変数名、{param_name} は宣言済みパラメータ変数名に展開される。
+    /// </summary>
+    string? CustomCallCode = null,
+    /// <summary>
+    /// return 文の戻り値数。-1=自動 (Void→0, 他→1), 0以上=明示指定。
+    /// CustomCallCode 内で lua_push* し、ReturnCount で return N を決定する。
+    /// </summary>
+    int ReturnCount = -1
 );
 
 public record ArrayAdapterBinding(

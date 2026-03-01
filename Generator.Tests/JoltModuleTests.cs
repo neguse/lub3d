@@ -41,7 +41,8 @@ public class JoltModuleTests
         var module = new JoltModule();
         var spec = module.BuildSpec(EmptyRegistry(), PrefixToModule);
         var world = spec.OpaqueTypes[0];
-        Assert.NotNull(world.UninitFunc);
+        // CustomDestructorCode で destroy メソッドが生成される
+        Assert.NotNull(world.CustomDestructorCode);
     }
 
     [Fact]
@@ -95,11 +96,12 @@ public class JoltModuleTests
     }
 
     [Fact]
-    public void GenerateC_ReturnsEmpty()
+    public void GenerateC_ProducesCode()
     {
         var module = new JoltModule();
         var code = module.GenerateC(EmptyRegistry(), PrefixToModule);
-        Assert.Equal("", code);
+        Assert.Contains("luaopen_jolt", code);
+        Assert.Contains("JoltWorld", code);
     }
 
     [Fact]

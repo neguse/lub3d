@@ -241,4 +241,188 @@ public class OpaqueTypeGenTests
         Assert.Contains("lua_pushvalue(L, 1)", code);
         Assert.Contains("lua_setiuservalue(L, -2, 1)", code);
     }
+
+    // ===== CustomCallCode =====
+
+    private static ModuleSpec OpaqueSpecWithCustomCall() => new(
+        "test", "test_",
+        ["test.h"],
+        null,
+        [], [], [],
+        [],
+        OpaqueTypes:
+        [
+            new OpaqueTypeBinding(
+                "TestObj", "Obj", "test.Obj", "test.Obj",
+                InitFunc: null, UninitFunc: "test_obj_uninit",
+                ConfigType: null, ConfigInitFunc: null,
+                Methods:
+                [
+                    new MethodBinding("l_test_custom", "custom_method",
+                        [new ParamBinding("x", new BindingType.Float())],
+                        new BindingType.Void(), null,
+                        CustomCallCode: "    {self}->DoThing({x});",
+                        ReturnCount: 0),
+                    new MethodBinding("l_test_multi", "multi_return",
+                        [], new BindingType.Void(), null,
+                        CustomCallCode: """
+                                lua_pushnumber(L, {self}->GetX());
+                                lua_pushnumber(L, {self}->GetY());
+                                lua_pushnumber(L, {self}->GetZ());
+                            """,
+                        ReturnCount: 3),
+                ],
+                SourceLink: null
+            )
+        ]
+    );
+
+    [Fact]
+    public void C_CustomCallCode_AppearsInOutput()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithCustomCall());
+        Assert.Contains("self->DoThing(x)", code);
+        Assert.DoesNotContain("l_test_custom(self", code);
+    }
+
+    [Fact]
+    public void C_CustomCallCode_ReturnCount()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithCustomCall());
+        // multi_return should have return 3
+        Assert.Contains("return 3;", code);
+        // custom_method should have return 0
+        Assert.Contains("return 0;", code);
+    }
+
+    [Fact]
+    public void C_CustomCallCode_MultiReturn_PushesValues()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithCustomCall());
+        Assert.Contains("lua_pushnumber(L, self->GetX())", code);
+        Assert.Contains("lua_pushnumber(L, self->GetY())", code);
+        Assert.Contains("lua_pushnumber(L, self->GetZ())", code);
+    }
+
+    // ===== CustomDestructorCode =====
+
+    private static ModuleSpec OpaqueSpecWithCustomDestructor() => new(
+        "test", "test_",
+        ["test.h"],
+        null,
+        [], [], [],
+        [],
+        OpaqueTypes:
+        [
+            new OpaqueTypeBinding(
+                "TestObj", "Obj", "test.Obj", "test.Obj",
+                InitFunc: null, UninitFunc: null,
+                ConfigType: null, ConfigInitFunc: null,
+                Methods: [],
+                SourceLink: null,
+                CustomDestructorCode: "custom_free(*{pp});\n        *{pp} = NULL;"
+            )
+        ]
+    );
+
+    [Fact]
+    public void C_CustomDestructorCode_AppearsInGc()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithCustomDestructor());
+        Assert.Contains("l_TestObj_gc", code);
+        Assert.Contains("custom_free(*pp)", code);
+    }
+
+    [Fact]
+    public void C_CustomDestructorCode_GeneratesDestroyMethod()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithCustomDestructor());
+        Assert.Contains("l_TestObj_destroy", code);
+        Assert.Contains("custom_free(*pp)", code);
+    }
+
+    [Fact]
+    public void C_CustomDestructorCode_MethodTableContainsDestroy()
+    {
+        var code = CBindingGen.Generate(OpaqueSpecWithCustomDestructor());
+        Assert.Contains("{\"destroy\", l_TestObj_destroy}", code);
+    }
+
+    // ===== C++ mode with OpaqueTypes =====
+
+    private static ModuleSpec CppOpaqueSpec() => new(
+        "test_cpp", "test_",
+        ["test.h"],
+        "// extra code here\n",
+        [], [], [],
+        [("init", "l_test_init")],
+        OpaqueTypes:
+        [
+            new OpaqueTypeBinding(
+                "TestObj", "Obj", "test.Obj", "test.Obj",
+                InitFunc: null, UninitFunc: null,
+                ConfigType: null, ConfigInitFunc: null,
+                Methods:
+                [
+                    new MethodBinding("l_test_method", "method",
+                        [], new BindingType.Void(), null,
+                        CustomCallCode: "    {self}->DoIt();",
+                        ReturnCount: 0),
+                ],
+                SourceLink: null,
+                CustomDestructorCode: "delete *{pp}; *{pp} = NULL;"
+            )
+        ],
+        IsCpp: true
+    );
+
+    [Fact]
+    public void Cpp_OpaqueType_GeneratesExternCLuaOpen()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("extern \"C\" LUB3D_API int luaopen_test_cpp(lua_State *L)", code);
+    }
+
+    [Fact]
+    public void Cpp_OpaqueType_ContainsRegisterMetatables()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("register_metatables(L)", code);
+        Assert.Contains("luaL_newmetatable(L, \"test.Obj\")", code);
+    }
+
+    [Fact]
+    public void Cpp_OpaqueType_ContainsExtraCCode()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("// extra code here", code);
+    }
+
+    [Fact]
+    public void Cpp_OpaqueType_ContainsCheckHelper()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("TestObj* check_TestObj(lua_State *L, int idx)", code);
+    }
+
+    [Fact]
+    public void Cpp_OpaqueType_ContainsCustomMethod()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("self->DoIt()", code);
+    }
+
+    [Fact]
+    public void Cpp_OpaqueType_ContainsCustomDestructor()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("delete *pp; *pp = NULL;", code);
+    }
+
+    [Fact]
+    public void Cpp_OpaqueType_ContainsLuaRegWithExtraRegs()
+    {
+        var code = CBindingGen.Generate(CppOpaqueSpec());
+        Assert.Contains("{\"init\", l_test_init}", code);
+    }
 }

@@ -475,6 +475,8 @@ public static class CBindingGen
 
         // Enum registrations in luaopen
         var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
+        if (spec.ExtraInitCode != null)
+            enumRegs.Add(spec.ExtraInitCode);
         if (enumRegs.Count > 0 || spec.OpaqueTypes.Count > 0)
         {
             sb += $$"""
@@ -500,6 +502,67 @@ public static class CBindingGen
     {
         var sb = CppHeader(spec.CIncludes);
 
+        // OpaqueTypes がある場合: C モードと同様のフルモジュール生成
+        if (spec.OpaqueTypes.Count > 0)
+        {
+            // ExtraCCode (構造体定義、ヘルパー関数等 — メソッドより前に必要)
+            if (spec.ExtraCCode != null)
+                sb += spec.ExtraCCode;
+
+            // OpaqueTypes
+            foreach (var ot in spec.OpaqueTypes)
+            {
+                sb += OpaqueCheckHelper(ot);
+                sb += OpaqueDestructor(ot);
+                sb += OpaqueDestroyMethod(ot);
+                foreach (var m in ot.Methods)
+                    sb += OpaqueMethod(ot, m);
+                sb += OpaqueMethodTable(ot);
+            }
+
+            // Functions
+            foreach (var f in spec.Funcs)
+                sb += CppFunc(f);
+
+            // Enums
+            foreach (var e in spec.Enums)
+            {
+                var items = e.Items.Select(i => (i.LuaName, i.CConstName));
+                sb += Enum(e.CName, e.FieldName, items);
+            }
+
+            // Metatables (opaque types only — no structs in C++ mode currently)
+            var metatables = spec.OpaqueTypes
+                .Select(ot => (ot.Metatable, (string?)null, (string?)null, (string?)null, new Dictionary<string, string>()))
+                .ToList();
+            sb += RegisterOpaqueMetatables(spec.OpaqueTypes, metatables);
+
+            // LuaReg
+            var funcArrayName = $"{spec.ModuleName.Replace('.', '_')}_funcs";
+            var regEntries = new List<(string, string)>();
+            regEntries.AddRange(spec.ExtraLuaRegs);
+            foreach (var f in spec.Funcs)
+                regEntries.Add((f.LuaName, $"l_{f.CName}"));
+            sb += LuaReg(funcArrayName, regEntries);
+
+            // luaopen — extern "C" int luaopen_X(L) (C モードと同パターン)
+            var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
+            if (spec.ExtraInitCode != null)
+                enumRegs.Add(spec.ExtraInitCode);
+            var luaOpenName = spec.ModuleName.Replace('.', '_');
+            sb += $$"""
+                extern "C" LUB3D_API int luaopen_{{luaOpenName}}(lua_State *L) {
+                    register_metatables(L);
+                    luaL_newlib(L, {{funcArrayName}});
+                {{string.Join("\n", enumRegs)}}
+                    return 1;
+                }
+                """;
+
+            return sb;
+        }
+
+        // OpaqueTypes なし: 従来の C++ モード (ImGui スタイル)
         // Functions
         foreach (var f in spec.Funcs)
             sb += CppFunc(f);
@@ -512,22 +575,22 @@ public static class CBindingGen
         }
 
         // LuaReg
-        var funcArrayName = spec.EntryPoint != null
+        var defaultFuncArrayName = spec.EntryPoint != null
             ? $"{spec.EntryPoint.Replace("luaopen_", "")}_funcs"
             : $"{spec.ModuleName.Replace('.', '_')}_funcs";
-        var regEntries = spec.Funcs.Select(f => (f.LuaName, $"l_{f.CName}")).ToList();
-        regEntries.AddRange(spec.ExtraLuaRegs);
-        sb += LuaReg(funcArrayName, regEntries);
+        var defaultRegEntries = spec.Funcs.Select(f => (f.LuaName, $"l_{f.CName}")).ToList();
+        defaultRegEntries.AddRange(spec.ExtraLuaRegs);
+        sb += LuaReg(defaultFuncArrayName, defaultRegEntries);
 
         // luaopen — extern "C" void luaopen_X(L, int table_idx)
-        var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
+        var defaultEnumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
         var entryPoint = spec.EntryPoint ?? $"luaopen_{spec.ModuleName.Replace('.', '_')}";
         sb += $$"""
             extern "C" void {{entryPoint}}(lua_State *L, int table_idx) {
                 int abs_idx = lua_absindex(L, table_idx);
                 lua_pushvalue(L, abs_idx);
-                luaL_setfuncs(L, {{funcArrayName}}, 0);
-            {{string.Join("\n", enumRegs)}}
+                luaL_setfuncs(L, {{defaultFuncArrayName}}, 0);
+            {{string.Join("\n", defaultEnumRegs)}}
                 lua_pop(L, 1);
             }
             """;
@@ -887,15 +950,23 @@ public static class CBindingGen
 
     private static string OpaqueDestructor(OpaqueTypeBinding ot)
     {
-        var uninitCall = ot.UninitFunc != null
-            ? $"        {ot.UninitFunc}(*pp);\n"
-            : "";
+        string body;
+        if (ot.CustomDestructorCode != null)
+        {
+            body = "        " + ot.CustomDestructorCode.Replace("{pp}", "pp");
+        }
+        else
+        {
+            var uninitCall = ot.UninitFunc != null
+                ? $"        {ot.UninitFunc}(*pp);\n"
+                : "";
+            body = $"{uninitCall}        free(*pp);\n            *pp = NULL;";
+        }
         return $$"""
             static int l_{{ot.CName}}_gc(lua_State *L) {
                 {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
                 if (*pp != NULL) {
-            {{uninitCall}}        free(*pp);
-                    *pp = NULL;
+            {{body}}
                 }
                 return 0;
             }
@@ -905,14 +976,22 @@ public static class CBindingGen
 
     private static string OpaqueDestroyMethod(OpaqueTypeBinding ot)
     {
-        if (ot.UninitFunc == null) return "";
-        var uninitCall = $"        {ot.UninitFunc}(*pp);\n";
+        if (ot.UninitFunc == null && ot.CustomDestructorCode == null) return "";
+        string body;
+        if (ot.CustomDestructorCode != null)
+        {
+            body = "        " + ot.CustomDestructorCode.Replace("{pp}", "pp");
+        }
+        else
+        {
+            var uninitCall = $"        {ot.UninitFunc}(*pp);\n";
+            body = $"{uninitCall}        free(*pp);\n            *pp = NULL;";
+        }
         return $$"""
             static int l_{{ot.CName}}_destroy(lua_State *L) {
                 {{ot.CName}}** pp = ({{ot.CName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
                 if (*pp != NULL) {
-            {{uninitCall}}        free(*pp);
-                    *pp = NULL;
+            {{body}}
                 }
                 return 0;
             }
@@ -931,16 +1010,30 @@ public static class CBindingGen
             var idx = i + 2; // self is 1
             paramDecls.Add(GenBindingParamDecl(p, idx));
         }
-        var argNames = new List<string> { "self" };
-        argNames.AddRange(m.Params.Select(p => p.Name));
-        var args = string.Join(", ", argNames);
 
-        var call = GenBindingReturnPush(m.ReturnType, $"{m.CName}({args})");
+        string callAndReturn;
+        if (m.CustomCallCode != null)
+        {
+            // プレースホルダ展開
+            var code = m.CustomCallCode.Replace("{self}", "self");
+            foreach (var p in m.Params)
+                code = code.Replace($"{{{p.Name}}}", p.Name);
+            var retCount = m.ReturnCount >= 0 ? m.ReturnCount : 0;
+            callAndReturn = $"{code}\n    return {retCount};";
+        }
+        else
+        {
+            // 既存: free-function 呼び出し
+            var argNames = new List<string> { "self" };
+            argNames.AddRange(m.Params.Select(p => p.Name));
+            var args = string.Join(", ", argNames);
+            callAndReturn = GenBindingReturnPush(m.ReturnType, $"{m.CName}({args})");
+        }
 
         return $$"""
             static int l_{{m.CName}}(lua_State *L) {
             {{string.Join("\n", paramDecls)}}
-            {{call}}
+            {{callAndReturn}}
             }
 
             """;
@@ -949,7 +1042,7 @@ public static class CBindingGen
     private static string OpaqueMethodTable(OpaqueTypeBinding ot)
     {
         var allEntries = new List<string>();
-        if (ot.UninitFunc != null)
+        if (ot.UninitFunc != null || ot.CustomDestructorCode != null)
             allEntries.Add($"    {{\"destroy\", l_{ot.CName}_destroy}},");
         allEntries.AddRange(ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},"));
         return $$"""
