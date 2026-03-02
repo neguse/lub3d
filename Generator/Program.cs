@@ -504,6 +504,155 @@ genIdlCommand.SetAction(parseResult =>
 
 rootCommand.Subcommands.Add(genIdlCommand);
 
+// --- dump-signatures サブコマンド ---
+var dumpSigHeadersArg = new Argument<FileInfo[]>("headers")
+{
+    Description = "Header files to parse",
+    Arity = ArgumentArity.OneOrMore,
+};
+var dumpSigPrefixOption = new Option<string>("--prefix")
+{
+    Description = "Function prefix to filter (e.g. sg_, b2_)",
+    Required = true,
+};
+var dumpSigModuleOption = new Option<string?>("--module")
+{
+    Description = "Module name (default: derived from prefix)",
+};
+var dumpSigClangOption = new Option<FileInfo?>("--clang")
+{
+    Description = "Path to clang executable",
+};
+var dumpSigIncludeOption = new Option<DirectoryInfo[]?>("--include")
+{
+    Description = "Additional include paths",
+};
+
+var dumpSigCppOption = new Option<bool>("--cpp")
+{
+    Description = "Parse as C++ (use clang++ with namespace extraction)",
+};
+var dumpSigNamespaceOption = new Option<string[]?>("--namespace")
+{
+    Description = "C++ namespaces to extract (required with --cpp)",
+};
+var dumpSigDefineOption = new Option<string[]?>("--define")
+{
+    Description = "Extra preprocessor defines (e.g. IMGUI_DISABLE_OBSOLETE_FUNCTIONS)",
+};
+
+var dumpSigCommand = new Command("dump-signatures", "Dump compact function/enum/struct signatures from C/C++ headers (via clang AST)");
+dumpSigCommand.Arguments.Add(dumpSigHeadersArg);
+dumpSigCommand.Options.Add(dumpSigPrefixOption);
+dumpSigCommand.Options.Add(dumpSigModuleOption);
+dumpSigCommand.Options.Add(dumpSigClangOption);
+dumpSigCommand.Options.Add(dumpSigIncludeOption);
+dumpSigCommand.Options.Add(dumpSigCppOption);
+dumpSigCommand.Options.Add(dumpSigNamespaceOption);
+dumpSigCommand.Options.Add(dumpSigDefineOption);
+dumpSigCommand.SetAction(parseResult =>
+{
+    var headers = parseResult.GetValue(dumpSigHeadersArg)!;
+    var prefix = parseResult.GetValue(dumpSigPrefixOption)!;
+    var moduleName = parseResult.GetValue(dumpSigModuleOption) ?? prefix.TrimEnd('_');
+    var clangPath = parseResult.GetValue(dumpSigClangOption)?.FullName ?? FindClang();
+    var includeDirs = parseResult.GetValue(dumpSigIncludeOption);
+    var isCpp = parseResult.GetValue(dumpSigCppOption);
+    var namespaces = parseResult.GetValue(dumpSigNamespaceOption);
+    var defines = parseResult.GetValue(dumpSigDefineOption);
+
+    if (clangPath == null)
+    {
+        Console.Error.WriteLine("Error: clang not found. Use --clang or add clang to PATH.");
+        return 1;
+    }
+
+    var headerPaths = headers.Select(h => h.FullName).ToList();
+    foreach (var h in headerPaths)
+    {
+        if (!File.Exists(h))
+        {
+            Console.Error.WriteLine($"Header not found: {h}");
+            return 1;
+        }
+    }
+
+    var includePathList = includeDirs?.Select(d => d.FullName).ToList()
+        ?? headerPaths.Select(h => Path.GetDirectoryName(h)!).Distinct().ToList();
+
+    Module parsed;
+    if (isCpp)
+    {
+        if (namespaces == null || namespaces.Length == 0)
+        {
+            Console.Error.WriteLine("Error: --namespace is required with --cpp");
+            return 1;
+        }
+        var (_, cppParsed) = ClangRunner.ParseCppHeadersWithRawJson(
+            clangPath, headerPaths, namespaces.ToList(), includePathList, defines?.ToList());
+        parsed = cppParsed;
+    }
+    else
+    {
+        var unified = ClangRunner.ParseHeaders(clangPath, headerPaths, [prefix], includePathList);
+        parsed = ClangRunner.CreateView(unified, prefix, moduleName);
+    }
+
+    var reg = TypeRegistry.FromModule(parsed);
+    Console.Write(SignatureDumper.Dump(reg));
+    return 0;
+});
+
+rootCommand.Subcommands.Add(dumpSigCommand);
+
+// --- import-emscripten-idl サブコマンド ---
+var importEmIdlFileArg = new Argument<FileInfo>("emscripten-idl")
+{
+    Description = "Input Emscripten WebIDL file (e.g. JoltJS.idl)",
+};
+var importEmOutOption = new Option<FileInfo?>("--out")
+{
+    Description = "Output lub3d IDL file (default: stdout)",
+};
+
+var importEmCommand = new Command("import-emscripten-idl", "Import Emscripten WebIDL and convert to lub3d IDL format");
+importEmCommand.Arguments.Add(importEmIdlFileArg);
+importEmCommand.Options.Add(importEmOutOption);
+importEmCommand.SetAction(parseResult =>
+{
+    var inputFile = parseResult.GetValue(importEmIdlFileArg)!;
+    var outFile = parseResult.GetValue(importEmOutOption);
+
+    if (!inputFile.Exists)
+    {
+        Console.Error.WriteLine($"File not found: {inputFile.FullName}");
+        return 1;
+    }
+
+    var source = File.ReadAllText(inputFile.FullName);
+    var parsed = EmscriptenIdlReader.Parse(source);
+
+    Console.Error.WriteLine($"Parsed: {parsed.Interfaces.Count} interfaces, {parsed.Enums.Count} enums, {parsed.Implements.Count} implements");
+
+    var lub3dIdl = EmscriptenIdlReader.ToLub3dIdl(parsed);
+
+    if (outFile != null)
+    {
+        var dir = Path.GetDirectoryName(outFile.FullName);
+        if (dir != null) Directory.CreateDirectory(dir);
+        File.WriteAllText(outFile.FullName, lub3dIdl);
+        Console.Error.WriteLine($"Written: {outFile.FullName}");
+    }
+    else
+    {
+        Console.Write(lub3dIdl);
+    }
+
+    return 0;
+});
+
+rootCommand.Subcommands.Add(importEmCommand);
+
 return rootCommand.Parse(args).Invoke();
 
 static string? FindEditorConfig()

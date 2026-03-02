@@ -8,8 +8,11 @@ public record IdlType(string Name, int? ArrayLength = null);
 
 /// <summary>
 /// 関数パラメータ
+/// IsOptional: 型の後に ? が付いた場合 true
+/// ExtAttrs: パラメータレベルの拡張属性 ([Output] 等)
 /// </summary>
-public record IdlParam(string Name, IdlType Type);
+public record IdlParam(string Name, IdlType Type, bool IsOptional = false,
+    Dictionary<string, string>? ExtAttrs = null);
 
 /// <summary>
 /// namespace 内のオペレーション (関数)
@@ -55,7 +58,7 @@ public record IdlMethod(string Name, IdlType ReturnType, List<IdlParam> Params,
 /// WebIDL interface 定義 (opaque type に対応)
 /// </summary>
 public record IdlInterface(string CName, List<IdlMethod> Methods,
-    Dictionary<string, string>? ExtAttrs = null);
+    Dictionary<string, string>? ExtAttrs = null, string? ParentName = null);
 
 /// <summary>
 /// Callback 型定義 (e.g. callback b2OverlapResultFcn = boolean (b2ShapeId shapeId);)

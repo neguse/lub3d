@@ -33,6 +33,23 @@ Presets: `win-d3d11-{debug,release}`, `win-gl-debug`, `win-dummy-{debug,release}
 
 Backend auto-detection: Windows → D3D11, macOS → Metal, Linux → OpenGL, Emscripten → WGPU.
 
+### Setup
+
+```bash
+git config core.hooksPath scripts/hooks   # pre-commit hook (IDL auto-format)
+```
+
+### WebIDL
+
+Experimental pipeline to generate bindings from `.idl` files in the `idl/` directory.
+
+```bash
+dotnet run --project Generator -- format-idl idl/*.idl          # Format IDL files
+dotnet run --project Generator -- format-idl --check idl/*.idl  # Check only (for CI)
+```
+
+The pre-commit hook automatically formats staged `.idl` files.
+
 ## Directory Structure
 
 ```
@@ -68,16 +85,20 @@ src/                    Manual C/C++ source
   bc7enc_lua.cpp        BC7 encoder Lua bindings
   shdc_wrapper.cc       sokol-shdc C++ wrapper
   shdc_lua.c            Shader compiler Lua bindings
+idl/                    WebIDL binding definitions
+  sokol_time.idl        sokol.time module definition (PoC)
 Generator/              C# (.NET 10) binding generator
   ClangAst/             Clang AST parsing → TypeRegistry
   CBinding/             C/C++ code generation
   LuaCats/              LuaCATS type annotation generation
+  WebIdl/               WebIDL parser, IR, formatter
   Modules/Sokol/        10 Sokol modules (SokolModule base class)
   Modules/Imgui/        Dear ImGui module (IModule direct, clang++)
   Modules/Miniaudio/    Miniaudio module
-  Program.cs            CLI entry point
+  Program.cs            CLI entry point (generate + format-idl)
 Generator.Tests/        xUnit tests (Assert.Contains-based)
 scripts/
+  hooks/pre-commit      IDL auto-format pre-commit hook
   build.bat             Windows build (auto-detects VS, clang)
   run_tests.bat/.sh     Headless example test runner
   gen_licenses.py       License data generator

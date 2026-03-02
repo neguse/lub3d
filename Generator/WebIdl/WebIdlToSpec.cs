@@ -18,6 +18,14 @@ public static class WebIdlToSpec
 
         var funcNaming = file.ExtAttrs.GetValueOrDefault("FuncNaming", "");
         var isPascalCase = funcNaming == "PascalCase";
+        var isCpp = HasFlag(file.ExtAttrs, "IsCpp");
+        var cppNamespace = file.ExtAttrs.ContainsKey("CppNamespace")
+            ? file.ExtAttrs["CppNamespace"] : null;
+        var entryPoint = file.ExtAttrs.ContainsKey("EntryPoint")
+            ? file.ExtAttrs["EntryPoint"] : null;
+        var standaloneEntry = HasFlag(file.ExtAttrs, "StandaloneEntry");
+        var enumPrefix = file.ExtAttrs.ContainsKey("EnumPrefix")
+            ? file.ExtAttrs["EnumPrefix"] : null;
 
         // enum/dictionary/interface/callback 名を収集 (型参照解決用)
         var enumNames = file.Enums.Select(e => e.CName).ToHashSet();
@@ -116,10 +124,16 @@ public static class WebIdlToSpec
                         continue;
                     }
 
-                    // Struct params → ConstPtr (except HandleType)
-                    pt = PromoteStructParam(pt, handleTypeNames);
-                    var isOutput = outputParamNames.Contains(p.Name);
-                    parms.Add(new ParamBinding(p.Name, pt, IsOutput: isOutput));
+                    // C API struct params → ConstPtr; C++ uses value/ref semantics
+                    if (!isCpp)
+                        pt = PromoteStructParam(pt, handleTypeNames);
+                    var isOutput = outputParamNames.Contains(p.Name)
+                        || HasFlag(p.ExtAttrs, "Output");
+                    // [Output] float[N] → FloatArray(N) for C++ float array params
+                    if (isOutput && pt is BindingType.FixedArray { Inner: BindingType.Float, Length: var len })
+                        pt = new BindingType.FloatArray(len);
+                    parms.Add(new ParamBinding(p.Name, pt,
+                        IsOptional: p.IsOptional, IsOutput: isOutput));
                 }
 
                 // PostCallPatch
@@ -133,13 +147,20 @@ public static class WebIdlToSpec
                     }).ToList();
                 }
 
+                // C++ function name: explicit [CppFunc] or auto ToPascalCase
+                string? cppFuncName = op.ExtAttrs?.GetValueOrDefault("CppFunc", null);
+                if (cppFuncName == null && isCpp)
+                    cppFuncName = Pipeline.ToPascalCase(funcLuaName);
+
                 funcs.Add(new FuncBinding(cName, funcLuaName, parms, ResolveType(op.ReturnType), null,
+                    CppNamespace: cppNamespace,
+                    CppFuncName: cppFuncName,
                     PostCallPatches: patches));
             }
         }
 
         // enum → EnumBinding
-        var enums = file.Enums.Select(e => ConvertEnum(e, moduleName, prefix)).ToList();
+        var enums = file.Enums.Select(e => ConvertEnum(e, moduleName, prefix, enumPrefix)).ToList();
 
         // dictionary → StructBinding (ValueStruct/HandleType は StructBinding を生成しない)
         var structs = new List<StructBinding>();
@@ -150,7 +171,7 @@ public static class WebIdlToSpec
         }
 
         // interface → OpaqueTypeBinding
-        var opaqueTypes = file.Interfaces.Select(i => ConvertInterface(i, moduleName, prefix, ResolveType)).ToList();
+        var opaqueTypes = file.Interfaces.Select(i => ConvertInterface(i, moduleName, prefix, ResolveType, isPascalCase)).ToList();
 
         // EventAdapter
         var eventAdapters = file.EventAdapters.Select(ev => ConvertEventAdapter(ev, prefix, ResolveType)).ToList();
@@ -174,6 +195,9 @@ public static class WebIdlToSpec
             Enums: enums,
             ExtraLuaRegs: extraLuaRegs,
             OpaqueTypes: opaqueTypes.Count > 0 ? opaqueTypes : null,
+            IsCpp: isCpp,
+            EntryPoint: entryPoint,
+            StandaloneEntry: standaloneEntry,
             ExtraLuaFuncs: extraLuaFuncs.Count > 0 ? extraLuaFuncs : null,
             ArrayAdapters: arrayAdapters.Count > 0 ? arrayAdapters : null,
             EventAdapters: eventAdapters.Count > 0 ? eventAdapters : null
@@ -267,18 +291,35 @@ public static class WebIdlToSpec
             }).ToList();
     }
 
-    private static EnumBinding ConvertEnum(IdlEnum e, string moduleName, string prefix)
+    private static EnumBinding ConvertEnum(IdlEnum e, string moduleName, string prefix,
+        string? enumPrefix = null)
     {
-        var stripped = Pipeline.StripPrefix(e.CName, prefix);
-        var pascalName = Pipeline.ToPascalCase(stripped);
-        var luaName = $"{moduleName}.{pascalName}";
+        // EnumPrefix mode (ImGui): strip "ImGui" prefix + trailing '_'
+        string fieldName;
+        if (enumPrefix != null)
+        {
+            fieldName = Pipeline.StripPrefix(e.CName, enumPrefix).TrimEnd('_');
+        }
+        else
+        {
+            var stripped = Pipeline.StripPrefix(e.CName, prefix);
+            fieldName = Pipeline.ToPascalCase(stripped);
+        }
+        var luaName = $"{moduleName}.{fieldName}";
 
         var enumItemStyle = e.ExtAttrs?.GetValueOrDefault("EnumItemStyle", null);
 
         var items = e.Values.Select(v =>
         {
             string itemLuaName;
-            if (enumItemStyle == "CamelCase")
+            if (enumPrefix != null)
+            {
+                // ImGui style: use enum CName (+ optional "_") as item prefix
+                var itemPrefix = e.CName.EndsWith('_') ? e.CName : e.CName + "_";
+                var itemStripped = Pipeline.StripPrefix(v.Name, itemPrefix);
+                itemLuaName = Pipeline.ToUpperSnakeCase(itemStripped);
+            }
+            else if (enumItemStyle == "CamelCase")
             {
                 // b2_staticBody → strip "b2_" → "staticBody" → "STATIC_BODY"
                 var itemStripped = Pipeline.StripPrefix(v.Name, prefix + "_");
@@ -290,7 +331,7 @@ public static class WebIdlToSpec
             }
             return new EnumItemBinding(itemLuaName, v.Name, v.Value);
         }).ToList();
-        return new EnumBinding(e.CName, luaName, pascalName, items, null);
+        return new EnumBinding(e.CName, luaName, fieldName, items, null);
     }
 
     private static StructBinding ConvertDict(IdlDictionary d, string moduleName, string prefix,
@@ -371,7 +412,7 @@ public static class WebIdlToSpec
     }
 
     private static OpaqueTypeBinding ConvertInterface(IdlInterface iface, string moduleName, string prefix,
-        Func<IdlType, BindingType> resolveType)
+        Func<IdlType, BindingType> resolveType, bool isPascalCase = false)
     {
         var stripped = Pipeline.StripPrefix(iface.CName, prefix);
         var pascalName = Pipeline.ToPascalCase(Pipeline.StripTypeSuffix(stripped));
@@ -381,6 +422,24 @@ public static class WebIdlToSpec
         var uninitFunc = iface.ExtAttrs?.GetValueOrDefault("UninitFunc", null);
         var configType = iface.ExtAttrs?.GetValueOrDefault("ConfigType", null);
         var configInitFunc = iface.ExtAttrs?.GetValueOrDefault("ConfigInitFunc", null);
+
+        // C++ class mode
+        var cppClassName = iface.ExtAttrs?.GetValueOrDefault("CppClass", null);
+        var noDelete = HasFlag(iface.ExtAttrs, "NoDelete");
+        var isCppClass = cppClassName != null;
+
+        // Constructor: method-level [Constructor] takes priority, then interface-level flag
+        List<ParamBinding>? constructorParams = null;
+        var constructorMethod = iface.Methods.FirstOrDefault(m => HasFlag(m.ExtAttrs, "Constructor"));
+        if (constructorMethod != null)
+        {
+            constructorParams = constructorMethod.Params.Select(p =>
+                new ParamBinding(p.Name, resolveType(p.Type))).ToList();
+        }
+        else if (HasFlag(iface.ExtAttrs, "Constructor"))
+        {
+            constructorParams = []; // no-arg constructor
+        }
 
         // Dependency: "engine:1" → DependencyBinding(ConstructorArgIndex=1, UservalueSlot=1, Name="engine")
         List<DependencyBinding>? deps = null;
@@ -396,17 +455,32 @@ public static class WebIdlToSpec
             }).ToList();
         }
 
-        var methods = iface.Methods.Select(m =>
+        var methods = iface.Methods
+            .Where(m => !HasFlag(m.ExtAttrs, "Constructor")) // exclude constructor method
+            .Select(m =>
         {
             var cName = $"{iface.CName}_{m.Name}";
+            var luaName = isCppClass && isPascalCase ? Pipeline.ToSnakeCase(m.Name) : m.Name;
             var parms = m.Params.Select(p => new ParamBinding(p.Name, resolveType(p.Type))).ToList();
-            return new MethodBinding(cName, m.Name, parms, resolveType(m.ReturnType), null);
+            // C++ method name for self->Method() dispatch
+            string? cppMethodName = m.ExtAttrs?.GetValueOrDefault("CppFunc", null);
+            if (cppMethodName == null && isCppClass)
+                cppMethodName = m.Name;
+            return new MethodBinding(cName, luaName, parms, resolveType(m.ReturnType), null, cppMethodName);
         }).ToList();
+
+        // ExtraMethod: "lua_name:c_func,lua_name2:c_func2"
+        var extraMethodsRaw = iface.ExtAttrs?.GetValueOrDefault("ExtraMethod", null);
+        var extraMethods = string.IsNullOrEmpty(extraMethodsRaw) ? null : ParseKvList(extraMethodsRaw);
 
         return new OpaqueTypeBinding(
             iface.CName, pascalName, metatable, metatable,
             initFunc, uninitFunc, configType, configInitFunc,
-            methods, null, deps);
+            methods, null, deps,
+            CppClassName: cppClassName,
+            NoDelete: noDelete,
+            ConstructorParams: constructorParams,
+            ExtraMethods: extraMethods);
     }
 
     private static EventAdapterBinding ConvertEventAdapter(IdlEventAdapter ev, string prefix,
@@ -508,6 +582,8 @@ public static class WebIdlToSpec
             "ConstVoidPtr" => new BindingType.ConstPtr(new BindingType.Void()),
             "Size" => new BindingType.Size(),
             "Callback" => new BindingType.Callback([], new BindingType.Void()),
+            // Lua-native types (for ExtraLuaFunc)
+            "table" => new BindingType.Custom("table", "table", "", "", "", ""),
             _ => (BindingType?)null
         };
 

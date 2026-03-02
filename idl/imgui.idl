@@ -1,0 +1,970 @@
+[Prefix="", CInclude="imgui.h", IsCpp, CppNamespace="ImGui",
+EntryPoint="luaopen_imgui_gen", EnumPrefix="ImGui",
+ExtraLuaFunc="setup:table?:void,shutdown:void:void,new_frame:void:void,render:void:void,handle_event:VoidPtr:boolean"]
+
+// ValueStruct types
+[ValueStruct]
+dictionary ImVec2 { float x; float y; };
+[ValueStruct]
+dictionary ImVec4 { float x; float y; float z; float w; };
+
+// Enums
+enum ImGuiDir {
+};
+
+enum ImGuiKey {
+};
+
+enum ImGuiMouseSource {
+};
+
+enum ImGuiSortDirection {
+};
+
+enum ImGuiWindowFlags_ {
+    "ImGuiWindowFlags_None" = 0,
+    "ImGuiWindowFlags_NoTitleBar" = 0,
+    "ImGuiWindowFlags_NoResize" = 0,
+    "ImGuiWindowFlags_NoMove" = 0,
+    "ImGuiWindowFlags_NoScrollbar" = 0,
+    "ImGuiWindowFlags_NoScrollWithMouse" = 0,
+    "ImGuiWindowFlags_NoCollapse" = 0,
+    "ImGuiWindowFlags_AlwaysAutoResize" = 0,
+    "ImGuiWindowFlags_NoBackground" = 0,
+    "ImGuiWindowFlags_NoSavedSettings" = 0,
+    "ImGuiWindowFlags_NoMouseInputs" = 0,
+    "ImGuiWindowFlags_MenuBar" = 0,
+    "ImGuiWindowFlags_HorizontalScrollbar" = 0,
+    "ImGuiWindowFlags_NoFocusOnAppearing" = 0,
+    "ImGuiWindowFlags_NoBringToFrontOnFocus" = 0,
+    "ImGuiWindowFlags_AlwaysVerticalScrollbar" = 0,
+    "ImGuiWindowFlags_AlwaysHorizontalScrollbar" = 0,
+    "ImGuiWindowFlags_NoNavInputs" = 0,
+    "ImGuiWindowFlags_NoNavFocus" = 0,
+    "ImGuiWindowFlags_UnsavedDocument" = 0,
+    "ImGuiWindowFlags_NoNav" = 0,
+    "ImGuiWindowFlags_NoDecoration" = 0,
+    "ImGuiWindowFlags_NoInputs" = 0,
+    "ImGuiWindowFlags_ChildWindow" = 0,
+    "ImGuiWindowFlags_Tooltip" = 0,
+    "ImGuiWindowFlags_Popup" = 0,
+    "ImGuiWindowFlags_Modal" = 0,
+    "ImGuiWindowFlags_ChildMenu" = 0
+};
+
+enum ImGuiChildFlags_ {
+    "ImGuiChildFlags_None" = 0,
+    "ImGuiChildFlags_Borders" = 0,
+    "ImGuiChildFlags_AlwaysUseWindowPadding" = 0,
+    "ImGuiChildFlags_ResizeX" = 0,
+    "ImGuiChildFlags_ResizeY" = 0,
+    "ImGuiChildFlags_AutoResizeX" = 0,
+    "ImGuiChildFlags_AutoResizeY" = 0,
+    "ImGuiChildFlags_AlwaysAutoResize" = 0,
+    "ImGuiChildFlags_FrameStyle" = 0,
+    "ImGuiChildFlags_NavFlattened" = 0
+};
+
+enum ImGuiItemFlags_ {
+    "ImGuiItemFlags_None" = 0,
+    "ImGuiItemFlags_NoTabStop" = 0,
+    "ImGuiItemFlags_NoNav" = 0,
+    "ImGuiItemFlags_NoNavDefaultFocus" = 0,
+    "ImGuiItemFlags_ButtonRepeat" = 0,
+    "ImGuiItemFlags_AutoClosePopups" = 0,
+    "ImGuiItemFlags_AllowDuplicateId" = 0,
+    "ImGuiItemFlags_Disabled" = 0
+};
+
+enum ImGuiInputTextFlags_ {
+    "ImGuiInputTextFlags_None" = 0,
+    "ImGuiInputTextFlags_CharsDecimal" = 0,
+    "ImGuiInputTextFlags_CharsHexadecimal" = 0,
+    "ImGuiInputTextFlags_CharsScientific" = 0,
+    "ImGuiInputTextFlags_CharsUppercase" = 0,
+    "ImGuiInputTextFlags_CharsNoBlank" = 0,
+    "ImGuiInputTextFlags_AllowTabInput" = 0,
+    "ImGuiInputTextFlags_EnterReturnsTrue" = 0,
+    "ImGuiInputTextFlags_EscapeClearsAll" = 0,
+    "ImGuiInputTextFlags_CtrlEnterForNewLine" = 0,
+    "ImGuiInputTextFlags_ReadOnly" = 0,
+    "ImGuiInputTextFlags_Password" = 0,
+    "ImGuiInputTextFlags_AlwaysOverwrite" = 0,
+    "ImGuiInputTextFlags_AutoSelectAll" = 0,
+    "ImGuiInputTextFlags_ParseEmptyRefVal" = 0,
+    "ImGuiInputTextFlags_DisplayEmptyRefVal" = 0,
+    "ImGuiInputTextFlags_NoHorizontalScroll" = 0,
+    "ImGuiInputTextFlags_NoUndoRedo" = 0,
+    "ImGuiInputTextFlags_ElideLeft" = 0,
+    "ImGuiInputTextFlags_CallbackCompletion" = 0,
+    "ImGuiInputTextFlags_CallbackHistory" = 0,
+    "ImGuiInputTextFlags_CallbackAlways" = 0,
+    "ImGuiInputTextFlags_CallbackCharFilter" = 0,
+    "ImGuiInputTextFlags_CallbackResize" = 0,
+    "ImGuiInputTextFlags_CallbackEdit" = 0,
+    "ImGuiInputTextFlags_WordWrap" = 0
+};
+
+enum ImGuiTreeNodeFlags_ {
+    "ImGuiTreeNodeFlags_None" = 0,
+    "ImGuiTreeNodeFlags_Selected" = 0,
+    "ImGuiTreeNodeFlags_Framed" = 0,
+    "ImGuiTreeNodeFlags_AllowOverlap" = 0,
+    "ImGuiTreeNodeFlags_NoTreePushOnOpen" = 0,
+    "ImGuiTreeNodeFlags_NoAutoOpenOnLog" = 0,
+    "ImGuiTreeNodeFlags_DefaultOpen" = 0,
+    "ImGuiTreeNodeFlags_OpenOnDoubleClick" = 0,
+    "ImGuiTreeNodeFlags_OpenOnArrow" = 0,
+    "ImGuiTreeNodeFlags_Leaf" = 0,
+    "ImGuiTreeNodeFlags_Bullet" = 0,
+    "ImGuiTreeNodeFlags_FramePadding" = 0,
+    "ImGuiTreeNodeFlags_SpanAvailWidth" = 0,
+    "ImGuiTreeNodeFlags_SpanFullWidth" = 0,
+    "ImGuiTreeNodeFlags_SpanLabelWidth" = 0,
+    "ImGuiTreeNodeFlags_SpanAllColumns" = 0,
+    "ImGuiTreeNodeFlags_LabelSpanAllColumns" = 0,
+    "ImGuiTreeNodeFlags_NavLeftJumpsToParent" = 0,
+    "ImGuiTreeNodeFlags_CollapsingHeader" = 0,
+    "ImGuiTreeNodeFlags_DrawLinesNone" = 0,
+    "ImGuiTreeNodeFlags_DrawLinesFull" = 0,
+    "ImGuiTreeNodeFlags_DrawLinesToNodes" = 0
+};
+
+enum ImGuiPopupFlags_ {
+    "ImGuiPopupFlags_None" = 0,
+    "ImGuiPopupFlags_MouseButtonLeft" = 0,
+    "ImGuiPopupFlags_MouseButtonRight" = 0,
+    "ImGuiPopupFlags_MouseButtonMiddle" = 0,
+    "ImGuiPopupFlags_MouseButtonMask_" = 0,
+    "ImGuiPopupFlags_MouseButtonDefault_" = 0,
+    "ImGuiPopupFlags_NoReopen" = 0,
+    "ImGuiPopupFlags_NoOpenOverExistingPopup" = 0,
+    "ImGuiPopupFlags_NoOpenOverItems" = 0,
+    "ImGuiPopupFlags_AnyPopupId" = 0,
+    "ImGuiPopupFlags_AnyPopupLevel" = 0,
+    "ImGuiPopupFlags_AnyPopup" = 0
+};
+
+enum ImGuiSelectableFlags_ {
+    "ImGuiSelectableFlags_None" = 0,
+    "ImGuiSelectableFlags_NoAutoClosePopups" = 0,
+    "ImGuiSelectableFlags_SpanAllColumns" = 0,
+    "ImGuiSelectableFlags_AllowDoubleClick" = 0,
+    "ImGuiSelectableFlags_Disabled" = 0,
+    "ImGuiSelectableFlags_AllowOverlap" = 0,
+    "ImGuiSelectableFlags_Highlight" = 0,
+    "ImGuiSelectableFlags_SelectOnNav" = 0
+};
+
+enum ImGuiComboFlags_ {
+    "ImGuiComboFlags_None" = 0,
+    "ImGuiComboFlags_PopupAlignLeft" = 0,
+    "ImGuiComboFlags_HeightSmall" = 0,
+    "ImGuiComboFlags_HeightRegular" = 0,
+    "ImGuiComboFlags_HeightLarge" = 0,
+    "ImGuiComboFlags_HeightLargest" = 0,
+    "ImGuiComboFlags_NoArrowButton" = 0,
+    "ImGuiComboFlags_NoPreview" = 0,
+    "ImGuiComboFlags_WidthFitPreview" = 0,
+    "ImGuiComboFlags_HeightMask_" = 0
+};
+
+enum ImGuiTabBarFlags_ {
+    "ImGuiTabBarFlags_None" = 0,
+    "ImGuiTabBarFlags_Reorderable" = 0,
+    "ImGuiTabBarFlags_AutoSelectNewTabs" = 0,
+    "ImGuiTabBarFlags_TabListPopupButton" = 0,
+    "ImGuiTabBarFlags_NoCloseWithMiddleMouseButton" = 0,
+    "ImGuiTabBarFlags_NoTabListScrollingButtons" = 0,
+    "ImGuiTabBarFlags_NoTooltip" = 0,
+    "ImGuiTabBarFlags_DrawSelectedOverline" = 0,
+    "ImGuiTabBarFlags_FittingPolicyMixed" = 0,
+    "ImGuiTabBarFlags_FittingPolicyShrink" = 0,
+    "ImGuiTabBarFlags_FittingPolicyScroll" = 0,
+    "ImGuiTabBarFlags_FittingPolicyMask_" = 0,
+    "ImGuiTabBarFlags_FittingPolicyDefault_" = 0
+};
+
+enum ImGuiTabItemFlags_ {
+    "ImGuiTabItemFlags_None" = 0,
+    "ImGuiTabItemFlags_UnsavedDocument" = 0,
+    "ImGuiTabItemFlags_SetSelected" = 0,
+    "ImGuiTabItemFlags_NoCloseWithMiddleMouseButton" = 0,
+    "ImGuiTabItemFlags_NoPushId" = 0,
+    "ImGuiTabItemFlags_NoTooltip" = 0,
+    "ImGuiTabItemFlags_NoReorder" = 0,
+    "ImGuiTabItemFlags_Leading" = 0,
+    "ImGuiTabItemFlags_Trailing" = 0,
+    "ImGuiTabItemFlags_NoAssumedClosure" = 0
+};
+
+enum ImGuiFocusedFlags_ {
+    "ImGuiFocusedFlags_None" = 0,
+    "ImGuiFocusedFlags_ChildWindows" = 0,
+    "ImGuiFocusedFlags_RootWindow" = 0,
+    "ImGuiFocusedFlags_AnyWindow" = 0,
+    "ImGuiFocusedFlags_NoPopupHierarchy" = 0,
+    "ImGuiFocusedFlags_RootAndChildWindows" = 0
+};
+
+enum ImGuiHoveredFlags_ {
+    "ImGuiHoveredFlags_None" = 0,
+    "ImGuiHoveredFlags_ChildWindows" = 0,
+    "ImGuiHoveredFlags_RootWindow" = 0,
+    "ImGuiHoveredFlags_AnyWindow" = 0,
+    "ImGuiHoveredFlags_NoPopupHierarchy" = 0,
+    "ImGuiHoveredFlags_AllowWhenBlockedByPopup" = 0,
+    "ImGuiHoveredFlags_AllowWhenBlockedByActiveItem" = 0,
+    "ImGuiHoveredFlags_AllowWhenOverlappedByItem" = 0,
+    "ImGuiHoveredFlags_AllowWhenOverlappedByWindow" = 0,
+    "ImGuiHoveredFlags_AllowWhenDisabled" = 0,
+    "ImGuiHoveredFlags_NoNavOverride" = 0,
+    "ImGuiHoveredFlags_AllowWhenOverlapped" = 0,
+    "ImGuiHoveredFlags_RectOnly" = 0,
+    "ImGuiHoveredFlags_RootAndChildWindows" = 0,
+    "ImGuiHoveredFlags_ForTooltip" = 0,
+    "ImGuiHoveredFlags_Stationary" = 0,
+    "ImGuiHoveredFlags_DelayNone" = 0,
+    "ImGuiHoveredFlags_DelayShort" = 0,
+    "ImGuiHoveredFlags_DelayNormal" = 0,
+    "ImGuiHoveredFlags_NoSharedDelay" = 0
+};
+
+enum ImGuiDragDropFlags_ {
+    "ImGuiDragDropFlags_None" = 0,
+    "ImGuiDragDropFlags_SourceNoPreviewTooltip" = 0,
+    "ImGuiDragDropFlags_SourceNoDisableHover" = 0,
+    "ImGuiDragDropFlags_SourceNoHoldToOpenOthers" = 0,
+    "ImGuiDragDropFlags_SourceAllowNullID" = 0,
+    "ImGuiDragDropFlags_SourceExtern" = 0,
+    "ImGuiDragDropFlags_PayloadAutoExpire" = 0,
+    "ImGuiDragDropFlags_PayloadNoCrossContext" = 0,
+    "ImGuiDragDropFlags_PayloadNoCrossProcess" = 0,
+    "ImGuiDragDropFlags_AcceptBeforeDelivery" = 0,
+    "ImGuiDragDropFlags_AcceptNoDrawDefaultRect" = 0,
+    "ImGuiDragDropFlags_AcceptNoPreviewTooltip" = 0,
+    "ImGuiDragDropFlags_AcceptDrawAsHovered" = 0,
+    "ImGuiDragDropFlags_AcceptPeekOnly" = 0
+};
+
+enum ImGuiDataType_ {
+    "ImGuiDataType_S8" = 0,
+    "ImGuiDataType_U8" = 0,
+    "ImGuiDataType_S16" = 0,
+    "ImGuiDataType_U16" = 0,
+    "ImGuiDataType_S32" = 0,
+    "ImGuiDataType_U32" = 0,
+    "ImGuiDataType_S64" = 0,
+    "ImGuiDataType_U64" = 0,
+    "ImGuiDataType_Float" = 0,
+    "ImGuiDataType_Double" = 0,
+    "ImGuiDataType_Bool" = 0,
+    "ImGuiDataType_String" = 0,
+    "ImGuiDataType_COUNT" = 0
+};
+
+enum ImGuiInputFlags_ {
+    "ImGuiInputFlags_None" = 0,
+    "ImGuiInputFlags_Repeat" = 0,
+    "ImGuiInputFlags_RouteActive" = 0,
+    "ImGuiInputFlags_RouteFocused" = 0,
+    "ImGuiInputFlags_RouteGlobal" = 0,
+    "ImGuiInputFlags_RouteAlways" = 0,
+    "ImGuiInputFlags_RouteOverFocused" = 0,
+    "ImGuiInputFlags_RouteOverActive" = 0,
+    "ImGuiInputFlags_RouteUnlessBgFocused" = 0,
+    "ImGuiInputFlags_RouteFromRootWindow" = 0,
+    "ImGuiInputFlags_Tooltip" = 0
+};
+
+enum ImGuiConfigFlags_ {
+    "ImGuiConfigFlags_None" = 0,
+    "ImGuiConfigFlags_NavEnableKeyboard" = 0,
+    "ImGuiConfigFlags_NavEnableGamepad" = 0,
+    "ImGuiConfigFlags_NoMouse" = 0,
+    "ImGuiConfigFlags_NoMouseCursorChange" = 0,
+    "ImGuiConfigFlags_NoKeyboard" = 0,
+    "ImGuiConfigFlags_IsSRGB" = 0,
+    "ImGuiConfigFlags_IsTouchScreen" = 0
+};
+
+enum ImGuiBackendFlags_ {
+    "ImGuiBackendFlags_None" = 0,
+    "ImGuiBackendFlags_HasGamepad" = 0,
+    "ImGuiBackendFlags_HasMouseCursors" = 0,
+    "ImGuiBackendFlags_HasSetMousePos" = 0,
+    "ImGuiBackendFlags_RendererHasVtxOffset" = 0,
+    "ImGuiBackendFlags_RendererHasTextures" = 0
+};
+
+enum ImGuiCol_ {
+    "ImGuiCol_Text" = 0,
+    "ImGuiCol_TextDisabled" = 0,
+    "ImGuiCol_WindowBg" = 0,
+    "ImGuiCol_ChildBg" = 0,
+    "ImGuiCol_PopupBg" = 0,
+    "ImGuiCol_Border" = 0,
+    "ImGuiCol_BorderShadow" = 0,
+    "ImGuiCol_FrameBg" = 0,
+    "ImGuiCol_FrameBgHovered" = 0,
+    "ImGuiCol_FrameBgActive" = 0,
+    "ImGuiCol_TitleBg" = 0,
+    "ImGuiCol_TitleBgActive" = 0,
+    "ImGuiCol_TitleBgCollapsed" = 0,
+    "ImGuiCol_MenuBarBg" = 0,
+    "ImGuiCol_ScrollbarBg" = 0,
+    "ImGuiCol_ScrollbarGrab" = 0,
+    "ImGuiCol_ScrollbarGrabHovered" = 0,
+    "ImGuiCol_ScrollbarGrabActive" = 0,
+    "ImGuiCol_CheckMark" = 0,
+    "ImGuiCol_SliderGrab" = 0,
+    "ImGuiCol_SliderGrabActive" = 0,
+    "ImGuiCol_Button" = 0,
+    "ImGuiCol_ButtonHovered" = 0,
+    "ImGuiCol_ButtonActive" = 0,
+    "ImGuiCol_Header" = 0,
+    "ImGuiCol_HeaderHovered" = 0,
+    "ImGuiCol_HeaderActive" = 0,
+    "ImGuiCol_Separator" = 0,
+    "ImGuiCol_SeparatorHovered" = 0,
+    "ImGuiCol_SeparatorActive" = 0,
+    "ImGuiCol_ResizeGrip" = 0,
+    "ImGuiCol_ResizeGripHovered" = 0,
+    "ImGuiCol_ResizeGripActive" = 0,
+    "ImGuiCol_InputTextCursor" = 0,
+    "ImGuiCol_TabHovered" = 0,
+    "ImGuiCol_Tab" = 0,
+    "ImGuiCol_TabSelected" = 0,
+    "ImGuiCol_TabSelectedOverline" = 0,
+    "ImGuiCol_TabDimmed" = 0,
+    "ImGuiCol_TabDimmedSelected" = 0,
+    "ImGuiCol_TabDimmedSelectedOverline" = 0,
+    "ImGuiCol_PlotLines" = 0,
+    "ImGuiCol_PlotLinesHovered" = 0,
+    "ImGuiCol_PlotHistogram" = 0,
+    "ImGuiCol_PlotHistogramHovered" = 0,
+    "ImGuiCol_TableHeaderBg" = 0,
+    "ImGuiCol_TableBorderStrong" = 0,
+    "ImGuiCol_TableBorderLight" = 0,
+    "ImGuiCol_TableRowBg" = 0,
+    "ImGuiCol_TableRowBgAlt" = 0,
+    "ImGuiCol_TextLink" = 0,
+    "ImGuiCol_TextSelectedBg" = 0,
+    "ImGuiCol_TreeLines" = 0,
+    "ImGuiCol_DragDropTarget" = 0,
+    "ImGuiCol_DragDropTargetBg" = 0,
+    "ImGuiCol_UnsavedMarker" = 0,
+    "ImGuiCol_NavCursor" = 0,
+    "ImGuiCol_NavWindowingHighlight" = 0,
+    "ImGuiCol_NavWindowingDimBg" = 0,
+    "ImGuiCol_ModalWindowDimBg" = 0,
+    "ImGuiCol_COUNT" = 0
+};
+
+enum ImGuiStyleVar_ {
+    "ImGuiStyleVar_Alpha" = 0,
+    "ImGuiStyleVar_DisabledAlpha" = 0,
+    "ImGuiStyleVar_WindowPadding" = 0,
+    "ImGuiStyleVar_WindowRounding" = 0,
+    "ImGuiStyleVar_WindowBorderSize" = 0,
+    "ImGuiStyleVar_WindowMinSize" = 0,
+    "ImGuiStyleVar_WindowTitleAlign" = 0,
+    "ImGuiStyleVar_ChildRounding" = 0,
+    "ImGuiStyleVar_ChildBorderSize" = 0,
+    "ImGuiStyleVar_PopupRounding" = 0,
+    "ImGuiStyleVar_PopupBorderSize" = 0,
+    "ImGuiStyleVar_FramePadding" = 0,
+    "ImGuiStyleVar_FrameRounding" = 0,
+    "ImGuiStyleVar_FrameBorderSize" = 0,
+    "ImGuiStyleVar_ItemSpacing" = 0,
+    "ImGuiStyleVar_ItemInnerSpacing" = 0,
+    "ImGuiStyleVar_IndentSpacing" = 0,
+    "ImGuiStyleVar_CellPadding" = 0,
+    "ImGuiStyleVar_ScrollbarSize" = 0,
+    "ImGuiStyleVar_ScrollbarRounding" = 0,
+    "ImGuiStyleVar_ScrollbarPadding" = 0,
+    "ImGuiStyleVar_GrabMinSize" = 0,
+    "ImGuiStyleVar_GrabRounding" = 0,
+    "ImGuiStyleVar_ImageBorderSize" = 0,
+    "ImGuiStyleVar_TabRounding" = 0,
+    "ImGuiStyleVar_TabBorderSize" = 0,
+    "ImGuiStyleVar_TabMinWidthBase" = 0,
+    "ImGuiStyleVar_TabMinWidthShrink" = 0,
+    "ImGuiStyleVar_TabBarBorderSize" = 0,
+    "ImGuiStyleVar_TabBarOverlineSize" = 0,
+    "ImGuiStyleVar_TableAngledHeadersAngle" = 0,
+    "ImGuiStyleVar_TableAngledHeadersTextAlign" = 0,
+    "ImGuiStyleVar_TreeLinesSize" = 0,
+    "ImGuiStyleVar_TreeLinesRounding" = 0,
+    "ImGuiStyleVar_ButtonTextAlign" = 0,
+    "ImGuiStyleVar_SelectableTextAlign" = 0,
+    "ImGuiStyleVar_SeparatorTextBorderSize" = 0,
+    "ImGuiStyleVar_SeparatorTextAlign" = 0,
+    "ImGuiStyleVar_SeparatorTextPadding" = 0,
+    "ImGuiStyleVar_COUNT" = 0
+};
+
+enum ImGuiButtonFlags_ {
+    "ImGuiButtonFlags_None" = 0,
+    "ImGuiButtonFlags_MouseButtonLeft" = 0,
+    "ImGuiButtonFlags_MouseButtonRight" = 0,
+    "ImGuiButtonFlags_MouseButtonMiddle" = 0,
+    "ImGuiButtonFlags_MouseButtonMask_" = 0,
+    "ImGuiButtonFlags_EnableNav" = 0
+};
+
+enum ImGuiColorEditFlags_ {
+    "ImGuiColorEditFlags_None" = 0,
+    "ImGuiColorEditFlags_NoAlpha" = 0,
+    "ImGuiColorEditFlags_NoPicker" = 0,
+    "ImGuiColorEditFlags_NoOptions" = 0,
+    "ImGuiColorEditFlags_NoSmallPreview" = 0,
+    "ImGuiColorEditFlags_NoInputs" = 0,
+    "ImGuiColorEditFlags_NoTooltip" = 0,
+    "ImGuiColorEditFlags_NoLabel" = 0,
+    "ImGuiColorEditFlags_NoSidePreview" = 0,
+    "ImGuiColorEditFlags_NoDragDrop" = 0,
+    "ImGuiColorEditFlags_NoBorder" = 0,
+    "ImGuiColorEditFlags_NoColorMarkers" = 0,
+    "ImGuiColorEditFlags_AlphaOpaque" = 0,
+    "ImGuiColorEditFlags_AlphaNoBg" = 0,
+    "ImGuiColorEditFlags_AlphaPreviewHalf" = 0,
+    "ImGuiColorEditFlags_AlphaBar" = 0,
+    "ImGuiColorEditFlags_HDR" = 0,
+    "ImGuiColorEditFlags_DisplayRGB" = 0,
+    "ImGuiColorEditFlags_DisplayHSV" = 0,
+    "ImGuiColorEditFlags_DisplayHex" = 0,
+    "ImGuiColorEditFlags_Uint8" = 0,
+    "ImGuiColorEditFlags_Float" = 0,
+    "ImGuiColorEditFlags_PickerHueBar" = 0,
+    "ImGuiColorEditFlags_PickerHueWheel" = 0,
+    "ImGuiColorEditFlags_InputRGB" = 0,
+    "ImGuiColorEditFlags_InputHSV" = 0,
+    "ImGuiColorEditFlags_DefaultOptions_" = 0,
+    "ImGuiColorEditFlags_AlphaMask_" = 0,
+    "ImGuiColorEditFlags_DisplayMask_" = 0,
+    "ImGuiColorEditFlags_DataTypeMask_" = 0,
+    "ImGuiColorEditFlags_PickerMask_" = 0,
+    "ImGuiColorEditFlags_InputMask_" = 0
+};
+
+enum ImGuiSliderFlags_ {
+    "ImGuiSliderFlags_None" = 0,
+    "ImGuiSliderFlags_Logarithmic" = 0,
+    "ImGuiSliderFlags_NoRoundToFormat" = 0,
+    "ImGuiSliderFlags_NoInput" = 0,
+    "ImGuiSliderFlags_WrapAround" = 0,
+    "ImGuiSliderFlags_ClampOnInput" = 0,
+    "ImGuiSliderFlags_ClampZeroRange" = 0,
+    "ImGuiSliderFlags_NoSpeedTweaks" = 0,
+    "ImGuiSliderFlags_ColorMarkers" = 0,
+    "ImGuiSliderFlags_AlwaysClamp" = 0,
+    "ImGuiSliderFlags_InvalidMask_" = 0
+};
+
+enum ImGuiMouseButton_ {
+    "ImGuiMouseButton_Left" = 0,
+    "ImGuiMouseButton_Right" = 0,
+    "ImGuiMouseButton_Middle" = 0,
+    "ImGuiMouseButton_COUNT" = 0
+};
+
+enum ImGuiMouseCursor_ {
+    "ImGuiMouseCursor_None" = 0,
+    "ImGuiMouseCursor_Arrow" = 0,
+    "ImGuiMouseCursor_TextInput" = 0,
+    "ImGuiMouseCursor_ResizeAll" = 0,
+    "ImGuiMouseCursor_ResizeNS" = 0,
+    "ImGuiMouseCursor_ResizeEW" = 0,
+    "ImGuiMouseCursor_ResizeNESW" = 0,
+    "ImGuiMouseCursor_ResizeNWSE" = 0,
+    "ImGuiMouseCursor_Hand" = 0,
+    "ImGuiMouseCursor_Wait" = 0,
+    "ImGuiMouseCursor_Progress" = 0,
+    "ImGuiMouseCursor_NotAllowed" = 0,
+    "ImGuiMouseCursor_COUNT" = 0
+};
+
+enum ImGuiCond_ {
+    "ImGuiCond_None" = 0,
+    "ImGuiCond_Always" = 0,
+    "ImGuiCond_Once" = 0,
+    "ImGuiCond_FirstUseEver" = 0,
+    "ImGuiCond_Appearing" = 0
+};
+
+enum ImGuiTableFlags_ {
+    "ImGuiTableFlags_None" = 0,
+    "ImGuiTableFlags_Resizable" = 0,
+    "ImGuiTableFlags_Reorderable" = 0,
+    "ImGuiTableFlags_Hideable" = 0,
+    "ImGuiTableFlags_Sortable" = 0,
+    "ImGuiTableFlags_NoSavedSettings" = 0,
+    "ImGuiTableFlags_ContextMenuInBody" = 0,
+    "ImGuiTableFlags_RowBg" = 0,
+    "ImGuiTableFlags_BordersInnerH" = 0,
+    "ImGuiTableFlags_BordersOuterH" = 0,
+    "ImGuiTableFlags_BordersInnerV" = 0,
+    "ImGuiTableFlags_BordersOuterV" = 0,
+    "ImGuiTableFlags_BordersH" = 0,
+    "ImGuiTableFlags_BordersV" = 0,
+    "ImGuiTableFlags_BordersInner" = 0,
+    "ImGuiTableFlags_BordersOuter" = 0,
+    "ImGuiTableFlags_Borders" = 0,
+    "ImGuiTableFlags_NoBordersInBody" = 0,
+    "ImGuiTableFlags_NoBordersInBodyUntilResize" = 0,
+    "ImGuiTableFlags_SizingFixedFit" = 0,
+    "ImGuiTableFlags_SizingFixedSame" = 0,
+    "ImGuiTableFlags_SizingStretchProp" = 0,
+    "ImGuiTableFlags_SizingStretchSame" = 0,
+    "ImGuiTableFlags_NoHostExtendX" = 0,
+    "ImGuiTableFlags_NoHostExtendY" = 0,
+    "ImGuiTableFlags_NoKeepColumnsVisible" = 0,
+    "ImGuiTableFlags_PreciseWidths" = 0,
+    "ImGuiTableFlags_NoClip" = 0,
+    "ImGuiTableFlags_PadOuterX" = 0,
+    "ImGuiTableFlags_NoPadOuterX" = 0,
+    "ImGuiTableFlags_NoPadInnerX" = 0,
+    "ImGuiTableFlags_ScrollX" = 0,
+    "ImGuiTableFlags_ScrollY" = 0,
+    "ImGuiTableFlags_SortMulti" = 0,
+    "ImGuiTableFlags_SortTristate" = 0,
+    "ImGuiTableFlags_HighlightHoveredColumn" = 0,
+    "ImGuiTableFlags_SizingMask_" = 0
+};
+
+enum ImGuiTableColumnFlags_ {
+    "ImGuiTableColumnFlags_None" = 0,
+    "ImGuiTableColumnFlags_Disabled" = 0,
+    "ImGuiTableColumnFlags_DefaultHide" = 0,
+    "ImGuiTableColumnFlags_DefaultSort" = 0,
+    "ImGuiTableColumnFlags_WidthStretch" = 0,
+    "ImGuiTableColumnFlags_WidthFixed" = 0,
+    "ImGuiTableColumnFlags_NoResize" = 0,
+    "ImGuiTableColumnFlags_NoReorder" = 0,
+    "ImGuiTableColumnFlags_NoHide" = 0,
+    "ImGuiTableColumnFlags_NoClip" = 0,
+    "ImGuiTableColumnFlags_NoSort" = 0,
+    "ImGuiTableColumnFlags_NoSortAscending" = 0,
+    "ImGuiTableColumnFlags_NoSortDescending" = 0,
+    "ImGuiTableColumnFlags_NoHeaderLabel" = 0,
+    "ImGuiTableColumnFlags_NoHeaderWidth" = 0,
+    "ImGuiTableColumnFlags_PreferSortAscending" = 0,
+    "ImGuiTableColumnFlags_PreferSortDescending" = 0,
+    "ImGuiTableColumnFlags_IndentEnable" = 0,
+    "ImGuiTableColumnFlags_IndentDisable" = 0,
+    "ImGuiTableColumnFlags_AngledHeader" = 0,
+    "ImGuiTableColumnFlags_IsEnabled" = 0,
+    "ImGuiTableColumnFlags_IsVisible" = 0,
+    "ImGuiTableColumnFlags_IsSorted" = 0,
+    "ImGuiTableColumnFlags_IsHovered" = 0,
+    "ImGuiTableColumnFlags_WidthMask_" = 0,
+    "ImGuiTableColumnFlags_IndentMask_" = 0,
+    "ImGuiTableColumnFlags_StatusMask_" = 0,
+    "ImGuiTableColumnFlags_NoDirectResize_" = 0
+};
+
+enum ImGuiTableRowFlags_ {
+    "ImGuiTableRowFlags_None" = 0,
+    "ImGuiTableRowFlags_Headers" = 0
+};
+
+enum ImGuiTableBgTarget_ {
+    "ImGuiTableBgTarget_None" = 0,
+    "ImGuiTableBgTarget_RowBg0" = 0,
+    "ImGuiTableBgTarget_RowBg1" = 0,
+    "ImGuiTableBgTarget_CellBg" = 0
+};
+
+enum ImGuiListClipperFlags_ {
+    "ImGuiListClipperFlags_None" = 0,
+    "ImGuiListClipperFlags_NoSetTableRowCounters" = 0
+};
+
+enum ImGuiMultiSelectFlags_ {
+    "ImGuiMultiSelectFlags_None" = 0,
+    "ImGuiMultiSelectFlags_SingleSelect" = 0,
+    "ImGuiMultiSelectFlags_NoSelectAll" = 0,
+    "ImGuiMultiSelectFlags_NoRangeSelect" = 0,
+    "ImGuiMultiSelectFlags_NoAutoSelect" = 0,
+    "ImGuiMultiSelectFlags_NoAutoClear" = 0,
+    "ImGuiMultiSelectFlags_NoAutoClearOnReselect" = 0,
+    "ImGuiMultiSelectFlags_BoxSelect1d" = 0,
+    "ImGuiMultiSelectFlags_BoxSelect2d" = 0,
+    "ImGuiMultiSelectFlags_BoxSelectNoScroll" = 0,
+    "ImGuiMultiSelectFlags_ClearOnEscape" = 0,
+    "ImGuiMultiSelectFlags_ClearOnClickVoid" = 0,
+    "ImGuiMultiSelectFlags_ScopeWindow" = 0,
+    "ImGuiMultiSelectFlags_ScopeRect" = 0,
+    "ImGuiMultiSelectFlags_SelectOnClick" = 0,
+    "ImGuiMultiSelectFlags_SelectOnClickRelease" = 0,
+    "ImGuiMultiSelectFlags_NavWrapX" = 0,
+    "ImGuiMultiSelectFlags_NoSelectOnRightClick" = 0
+};
+
+enum ImGuiSelectionRequestType {
+    "ImGuiSelectionRequestType_None" = 0,
+    "ImGuiSelectionRequestType_SetAll" = 0,
+    "ImGuiSelectionRequestType_SetRange" = 0
+};
+
+enum ImGuiViewportFlags_ {
+    "ImGuiViewportFlags_None" = 0,
+    "ImGuiViewportFlags_IsPlatformWindow" = 0,
+    "ImGuiViewportFlags_IsPlatformMonitor" = 0,
+    "ImGuiViewportFlags_OwnedByApp" = 0
+};
+
+// Functions
+namespace imgui {
+    boolean show_demo_window([Output] boolean? p_open);
+    boolean show_metrics_window([Output] boolean? p_open);
+    boolean show_debug_log_window([Output] boolean? p_open);
+    [CppFunc="ShowIDStackToolWindow"]
+    boolean show_id_stack_tool_window([Output] boolean? p_open);
+    boolean show_about_window([Output] boolean? p_open);
+    boolean show_style_selector(DOMString label);
+    void show_font_selector(DOMString label);
+    void show_user_guide();
+    DOMString get_version();
+    [CppFunc="Begin"]
+    boolean begin_window(DOMString name, [Output] boolean? p_open, long? flags);
+    [CppFunc="End"]
+    void end_window();
+    [CppFunc="BeginChild"]
+    boolean begin_child_str_vec2_x_x(DOMString str_id, ImVec2? size, long? child_flags, long? window_flags);
+    [CppFunc="BeginChild"]
+    boolean begin_child_x_vec2_x_x(long id, ImVec2? size, long? child_flags, long? window_flags);
+    void end_child();
+    boolean is_window_appearing();
+    boolean is_window_collapsed();
+    boolean is_window_focused(long? flags);
+    boolean is_window_hovered(long? flags);
+    ImVec2 get_window_pos();
+    ImVec2 get_window_size();
+    float get_window_width();
+    float get_window_height();
+    void set_next_window_pos(ImVec2 pos, long? cond, ImVec2? pivot);
+    void set_next_window_size(ImVec2 size, long? cond);
+    void set_next_window_content_size(ImVec2 size);
+    void set_next_window_collapsed(boolean collapsed, long? cond);
+    void set_next_window_focus();
+    void set_next_window_scroll(ImVec2 scroll);
+    void set_next_window_bg_alpha(float alpha);
+    [CppFunc="SetWindowPos"]
+    void set_window_pos_vec2_x(ImVec2 pos, long? cond);
+    [CppFunc="SetWindowSize"]
+    void set_window_size_vec2_x(ImVec2 size, long? cond);
+    [CppFunc="SetWindowCollapsed"]
+    void set_window_collapsed_bool_x(boolean collapsed, long? cond);
+    void set_window_focus_();
+    [CppFunc="SetWindowPos"]
+    void set_window_pos_str_vec2_x(DOMString name, ImVec2 pos, long? cond);
+    [CppFunc="SetWindowSize"]
+    void set_window_size_str_vec2_x(DOMString name, ImVec2 size, long? cond);
+    [CppFunc="SetWindowCollapsed"]
+    void set_window_collapsed_str_bool_x(DOMString name, boolean collapsed, long? cond);
+    [CppFunc="SetWindowFocus"]
+    void set_window_focus_str(DOMString name);
+    float get_scroll_x();
+    float get_scroll_y();
+    void set_scroll_x(float scroll_x);
+    void set_scroll_y(float scroll_y);
+    float get_scroll_max_x();
+    float get_scroll_max_y();
+    void set_scroll_here_x(float? center_x_ratio);
+    void set_scroll_here_y(float? center_y_ratio);
+    void set_scroll_from_pos_x(float local_x, float? center_x_ratio);
+    void set_scroll_from_pos_y(float local_y, float? center_y_ratio);
+    float get_font_size();
+    [CppFunc="PushStyleColor"]
+    void push_style_color_x_x(long idx, long col);
+    [CppFunc="PushStyleColor"]
+    void push_style_color_x_vec4(long idx, ImVec4 col);
+    void pop_style_color(long? count);
+    [CppFunc="PushStyleVar"]
+    void push_style_var_x_float(long idx, float val);
+    [CppFunc="PushStyleVar"]
+    void push_style_var_x_vec2(long idx, ImVec2 val);
+    void push_style_var_x(long idx, float val_x);
+    void push_style_var_y(long idx, float val_y);
+    void pop_style_var(long? count);
+    void push_item_flag(long option, boolean enabled);
+    void pop_item_flag();
+    void push_item_width(float item_width);
+    void pop_item_width();
+    void set_next_item_width(float item_width);
+    float calc_item_width();
+    void push_text_wrap_pos(float? wrap_local_pos_x);
+    void pop_text_wrap_pos();
+    ImVec2 get_font_tex_uv_white_pixel();
+    [CppFunc="GetColorU32"]
+    unsigned long get_color_u32_x_float(long idx, float? alpha_mul);
+    [CppFunc="GetColorU32"]
+    unsigned long get_color_u32_vec4(ImVec4 col);
+    [CppFunc="GetColorU32"]
+    unsigned long get_color_u32_x_float2(long col, float? alpha_mul);
+    ImVec4 get_style_color_vec4(long idx);
+    ImVec2 get_cursor_screen_pos();
+    void set_cursor_screen_pos(ImVec2 pos);
+    ImVec2 get_content_region_avail();
+    ImVec2 get_cursor_pos();
+    float get_cursor_pos_x();
+    float get_cursor_pos_y();
+    void set_cursor_pos(ImVec2 local_pos);
+    void set_cursor_pos_x(float local_x);
+    void set_cursor_pos_y(float local_y);
+    ImVec2 get_cursor_start_pos();
+    void separator();
+    void same_line(float? offset_from_start_x, float? spacing);
+    void new_line();
+    void spacing();
+    void dummy(ImVec2 size);
+    void indent(float? indent_w);
+    void unindent(float? indent_w);
+    void begin_group();
+    void end_group();
+    void align_text_to_frame_padding();
+    float get_text_line_height();
+    float get_text_line_height_with_spacing();
+    float get_frame_height();
+    float get_frame_height_with_spacing();
+    [CppFunc="PushID"]
+    void push_id_str(DOMString str_id);
+    [CppFunc="PushID"]
+    void push_id_str_str(DOMString str_id_begin, DOMString str_id_end);
+    [CppFunc="PushID"]
+    void push_id_int(long int_id);
+    [CppFunc="PopID"]
+    void pop_id();
+    [CppFunc="GetID"]
+    unsigned long get_id_str(DOMString str_id);
+    [CppFunc="GetID"]
+    unsigned long get_id_str_str(DOMString str_id_begin, DOMString str_id_end);
+    [CppFunc="GetID"]
+    unsigned long get_id_int(long int_id);
+    void text_unformatted(DOMString text, DOMString? text_end);
+    void separator_text(DOMString label);
+    boolean button(DOMString label, ImVec2? size);
+    boolean small_button(DOMString label);
+    boolean invisible_button(DOMString str_id, ImVec2 size, long? flags);
+    boolean arrow_button(DOMString str_id, long dir);
+    boolean checkbox(DOMString label, [Output] boolean? v);
+    [CppFunc="CheckboxFlags"]
+    boolean checkbox_flags_str_ptr_int(DOMString label, long flags_value);
+    [CppFunc="CheckboxFlags"]
+    boolean checkbox_flags_str_ptr_uint(DOMString label, long flags_value);
+    [CppFunc="RadioButton"]
+    boolean radio_button_str_bool(DOMString label, boolean active);
+    [CppFunc="RadioButton"]
+    boolean radio_button_str_ptr_int(DOMString label, long v_button);
+    void progress_bar(float fraction, ImVec2? size_arg, DOMString? overlay);
+    void bullet();
+    boolean text_link(DOMString label);
+    [CppFunc="TextLinkOpenURL"]
+    boolean text_link_open_url(DOMString label, DOMString? url);
+    boolean begin_combo(DOMString label, DOMString preview_value, long? flags);
+    void end_combo();
+    boolean drag_float(DOMString label, float? v_speed, float? v_min, float? v_max, DOMString? format, long? flags);
+    boolean drag_float2(DOMString label, [Output] float v[2], float? v_speed, float? v_min, float? v_max, DOMString? format, long? flags);
+    boolean drag_float3(DOMString label, [Output] float v[3], float? v_speed, float? v_min, float? v_max, DOMString? format, long? flags);
+    boolean drag_float4(DOMString label, [Output] float v[4], float? v_speed, float? v_min, float? v_max, DOMString? format, long? flags);
+    float drag_float_range2(DOMString label, float? v_speed, float? v_min, float? v_max, DOMString? format, DOMString? format_max, long? flags);
+    boolean drag_int(DOMString label, float? v_speed, long? v_min, long? v_max, DOMString? format, long? flags);
+    boolean drag_int2(DOMString label, float? v_speed, long? v_min, long? v_max, DOMString? format, long? flags);
+    boolean drag_int3(DOMString label, float? v_speed, long? v_min, long? v_max, DOMString? format, long? flags);
+    boolean drag_int4(DOMString label, float? v_speed, long? v_min, long? v_max, DOMString? format, long? flags);
+    unsigned long drag_int_range2(DOMString label, float? v_speed, long? v_min, long? v_max, DOMString? format, DOMString? format_max, long? flags);
+    boolean slider_float(DOMString label, float v_min, float v_max, DOMString? format, long? flags);
+    boolean slider_float2(DOMString label, [Output] float v[2], float v_min, float v_max, DOMString? format, long? flags);
+    boolean slider_float3(DOMString label, [Output] float v[3], float v_min, float v_max, DOMString? format, long? flags);
+    boolean slider_float4(DOMString label, [Output] float v[4], float v_min, float v_max, DOMString? format, long? flags);
+    boolean slider_angle(DOMString label, float? v_degrees_min, float? v_degrees_max, DOMString? format, long? flags);
+    boolean slider_int(DOMString label, long v_min, long v_max, DOMString? format, long? flags);
+    boolean slider_int2(DOMString label, long v_min, long v_max, DOMString? format, long? flags);
+    boolean slider_int3(DOMString label, long v_min, long v_max, DOMString? format, long? flags);
+    boolean slider_int4(DOMString label, long v_min, long v_max, DOMString? format, long? flags);
+    boolean v_slider_float(DOMString label, ImVec2 size, float v_min, float v_max, DOMString? format, long? flags);
+    boolean v_slider_int(DOMString label, ImVec2 size, long v_min, long v_max, DOMString? format, long? flags);
+    boolean input_float(DOMString label, float? step, float? step_fast, DOMString? format, long? flags);
+    boolean input_float2(DOMString label, [Output] float v[2], DOMString? format, long? flags);
+    boolean input_float3(DOMString label, [Output] float v[3], DOMString? format, long? flags);
+    boolean input_float4(DOMString label, [Output] float v[4], DOMString? format, long? flags);
+    boolean input_int(DOMString label, long? step, long? step_fast, long? flags);
+    boolean input_int2(DOMString label, long? flags);
+    boolean input_int3(DOMString label, long? flags);
+    boolean input_int4(DOMString label, long? flags);
+    boolean input_double(DOMString label, double? step, double? step_fast, DOMString? format, long? flags);
+    boolean color_edit3(DOMString label, [Output] float col[3], long? flags);
+    boolean color_edit4(DOMString label, [Output] float col[4], long? flags);
+    boolean color_picker3(DOMString label, [Output] float col[3], long? flags);
+    boolean color_button(DOMString desc_id, ImVec4 col, long? flags, ImVec2? size);
+    void set_color_edit_options(long flags);
+    [CppFunc="TreeNode"]
+    boolean tree_node_str(DOMString label);
+    [CppFunc="TreeNodeEx"]
+    boolean tree_node_ex_str_x(DOMString label, long? flags);
+    [CppFunc="TreePush"]
+    void tree_push_str(DOMString str_id);
+    void tree_pop();
+    float get_tree_node_to_label_spacing();
+    [CppFunc="CollapsingHeader"]
+    boolean collapsing_header_str_x(DOMString label, long? flags);
+    [CppFunc="CollapsingHeader"]
+    boolean collapsing_header_str_ptr_x(DOMString label, [Output] boolean? p_visible, long? flags);
+    void set_next_item_open(boolean is_open, long? cond);
+    [CppFunc="SetNextItemStorageID"]
+    void set_next_item_storage_id(long storage_id);
+    [CppFunc="Selectable"]
+    boolean selectable_str_bool_x_vec2(DOMString label, boolean selected, long? flags, ImVec2? size);
+    [CppFunc="Selectable"]
+    boolean selectable_str_ptr_x_vec2(DOMString label, [Output] boolean? p_selected, long? flags, ImVec2? size);
+    boolean is_item_toggled_selection();
+    boolean begin_list_box(DOMString label, ImVec2? size);
+    void end_list_box();
+    [CppFunc="Value"]
+    void value_str_bool(DOMString prefix, boolean b);
+    [CppFunc="Value"]
+    void value_str_int(DOMString prefix, long v);
+    [CppFunc="Value"]
+    void value_str_uint(DOMString prefix, long v);
+    [CppFunc="Value"]
+    void value_str_float_str(DOMString prefix, float v, DOMString? float_format);
+    boolean begin_menu_bar();
+    void end_menu_bar();
+    boolean begin_main_menu_bar();
+    void end_main_menu_bar();
+    boolean begin_menu(DOMString label, boolean enabled);
+    void end_menu();
+    [CppFunc="MenuItem"]
+    boolean menu_item_str_str_bool_bool(DOMString label, DOMString? shortcut, boolean selected, boolean enabled);
+    [CppFunc="MenuItem"]
+    boolean menu_item_str_str_ptr_bool(DOMString label, DOMString shortcut, [Output] boolean? p_selected, boolean enabled);
+    boolean begin_tooltip();
+    void end_tooltip();
+    boolean begin_item_tooltip();
+    boolean begin_popup(DOMString str_id, long? flags);
+    boolean begin_popup_modal(DOMString name, [Output] boolean? p_open, long? flags);
+    void end_popup();
+    [CppFunc="OpenPopup"]
+    void open_popup_str_x(DOMString str_id, long? popup_flags);
+    [CppFunc="OpenPopup"]
+    void open_popup_x_x(long id, long? popup_flags);
+    void open_popup_on_item_click(DOMString? str_id, long? popup_flags);
+    void close_current_popup();
+    boolean begin_popup_context_item(DOMString? str_id, long? popup_flags);
+    boolean begin_popup_context_window(DOMString? str_id, long? popup_flags);
+    boolean begin_popup_context_void(DOMString? str_id, long? popup_flags);
+    boolean is_popup_open(DOMString str_id, long? flags);
+    boolean begin_table(DOMString str_id, long columns, long? flags, ImVec2? outer_size, float? inner_width);
+    void end_table();
+    void table_next_row(long? row_flags, float? min_row_height);
+    boolean table_next_column();
+    boolean table_set_column_index(long column_n);
+    void table_setup_column(DOMString label, long? flags, float? init_width_or_weight, long? user_id);
+    void table_setup_scroll_freeze(long cols, long rows);
+    void table_header(DOMString label);
+    void table_headers_row();
+    void table_angled_headers_row();
+    unsigned long table_get_column_count();
+    unsigned long table_get_column_index();
+    unsigned long table_get_row_index();
+    DOMString table_get_column_name(long? column_n);
+    unsigned long table_get_column_flags(long? column_n);
+    void table_set_column_enabled(long column_n, boolean v);
+    unsigned long table_get_hovered_column();
+    void table_set_bg_color(long target, long color, long? column_n);
+    void columns(long? count, DOMString? id, boolean borders);
+    void next_column();
+    unsigned long get_column_index();
+    float get_column_width(long? column_index);
+    void set_column_width(long column_index, float width);
+    float get_column_offset(long? column_index);
+    void set_column_offset(long column_index, float offset_x);
+    unsigned long get_columns_count();
+    boolean begin_tab_bar(DOMString str_id, long? flags);
+    void end_tab_bar();
+    boolean begin_tab_item(DOMString label, [Output] boolean? p_open, long? flags);
+    void end_tab_item();
+    boolean tab_item_button(DOMString label, long? flags);
+    void set_tab_item_closed(DOMString tab_or_docked_window_label);
+    [CppFunc="LogToTTY"]
+    void log_to_tty(long? auto_open_depth);
+    void log_to_file(long? auto_open_depth, DOMString? filename);
+    void log_to_clipboard(long? auto_open_depth);
+    void log_finish();
+    void log_buttons();
+    boolean begin_drag_drop_source(long? flags);
+    void end_drag_drop_source();
+    boolean begin_drag_drop_target();
+    void end_drag_drop_target();
+    void begin_disabled(boolean disabled);
+    void end_disabled();
+    void push_clip_rect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, boolean intersect_with_current_clip_rect);
+    void pop_clip_rect();
+    void set_item_default_focus();
+    void set_keyboard_focus_here(long? offset);
+    void set_nav_cursor_visible(boolean visible);
+    void set_next_item_allow_overlap();
+    boolean is_item_hovered(long? flags);
+    boolean is_item_active();
+    boolean is_item_focused();
+    boolean is_item_clicked(long? mouse_button);
+    boolean is_item_visible();
+    boolean is_item_edited();
+    boolean is_item_activated();
+    boolean is_item_deactivated();
+    boolean is_item_deactivated_after_edit();
+    boolean is_item_toggled_open();
+    boolean is_any_item_hovered();
+    boolean is_any_item_active();
+    boolean is_any_item_focused();
+    [CppFunc="GetItemID"]
+    unsigned long get_item_id();
+    ImVec2 get_item_rect_min();
+    ImVec2 get_item_rect_max();
+    ImVec2 get_item_rect_size();
+    unsigned long get_item_flags();
+    [CppFunc="IsRectVisible"]
+    boolean is_rect_visible_vec2(ImVec2 size);
+    [CppFunc="IsRectVisible"]
+    boolean is_rect_visible_vec2_vec2(ImVec2 rect_min, ImVec2 rect_max);
+    double get_time();
+    unsigned long get_frame_count();
+    DOMString get_style_color_name(long idx);
+    ImVec2 calc_text_size(DOMString text, DOMString? text_end, boolean hide_text_after_double_hash, float? wrap_width);
+    ImVec4 color_convert_u32_to_float4(long in);
+    unsigned long color_convert_float4_to_u32(ImVec4 in);
+    boolean is_key_down(long key);
+    boolean is_key_pressed(long key, boolean repeat);
+    boolean is_key_released(long key);
+    boolean is_key_chord_pressed(long key_chord);
+    unsigned long get_key_pressed_amount(long key, float repeat_delay, float rate);
+    DOMString get_key_name(long key);
+    void set_next_frame_want_capture_keyboard(boolean want_capture_keyboard);
+    void set_item_key_owner(long key);
+    boolean is_mouse_down(long button);
+    boolean is_mouse_clicked(long button, boolean repeat);
+    boolean is_mouse_released(long button);
+    boolean is_mouse_double_clicked(long button);
+    boolean is_mouse_released_with_delay(long button, float delay);
+    unsigned long get_mouse_clicked_count(long button);
+    boolean is_mouse_hovering_rect(ImVec2 r_min, ImVec2 r_max, boolean clip);
+    boolean is_any_mouse_down();
+    ImVec2 get_mouse_pos();
+    ImVec2 get_mouse_pos_on_opening_current_popup();
+    boolean is_mouse_dragging(long button, float? lock_threshold);
+    ImVec2 get_mouse_drag_delta(long? button, float? lock_threshold);
+    void reset_mouse_drag_delta(long? button);
+    unsigned long get_mouse_cursor();
+    void set_mouse_cursor(long cursor_type);
+    void set_next_frame_want_capture_mouse(boolean want_capture_mouse);
+    DOMString get_clipboard_text();
+    void set_clipboard_text(DOMString text);
+    void load_ini_settings_from_disk(DOMString ini_filename);
+    void save_ini_settings_to_disk(DOMString ini_filename);
+    void debug_text_encoding(DOMString text);
+    void debug_flash_style_color(long idx);
+    void debug_start_item_picker();
+    boolean debug_check_version_and_data_layout(DOMString version_str, long sz_io, long sz_style, long sz_vec2, long sz_vec4, long sz_drawvert, long sz_drawidx);
+};

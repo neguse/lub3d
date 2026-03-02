@@ -1,0 +1,29 @@
+// Jolt Physics — lub3d binding via CppClass pipeline
+// JoltWorld wraps JPH::PhysicsSystem + subsystems into a single opaque type.
+// Complex operations (multi-return, constructor with optional params) are in ExtraCCode.
+[Prefix="jolt_", IsCpp, EntryPoint="luaopen_jolt", StandaloneEntry,
+ExtraCCode="extra/jolt_extra.cpp",
+ExtraLuaReg="World:l_jolt_World_new"]
+
+enum EMotionType {
+    "EMotionType_Static" = 0,
+    "EMotionType_Kinematic" = 1,
+    "EMotionType_Dynamic" = 2
+};
+
+[CppClass="JoltWorld",
+ExtraMethod="get_gravity:l_jolt_get_gravity,get_position:l_jolt_get_position,get_rotation:l_jolt_get_rotation"]
+interface World {
+    void set_gravity(float x, float y, float z);
+    long update(float dt, long steps);
+    void optimize();
+    unsigned long body_count();
+    boolean is_active(unsigned long body_id);
+    void remove_body(unsigned long body_id);
+    void set_linear_velocity(unsigned long body_id, float vx, float vy, float vz);
+    void add_impulse(unsigned long body_id, float ix, float iy, float iz);
+    unsigned long create_box(float hx, float hy, float hz,
+    float px, float py, float pz, long motion_type);
+    unsigned long create_sphere(float radius, float px, float py, float pz,
+    long motion_type);
+};

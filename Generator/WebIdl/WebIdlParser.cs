@@ -135,7 +135,7 @@ public static class WebIdlParser
             }
 
             // punctuation
-            if ("[]{}();,=:".Contains(ch))
+            if ("[]{}();,=:?".Contains(ch))
             {
                 tokens.Add(new Token(TokenKind.Punctuation, ch.ToString(), line));
                 i++;
@@ -280,6 +280,12 @@ public static class WebIdlParser
     {
         Expect(tokens, ref cursor, TokenKind.Identifier, "interface");
         var name = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
+
+        // Optional inheritance: interface A : B { }
+        string? parentName = null;
+        if (TryConsume(tokens, ref cursor, TokenKind.Punctuation, ":"))
+            parentName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
+
         Expect(tokens, ref cursor, TokenKind.Punctuation, "{");
 
         var methods = new List<IdlMethod>();
@@ -294,7 +300,7 @@ public static class WebIdlParser
         Expect(tokens, ref cursor, TokenKind.Punctuation, "}");
         Expect(tokens, ref cursor, TokenKind.Punctuation, ";");
 
-        return new IdlInterface(name, methods, extAttrs);
+        return new IdlInterface(name, methods, extAttrs, parentName);
     }
 
     // Method = Type Ident "(" ParamList? ")" ";"
@@ -305,18 +311,7 @@ public static class WebIdlParser
         var retType = ParseType(tokens, ref cursor);
         var name = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
         Expect(tokens, ref cursor, TokenKind.Punctuation, "(");
-
-        var parms = new List<IdlParam>();
-        if (Peek(tokens, cursor) is not { Kind: TokenKind.Punctuation, Value: ")" })
-        {
-            do
-            {
-                var pType = ParseType(tokens, ref cursor);
-                var pName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
-                parms.Add(new IdlParam(pName, pType));
-            } while (TryConsume(tokens, ref cursor, TokenKind.Punctuation, ","));
-        }
-
+        var parms = ParseParamList(tokens, ref cursor);
         Expect(tokens, ref cursor, TokenKind.Punctuation, ")");
         Expect(tokens, ref cursor, TokenKind.Punctuation, ";");
 
@@ -332,18 +327,7 @@ public static class WebIdlParser
         Expect(tokens, ref cursor, TokenKind.Punctuation, "=");
         var retType = ParseType(tokens, ref cursor);
         Expect(tokens, ref cursor, TokenKind.Punctuation, "(");
-
-        var parms = new List<IdlParam>();
-        if (Peek(tokens, cursor) is not { Kind: TokenKind.Punctuation, Value: ")" })
-        {
-            do
-            {
-                var pType = ParseType(tokens, ref cursor);
-                var pName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
-                parms.Add(new IdlParam(pName, pType));
-            } while (TryConsume(tokens, ref cursor, TokenKind.Punctuation, ","));
-        }
-
+        var parms = ParseParamList(tokens, ref cursor);
         Expect(tokens, ref cursor, TokenKind.Punctuation, ")");
         Expect(tokens, ref cursor, TokenKind.Punctuation, ";");
 
@@ -360,18 +344,7 @@ public static class WebIdlParser
         var luaName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
         var cFunc = extAttrs?.GetValueOrDefault("CFunc", null);
         Expect(tokens, ref cursor, TokenKind.Punctuation, "(");
-
-        var parms = new List<IdlParam>();
-        if (Peek(tokens, cursor) is not { Kind: TokenKind.Punctuation, Value: ")" })
-        {
-            do
-            {
-                var pType = ParseType(tokens, ref cursor);
-                var pName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
-                parms.Add(new IdlParam(pName, pType));
-            } while (TryConsume(tokens, ref cursor, TokenKind.Punctuation, ","));
-        }
-
+        var parms = ParseParamList(tokens, ref cursor);
         Expect(tokens, ref cursor, TokenKind.Punctuation, ")");
         Expect(tokens, ref cursor, TokenKind.Punctuation, ":");
         var cReturnType = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
@@ -436,6 +409,51 @@ public static class WebIdlParser
         return attrs;
     }
 
+    // Param = ExtAttrs? Type "?"? Ident ("[" Number "]")?
+    private static IdlParam ParseParam(List<Token> tokens, ref int cursor)
+    {
+        // Per-param ExtAttrs (e.g. [Output])
+        Dictionary<string, string>? paramAttrs = null;
+        if (Peek(tokens, cursor) is { Kind: TokenKind.Punctuation, Value: "[" })
+        {
+            // Peek ahead to distinguish ExtAttrs [Ident...] from FixedArray [Number]
+            // — but in param position, [Ident] is always ExtAttr since FixedArray comes after name
+            paramAttrs = ParseExtAttrs(tokens, ref cursor);
+        }
+
+        var pType = ParseType(tokens, ref cursor);
+
+        // Optional suffix: ?
+        var isOptional = TryConsume(tokens, ref cursor, TokenKind.Punctuation, "?");
+
+        var pName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
+
+        // FixedArray on param name: type name[N]
+        if (Peek(tokens, cursor) is { Kind: TokenKind.Punctuation, Value: "[" })
+        {
+            cursor++; // skip "["
+            var arrayLen = int.Parse(Expect(tokens, ref cursor, TokenKind.Number).Value);
+            Expect(tokens, ref cursor, TokenKind.Punctuation, "]");
+            pType = pType with { ArrayLength = arrayLen };
+        }
+
+        return new IdlParam(pName, pType, isOptional, paramAttrs);
+    }
+
+    // ParamList = Param ("," Param)*
+    private static List<IdlParam> ParseParamList(List<Token> tokens, ref int cursor)
+    {
+        var parms = new List<IdlParam>();
+        if (Peek(tokens, cursor) is not { Kind: TokenKind.Punctuation, Value: ")" })
+        {
+            do
+            {
+                parms.Add(ParseParam(tokens, ref cursor));
+            } while (TryConsume(tokens, ref cursor, TokenKind.Punctuation, ","));
+        }
+        return parms;
+    }
+
     // Operation = ExtAttrs? Type Ident "(" ParamList? ")" ";"
     private static IdlOperation ParseOperation(List<Token> tokens, ref int cursor,
         Dictionary<string, string>? extAttrs = null)
@@ -443,18 +461,7 @@ public static class WebIdlParser
         var retType = ParseType(tokens, ref cursor);
         var name = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
         Expect(tokens, ref cursor, TokenKind.Punctuation, "(");
-
-        var parms = new List<IdlParam>();
-        if (Peek(tokens, cursor) is not { Kind: TokenKind.Punctuation, Value: ")" })
-        {
-            do
-            {
-                var pType = ParseType(tokens, ref cursor);
-                var pName = Expect(tokens, ref cursor, TokenKind.Identifier).Value;
-                parms.Add(new IdlParam(pName, pType));
-            } while (TryConsume(tokens, ref cursor, TokenKind.Punctuation, ","));
-        }
-
+        var parms = ParseParamList(tokens, ref cursor);
         Expect(tokens, ref cursor, TokenKind.Punctuation, ")");
         Expect(tokens, ref cursor, TokenKind.Punctuation, ";");
 

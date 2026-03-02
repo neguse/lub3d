@@ -1,0 +1,128 @@
+// sokol_shape.h — Create simple geometric shapes for sokol_gfx
+[Prefix="sshape_", CInclude="sokol_shape.h"]
+
+dictionary sshape_range {
+    ConstVoidPtr ptr;
+    Size size;
+};
+
+dictionary sshape_mat4_t {
+    float[16] m;
+};
+
+dictionary sshape_vertex_t {
+    float x;
+    float y;
+    float z;
+    unsigned long normal;
+    unsigned short u;
+    unsigned short v;
+    unsigned long color;
+};
+
+dictionary sshape_element_range_t {
+    long base_element;
+    long num_elements;
+};
+
+dictionary sshape_sizes_item_t {
+    unsigned long num;
+    unsigned long size;
+};
+
+dictionary sshape_sizes_t {
+    sshape_sizes_item_t vertices;
+    sshape_sizes_item_t indices;
+};
+
+dictionary sshape_buffer_item_t {
+    sshape_range buffer;
+    Size data_size;
+    Size shape_offset;
+};
+
+dictionary sshape_buffer_t {
+    boolean valid;
+    sshape_buffer_item_t vertices;
+    sshape_buffer_item_t indices;
+};
+
+dictionary sshape_plane_t {
+    float width;
+    float depth;
+    unsigned short tiles;
+    unsigned long color;
+    boolean random_colors;
+    boolean merge;
+    sshape_mat4_t transform;
+};
+
+dictionary sshape_box_t {
+    float width;
+    float height;
+    float depth;
+    unsigned short tiles;
+    unsigned long color;
+    boolean random_colors;
+    boolean merge;
+    sshape_mat4_t transform;
+};
+
+dictionary sshape_sphere_t {
+    float radius;
+    unsigned short slices;
+    unsigned short stacks;
+    unsigned long color;
+    boolean random_colors;
+    boolean merge;
+    sshape_mat4_t transform;
+};
+
+dictionary sshape_cylinder_t {
+    float radius;
+    float height;
+    unsigned short slices;
+    unsigned short stacks;
+    unsigned long color;
+    boolean random_colors;
+    boolean merge;
+    sshape_mat4_t transform;
+};
+
+dictionary sshape_torus_t {
+    float radius;
+    float ring_radius;
+    unsigned short sides;
+    unsigned short rings;
+    unsigned long color;
+    boolean random_colors;
+    boolean merge;
+    sshape_mat4_t transform;
+};
+
+namespace sshape {
+    sshape_buffer_t build_plane(sshape_buffer_t buf, sshape_plane_t params);
+    sshape_buffer_t build_box(sshape_buffer_t buf, sshape_box_t params);
+    sshape_buffer_t build_sphere(sshape_buffer_t buf, sshape_sphere_t params);
+    sshape_buffer_t build_cylinder(sshape_buffer_t buf, sshape_cylinder_t params);
+    sshape_buffer_t build_torus(sshape_buffer_t buf, sshape_torus_t params);
+    sshape_sizes_t plane_sizes(unsigned long tiles);
+    sshape_sizes_t box_sizes(unsigned long tiles);
+    sshape_sizes_t sphere_sizes(unsigned long slices, unsigned long stacks);
+    sshape_sizes_t cylinder_sizes(unsigned long slices, unsigned long stacks);
+    sshape_sizes_t torus_sizes(unsigned long sides, unsigned long rings);
+    sshape_element_range_t element_range(sshape_buffer_t buf);
+    sg_buffer_desc vertex_buffer_desc(sshape_buffer_t buf);
+    sg_buffer_desc index_buffer_desc(sshape_buffer_t buf);
+    sg_vertex_buffer_layout_state vertex_buffer_layout_state();
+    sg_vertex_attr_state position_vertex_attr_state();
+    sg_vertex_attr_state normal_vertex_attr_state();
+    sg_vertex_attr_state texcoord_vertex_attr_state();
+    sg_vertex_attr_state color_vertex_attr_state();
+    unsigned long color_4f(float r, float g, float b, float a);
+    unsigned long color_3f(float r, float g, float b);
+    unsigned long color_4b(octet r, octet g, octet b, octet a);
+    unsigned long color_3b(octet r, octet g, octet b);
+    // [Ignore] sshape_mat4 — returns raw float[16]
+    // [Ignore] sshape_mat4_transpose — returns raw float[16]
+};

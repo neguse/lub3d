@@ -1,0 +1,13 @@
+// sokol_time — timing functions
+[Prefix="stm_", CInclude="sokol_time.h"]
+namespace stm {
+    void setup();
+    unsigned long long now();
+    unsigned long long diff(unsigned long long new_ticks, unsigned long long old_ticks);
+    unsigned long long since(unsigned long long start_ticks);
+    unsigned long long round_to_common_refresh_rate(unsigned long long frame_ticks);
+    double sec(unsigned long long ticks);
+    double ms(unsigned long long ticks);
+    double us(unsigned long long ticks);
+    double ns(unsigned long long ticks);
+};

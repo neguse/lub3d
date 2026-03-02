@@ -15,6 +15,7 @@ public record ModuleSpec(
     List<OpaqueTypeBinding> OpaqueTypes = default!,
     bool IsCpp = false,
     string? EntryPoint = null,
+    bool StandaloneEntry = false,
     List<FuncBinding>? ExtraLuaFuncs = null,
     List<ArrayAdapterBinding>? ArrayAdapters = null,
     List<EventAdapterBinding>? EventAdapters = null
@@ -122,7 +123,11 @@ public record OpaqueTypeBinding(
     string? ConfigInitFunc,
     List<MethodBinding> Methods,
     string? SourceLink,
-    List<DependencyBinding>? Dependencies = null
+    List<DependencyBinding>? Dependencies = null,
+    string? CppClassName = null,
+    bool NoDelete = false,
+    List<ParamBinding>? ConstructorParams = null,
+    List<(string LuaName, string CFunc)>? ExtraMethods = null
 )
 {
     public List<DependencyBinding> Dependencies { get; init; } = Dependencies ?? [];
@@ -133,7 +138,8 @@ public record MethodBinding(
     string LuaName,
     List<ParamBinding> Params,
     BindingType ReturnType,
-    string? SourceLink
+    string? SourceLink,
+    string? CppMethodName = null
 );
 
 public record ArrayAdapterBinding(

@@ -526,8 +526,8 @@ if(LUB3D_BUILD_JOLT)
 
     add_subdirectory(${JOLT_DIR}/Build ${CMAKE_CURRENT_BINARY_DIR}/jolt)
 
-    # Jolt Lua bindings (C++)
-    add_library(jolt_lua STATIC src/jolt_lua.cpp)
+    # Jolt Lua bindings (C++ — generated from idl/jolt.idl)
+    add_library(jolt_lua STATIC ${CMAKE_CURRENT_SOURCE_DIR}/gen/jolt.cpp)
     target_include_directories(jolt_lua
         PRIVATE ${JOLT_DIR}
         PRIVATE ${LUA_INCLUDE}

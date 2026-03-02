@@ -1,0 +1,22 @@
+// stb_image.h — Image loading
+[Prefix="stbi_", CInclude="stb_image.h",
+ExtraCCode="extra/stb_image_extra.c",
+ExtraLuaReg="load:l_stbi_load,load_from_memory:l_stbi_load_from_memory,info:l_stbi_info"]
+
+namespace stbi {
+    void hdr_to_ldr_gamma(float gamma);
+    void hdr_to_ldr_scale(float scale);
+    void ldr_to_hdr_gamma(float gamma);
+    void ldr_to_hdr_scale(float scale);
+    long is_hdr_from_memory(DOMString buffer, long len);
+    long is_hdr(DOMString filename);
+    DOMString failure_reason();
+    long is_16_bit_from_memory(DOMString buffer, long len);
+    long is_16_bit(DOMString filename);
+    void set_unpremultiply_on_load(long flag_true_if_should_unpremultiply);
+    void convert_iphone_png_to_rgb(long flag_true_if_should_convert);
+    void set_flip_vertically_on_load(long flag_true_if_should_flip);
+    void set_unpremultiply_on_load_thread(long flag_true_if_should_unpremultiply);
+    void convert_iphone_png_to_rgb_thread(long flag_true_if_should_convert);
+    void set_flip_vertically_on_load_thread(long flag_true_if_should_flip);
+};
