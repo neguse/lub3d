@@ -2,6 +2,22 @@
 
 <!-- Add newest entries at the top -->
 
+### Phase 5: Box2D WebIDL Migration ✓ (2026-03-02)
+- Migrated Box2D module (~1050-line Box2dModule.cs) to WebIDL-based pipeline
+- Extended WebIDL IR: IdlCallback, IdlEventAdapter, IdlField.ExtAttrs, IdlFile Callbacks/EventAdapters
+- Extended WebIDL parser: `callback`, `event` keywords, per-field ExtAttr, dictionary FixedArray syntax (`type name[N]`)
+- Extended WebIdlToSpec converter: ValueStruct, HandleType, Callback (Immediate/Persistent), FuncNaming="PascalCase", EnumItemStyle="CamelCase", ArrayAdapter, EventAdapter, OutputParams, PostCallPatch, PropertyBinding file loading, multiple CInclude, PromoteStructParam (HandleType-aware)
+- Created idl/box2d.idl (~1040 lines): 6 ValueStruct, 5 Callback, 5 HandleType, 4 Enum, ~30 Struct, ~380 namespace functions, 4 ArrayAdapter, 3 EventAdapter
+- Created idl/extra/box2d_extra.c (~170 lines), b2_chain_points.c, b2_chain_materials.c (PropertyBinding)
+- Fixed CBindingGen: VoidPtr support in BindingTypeToString
+- Fixed Program.cs: idlBasePath passthrough, SpecTransform.ExpandHandleTypes for IDL pipeline
+- E2E verification: function name list exact match (unique), 42 metatables match, C 8584 lines / Lua 785 lines
+- Files: WebIdlIr.cs, WebIdlParser.cs, WebIdlToSpec.cs, CBindingGen.cs, Program.cs, WebIdlBox2dTests.cs (23 tests), idl/box2d.idl, idl/extra/box2d_extra.c, idl/extra/b2_chain_points.c, idl/extra/b2_chain_materials.c
+- Tests: 570 Generator.Tests pass (547 existing + 23 new)
+- What went well: ExtAttr-based approach kept new keywords to minimum (callback, event only). PromoteStructParam with HandleType awareness cleanly separates value-pass vs pointer-pass semantics
+- Decisions: b2Manifold not exposed (SkipStruct) — collide functions return void, manifold accessed via ExtraCCode functions. CFunc explicit naming on EventAdapter to avoid PascalCase underscore removal. PropertyBinding type specified in ExtAttr value ("path:type" format)
+- Remaining: Box2dModule.cs still used for production generation — IDL pipeline is verified-equivalent but not yet the primary path
+
 ### T07: Add Jolt Physics binding ✓ (2026-02-23)
 - Added Jolt Physics v5.5.0 Lua binding with JoltWorld opaque type wrapping PhysicsSystem + JobSystem + TempAllocator
 - 15 Lua API functions: init, destroy, set_gravity, get_gravity, update, optimize, create_box, create_sphere, remove_body, get_position, get_rotation, set_linear_velocity, add_impulse, is_active, body_count
