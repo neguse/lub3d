@@ -544,6 +544,7 @@ if(LUB3D_BUILD_JOLT)
             ${GENERATOR_DIR}/WebIdl/WebIdlToSpec.cs
             ${GENERATOR_DIR}/CBinding/CBindingGen.cs
             ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
+            ${GENERATOR_OUTPUTS}
         COMMENT "Generating Jolt bindings from idl/jolt.idl"
     )
     add_library(jolt_lua STATIC ${GEN_DIR}/jolt.cpp)
