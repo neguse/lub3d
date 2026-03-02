@@ -553,6 +553,7 @@ if(LUB3D_BUILD_JOLT)
         PRIVATE ${LUA_INCLUDE}
     )
     target_link_libraries(jolt_lua PUBLIC Jolt ${LUA_TARGET})
+    target_compile_definitions(jolt_lua PRIVATE LUB3D_EXPORTS)
     set_target_properties(jolt_lua PROPERTIES CXX_STANDARD 17)
 
     target_link_libraries(lub3d PUBLIC jolt_lua)
