@@ -1,0 +1,87 @@
+// sokol_audio.h — Cross-platform audio playback
+[Prefix="saudio_", CInclude="sokol_audio.h",
+ExtraCCode="extra/audio_extra.c",
+ExtraLuaReg="push:l_saudio_push"]
+
+enum saudio_log_item {
+    "SAUDIO_LOGITEM_OK" = 0,
+    "SAUDIO_LOGITEM_MALLOC_FAILED" = 1,
+    "SAUDIO_LOGITEM_ALSA_SND_PCM_OPEN_FAILED" = 2,
+    "SAUDIO_LOGITEM_ALSA_FLOAT_SAMPLES_NOT_SUPPORTED" = 3,
+    "SAUDIO_LOGITEM_ALSA_REQUESTED_BUFFER_SIZE_NOT_SUPPORTED" = 4,
+    "SAUDIO_LOGITEM_ALSA_REQUESTED_CHANNEL_COUNT_NOT_SUPPORTED" = 5,
+    "SAUDIO_LOGITEM_ALSA_SND_PCM_HW_PARAMS_SET_RATE_NEAR_FAILED" = 6,
+    "SAUDIO_LOGITEM_ALSA_SND_PCM_HW_PARAMS_FAILED" = 7,
+    "SAUDIO_LOGITEM_ALSA_PTHREAD_CREATE_FAILED" = 8,
+    "SAUDIO_LOGITEM_WASAPI_CREATE_EVENT_FAILED" = 9,
+    "SAUDIO_LOGITEM_WASAPI_CREATE_DEVICE_ENUMERATOR_FAILED" = 10,
+    "SAUDIO_LOGITEM_WASAPI_GET_DEFAULT_AUDIO_ENDPOINT_FAILED" = 11,
+    "SAUDIO_LOGITEM_WASAPI_DEVICE_ACTIVATE_FAILED" = 12,
+    "SAUDIO_LOGITEM_WASAPI_AUDIO_CLIENT_INITIALIZE_FAILED" = 13,
+    "SAUDIO_LOGITEM_WASAPI_AUDIO_CLIENT_GET_BUFFER_SIZE_FAILED" = 14,
+    "SAUDIO_LOGITEM_WASAPI_AUDIO_CLIENT_GET_SERVICE_FAILED" = 15,
+    "SAUDIO_LOGITEM_WASAPI_AUDIO_CLIENT_SET_EVENT_HANDLE_FAILED" = 16,
+    "SAUDIO_LOGITEM_WASAPI_CREATE_THREAD_FAILED" = 17,
+    "SAUDIO_LOGITEM_AAUDIO_STREAMBUILDER_OPEN_STREAM_FAILED" = 18,
+    "SAUDIO_LOGITEM_AAUDIO_PTHREAD_CREATE_FAILED" = 19,
+    "SAUDIO_LOGITEM_AAUDIO_RESTARTING_STREAM_AFTER_ERROR" = 20,
+    "SAUDIO_LOGITEM_USING_AAUDIO_BACKEND" = 21,
+    "SAUDIO_LOGITEM_AAUDIO_CREATE_STREAMBUILDER_FAILED" = 22,
+    "SAUDIO_LOGITEM_COREAUDIO_NEW_OUTPUT_FAILED" = 23,
+    "SAUDIO_LOGITEM_COREAUDIO_ALLOCATE_BUFFER_FAILED" = 24,
+    "SAUDIO_LOGITEM_COREAUDIO_START_FAILED" = 25,
+    "SAUDIO_LOGITEM_BACKEND_BUFFER_SIZE_ISNT_MULTIPLE_OF_PACKET_SIZE" = 26,
+    "SAUDIO_LOGITEM_VITA_SCEAUDIO_OPEN_FAILED" = 27,
+    "SAUDIO_LOGITEM_VITA_PTHREAD_CREATE_FAILED" = 28,
+    "SAUDIO_LOGITEM_N3DS_NDSP_OPEN_FAILED" = 29,
+};
+
+enum saudio_n3ds_ndspinterptype {
+    "SAUDIO_N3DS_DSP_INTERP_POLYPHASE" = 0,
+    "SAUDIO_N3DS_DSP_INTERP_LINEAR" = 1,
+    "SAUDIO_N3DS_DSP_INTERP_NONE" = 2,
+};
+
+dictionary saudio_logger {
+    Callback func;
+    VoidPtr user_data;
+};
+
+dictionary saudio_allocator {
+    Callback alloc_fn;
+    Callback free_fn;
+    VoidPtr user_data;
+};
+
+dictionary saudio_n3ds_desc {
+    long queue_count;
+    saudio_n3ds_ndspinterptype interpolation_type;
+    long channel_id;
+};
+
+dictionary saudio_desc {
+    long sample_rate;
+    long num_channels;
+    long buffer_frames;
+    long packet_frames;
+    long num_packets;
+    Callback stream_cb;
+    Callback stream_userdata_cb;
+    VoidPtr user_data;
+    saudio_n3ds_desc n3ds;
+    saudio_allocator allocator;
+    saudio_logger logger;
+};
+
+namespace saudio {
+    void setup(saudio_desc desc);
+    void shutdown();
+    boolean isvalid();
+    VoidPtr userdata();
+    saudio_desc query_desc();
+    long sample_rate();
+    long buffer_frames();
+    long channels();
+    boolean suspended();
+    long expect();
+};

@@ -102,10 +102,14 @@ public static class CBindingGen
     /// <summary>
     /// Enum の Lua テーブル生成
     /// </summary>
-    private static string Enum(string cEnumName, string luaEnumName, IEnumerable<(string luaName, string cConstName)> items)
+    private static string Enum(string cEnumName, string luaEnumName, IEnumerable<(string luaName, string cConstName, int? value)> items,
+        bool preferValues = false)
     {
         var itemLines = string.Join("\n", items.Select(item =>
-            $"        lua_pushinteger(L, {item.cConstName}); lua_setfield(L, -2, \"{item.luaName}\");"));
+        {
+            var cExpr = preferValues && item.value.HasValue ? item.value.Value.ToString() : item.cConstName;
+            return $"        lua_pushinteger(L, {cExpr}); lua_setfield(L, -2, \"{item.luaName}\");";
+        }));
         return $$"""
             static void register_{{cEnumName}}(lua_State *L) {
                 lua_newtable(L);
@@ -411,7 +415,7 @@ public static class CBindingGen
         // Enums
         foreach (var e in spec.Enums)
         {
-            var items = e.Items.Select(i => (i.LuaName, i.CConstName));
+            var items = e.Items.Select(i => (i.LuaName, i.CConstName, i.Value));
             sb += Enum(e.CName, e.FieldName, items);
         }
 
@@ -500,37 +504,84 @@ public static class CBindingGen
     {
         var sb = CppHeader(spec.CIncludes);
 
+        // ExtraCCode — C++ class/struct definitions needed before opaque type check helpers
+        if (spec.ExtraCCode != null)
+            sb += spec.ExtraCCode;
+
         // Functions
         foreach (var f in spec.Funcs)
             sb += CppFunc(f);
 
-        // Enums
+        // C++ Opaque types (CppClass mode)
+        foreach (var ot in spec.OpaqueTypes)
+        {
+            sb += CppOpaqueCheckHelper(ot);
+            if (ot.ConstructorParams != null)
+                sb += CppOpaqueConstructor(ot);
+            if (!ot.NoDelete)
+            {
+                sb += CppOpaqueDestructor(ot);
+                sb += CppOpaqueDestroyMethod(ot);
+            }
+            foreach (var m in ot.Methods)
+                sb += CppOpaqueMethod(ot, m);
+            sb += CppOpaqueMethodTable(ot);
+        }
+
+        // Enums (C++ mode: use integer values to avoid invalid C++ identifiers)
         foreach (var e in spec.Enums)
         {
-            var items = e.Items.Select(i => (i.LuaName, i.CConstName));
-            sb += Enum(e.CName, e.FieldName, items);
+            var items = e.Items.Select(i => (i.LuaName, i.CConstName, i.Value));
+            sb += Enum(e.CName, e.FieldName, items, preferValues: true);
         }
+
+        // Metatables
+        if (spec.OpaqueTypes.Count > 0)
+            sb += CppRegisterMetatables(spec.OpaqueTypes);
 
         // LuaReg
         var funcArrayName = spec.EntryPoint != null
             ? $"{spec.EntryPoint.Replace("luaopen_", "")}_funcs"
             : $"{spec.ModuleName.Replace('.', '_')}_funcs";
         var regEntries = spec.Funcs.Select(f => (f.LuaName, $"l_{f.CName}")).ToList();
+        // Opaque type constructors
+        foreach (var ot in spec.OpaqueTypes)
+        {
+            if (ot.ConstructorParams != null)
+                regEntries.Add((ot.PascalName, $"l_{ot.CName}_new"));
+        }
         regEntries.AddRange(spec.ExtraLuaRegs);
         sb += LuaReg(funcArrayName, regEntries);
 
-        // luaopen — extern "C" void luaopen_X(L, int table_idx)
+        // luaopen
         var enumRegs = spec.Enums.Select(e => $"    register_{e.CName}(L);").ToList();
         var entryPoint = spec.EntryPoint ?? $"luaopen_{spec.ModuleName.Replace('.', '_')}";
-        sb += $$"""
-            extern "C" void {{entryPoint}}(lua_State *L, int table_idx) {
-                int abs_idx = lua_absindex(L, table_idx);
-                lua_pushvalue(L, abs_idx);
-                luaL_setfuncs(L, {{funcArrayName}}, 0);
-            {{string.Join("\n", enumRegs)}}
-                lua_pop(L, 1);
-            }
-            """;
+        var metatableCall = spec.OpaqueTypes.Count > 0 ? "\n    register_metatables(L);" : "";
+
+        if (spec.StandaloneEntry)
+        {
+            // Standalone entry: standard Lua CFunction signature (for luaL_requiref)
+            sb += $$"""
+                extern "C" LUB3D_API int {{entryPoint}}(lua_State *L) {
+                    luaL_newlib(L, {{funcArrayName}});
+                {{string.Join("\n", enumRegs)}}{{metatableCall}}
+                    return 1;
+                }
+                """;
+        }
+        else
+        {
+            // Sub-module helper: 2-arg void signature (called from manual wrapper)
+            sb += $$"""
+                extern "C" void {{entryPoint}}(lua_State *L, int table_idx) {
+                    int abs_idx = lua_absindex(L, table_idx);
+                    lua_pushvalue(L, abs_idx);
+                    luaL_setfuncs(L, {{funcArrayName}}, 0);
+                {{string.Join("\n", enumRegs)}}{{metatableCall}}
+                    lua_pop(L, 1);
+                }
+                """;
+        }
 
         return sb;
     }
@@ -557,13 +608,13 @@ public static class CBindingGen
             else if (p.IsOptional)
             {
                 sb += GenCppOptionalParamDecl(p, idx);
-                argNames.Add(p.Name);
+                argNames.Add(CppParamArgExpr(p));
                 idx++;
             }
             else
             {
                 sb += GenCppParamDecl(p, idx);
-                argNames.Add(p.Name);
+                argNames.Add(CppParamArgExpr(p));
                 idx++;
             }
         }
@@ -627,6 +678,8 @@ public static class CBindingGen
 
             """,
         BindingType.FloatArray(var len) => GenCppFloatArrayInput(p.Name, idx, len, required: true),
+        BindingType.OpaqueRef(var cName, var checkName, _, _, _) =>
+            $"    {cName}* {p.Name} = check_{checkName}(L, {idx});\n",
         _ => $"    /* unsupported param type for {p.Name} */\n"
     };
 
@@ -726,6 +779,16 @@ public static class CBindingGen
         _ => $"    /* unsupported output push for {name} */\n"
     };
 
+    /// <summary>
+    /// OpaqueRef パラメータの C++ 呼び出し式を返す。
+    /// ValueType は *ptr (値渡し/参照渡し)、PtrType は ptr (ポインタ渡し)。
+    /// </summary>
+    private static string CppParamArgExpr(ParamBinding p) => p.Type switch
+    {
+        BindingType.OpaqueRef(_, _, _, _, true) => $"*{p.Name}",
+        _ => p.Name,
+    };
+
     private static string GenCppFloatArrayInput(string name, int idx, int len, bool required)
     {
         var sb = $"    float {name}[{len}] = {{0}};\n";
@@ -779,8 +842,205 @@ public static class CBindingGen
                 lua_pushnumber(L, _result.w); lua_rawseti(L, -2, 4);
 
             """,
+        BindingType.OpaqueRef(var cName, _, var mt, _, true) => $$"""
+                {{cName}} _result = {{callExpr}};
+                {{cName}}* _ud = ({{cName}}*)lua_newuserdatauv(L, sizeof({{cName}}), 0);
+                new(_ud) {{cName}}(_result);
+                luaL_setmetatable(L, "{{mt}}");
+
+            """,
+        BindingType.OpaqueRef(var cName, _, var mt, _, false) => $$"""
+                {{cName}}* _result = {{callExpr}};
+                {{cName}}** _pp = ({{cName}}**)lua_newuserdatauv(L, sizeof({{cName}}*), 0);
+                *_pp = _result;
+                luaL_setmetatable(L, "{{mt}}");
+
+            """,
         _ => $"    {callExpr};\n"
     };
+
+    // ===== C++ Opaque Type (CppClass) code generation =====
+
+    private static string CppOpaqueCheckHelper(OpaqueTypeBinding ot)
+    {
+        var typeName = ot.CppClassName ?? ot.CName;
+        if (ot.IsValueType)
+        {
+            return $$"""
+                static {{typeName}}* check_{{ot.CName}}(lua_State *L, int idx) {
+                    return ({{typeName}}*)luaL_checkudata(L, idx, "{{ot.Metatable}}");
+                }
+
+                """;
+        }
+        return $$"""
+            static {{typeName}}* check_{{ot.CName}}(lua_State *L, int idx) {
+                {{typeName}}** pp = ({{typeName}}**)luaL_checkudata(L, idx, "{{ot.Metatable}}");
+                if (*pp == NULL) luaL_error(L, "{{ot.CName}} already freed");
+                return *pp;
+            }
+
+            """;
+    }
+
+    private static string CppOpaqueConstructor(OpaqueTypeBinding ot)
+    {
+        var typeName = ot.CppClassName ?? ot.CName;
+        var sb = $"static int l_{ot.CName}_new(lua_State *L) {{\n";
+
+        var argNames = new List<string>();
+        if (ot.ConstructorParams != null)
+        {
+            var idx = 1;
+            foreach (var p in ot.ConstructorParams)
+            {
+                sb += GenCppParamDecl(p, idx);
+                argNames.Add(CppParamArgExpr(p));
+                idx++;
+            }
+        }
+
+        var args = string.Join(", ", argNames);
+        if (ot.IsValueType)
+        {
+            sb += $"    {typeName}* p = ({typeName}*)lua_newuserdatauv(L, sizeof({typeName}), 0);\n";
+            sb += $"    new(p) {typeName}({args});\n";
+        }
+        else
+        {
+            sb += $"    {typeName}* p = new {typeName}({args});\n";
+            sb += $"    {typeName}** pp = ({typeName}**)lua_newuserdatauv(L, sizeof({typeName}*), 0);\n";
+            sb += "    *pp = p;\n";
+        }
+        sb += $"    luaL_setmetatable(L, \"{ot.Metatable}\");\n";
+        sb += "    return 1;\n}\n\n";
+
+        return sb;
+    }
+
+    private static string CppOpaqueDestructor(OpaqueTypeBinding ot)
+    {
+        var typeName = ot.CppClassName ?? ot.CName;
+        if (ot.IsValueType)
+        {
+            var dtorName = Pipeline.StripNamespace(typeName);
+            // For nested types (e.g. JPH::ShapeSettings::ShapeResult), the short name
+            // isn't directly visible. Emit a using alias to make the destructor call work.
+            var needsUsing = typeName.Contains("::") && typeName.IndexOf("::") != typeName.LastIndexOf("::");
+            var usingLine = needsUsing ? $"    using {dtorName} = {typeName};\n" : "";
+            return $$"""
+                static int l_{{ot.CName}}_gc(lua_State *L) {
+                    {{typeName}}* p = ({{typeName}}*)luaL_checkudata(L, 1, "{{ot.Metatable}}");
+                {{usingLine}}    p->~{{dtorName}}();
+                    return 0;
+                }
+
+                """;
+        }
+        return $$"""
+            static int l_{{ot.CName}}_gc(lua_State *L) {
+                {{typeName}}** pp = ({{typeName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
+                if (*pp != NULL) {
+                    delete *pp;
+                    *pp = NULL;
+                }
+                return 0;
+            }
+
+            """;
+    }
+
+    private static string CppOpaqueDestroyMethod(OpaqueTypeBinding ot)
+    {
+        var typeName = ot.CppClassName ?? ot.CName;
+        if (ot.IsValueType)
+        {
+            // ValueType: destroy is a no-op (GC handles destructor)
+            return "";
+        }
+        return $$"""
+            static int l_{{ot.CName}}_destroy(lua_State *L) {
+                {{typeName}}** pp = ({{typeName}}**)luaL_checkudata(L, 1, "{{ot.Metatable}}");
+                if (*pp != NULL) {
+                    delete *pp;
+                    *pp = NULL;
+                }
+                return 0;
+            }
+
+            """;
+    }
+
+    private static string CppOpaqueMethod(OpaqueTypeBinding ot, MethodBinding m)
+    {
+        var typeName = ot.CppClassName ?? ot.CName;
+        var cppMethod = m.CppMethodName ?? m.LuaName;
+
+        var sb = $"static int l_{m.CName}(lua_State *L) {{\n";
+        sb += $"    {typeName}* self = check_{ot.CName}(L, 1);\n";
+
+        var argNames = new List<string>();
+        var idx = 2; // self is 1
+        foreach (var p in m.Params)
+        {
+            sb += GenCppParamDecl(p, idx);
+            argNames.Add(CppParamArgExpr(p));
+            idx++;
+        }
+
+        var args = string.Join(", ", argNames);
+        var callExpr = $"self->{cppMethod}({args})";
+
+        if (m.ReturnType is not BindingType.Void)
+        {
+            sb += GenCppReturnCapture(m.ReturnType, callExpr);
+            sb += "    return 1;\n";
+        }
+        else
+        {
+            sb += $"    {callExpr};\n";
+            sb += "    return 0;\n";
+        }
+
+        sb += "}\n\n";
+        return sb;
+    }
+
+    private static string CppOpaqueMethodTable(OpaqueTypeBinding ot)
+    {
+        var allEntries = new List<string>();
+        if (!ot.NoDelete && !ot.IsValueType)
+            allEntries.Add($"    {{\"destroy\", l_{ot.CName}_destroy}},");
+        allEntries.AddRange(ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},"));
+        if (ot.ExtraMethods != null)
+            allEntries.AddRange(ot.ExtraMethods.Select(m => $"    {{\"{m.LuaName}\", {m.CFunc}}},"));
+        return $$"""
+            static const luaL_Reg {{ot.CName}}_methods[] = {
+            {{string.Join("\n", allEntries)}}
+                {NULL, NULL}
+            };
+
+            """;
+    }
+
+    private static string CppRegisterMetatables(List<OpaqueTypeBinding> opaqueTypes)
+    {
+        var lines = opaqueTypes.Select(ot =>
+        {
+            var sb = $"    luaL_newmetatable(L, \"{ot.Metatable}\");";
+            if (!ot.NoDelete)
+                sb += $"\n    lua_pushcfunction(L, l_{ot.CName}_gc); lua_setfield(L, -2, \"__gc\");";
+            sb += $"\n    luaL_newlib(L, {ot.CName}_methods); lua_setfield(L, -2, \"__index\");";
+            sb += "\n    lua_pop(L, 1);";
+            return sb;
+        });
+        return $$"""
+            static void register_metatables(lua_State *L) {
+            {{string.Join("\n", lines)}}
+            }
+
+            """;
+    }
 
     /// <summary>
     /// AllowStringInit 構造体コンストラクタ (string / table 両対応)
@@ -864,12 +1124,15 @@ public static class CBindingGen
                     }
                 """
             : "";
-        var nuv = ot.Dependencies.Count;
+        var nuv = ot.Dependencies?.Count ?? 0;
         var depCode = "";
-        foreach (var dep in ot.Dependencies)
+        if (ot.Dependencies != null)
         {
-            depCode += $"    lua_pushvalue(L, {dep.ConstructorArgIndex});\n";
-            depCode += $"    lua_setiuservalue(L, -2, {dep.UservalueSlot});\n";
+            foreach (var dep in ot.Dependencies)
+            {
+                depCode += $"    lua_pushvalue(L, {dep.ConstructorArgIndex});\n";
+                depCode += $"    lua_setiuservalue(L, -2, {dep.UservalueSlot});\n";
+            }
         }
         return $$"""
             static int l_{{ot.CName}}_new(lua_State *L) {
@@ -952,6 +1215,8 @@ public static class CBindingGen
         if (ot.UninitFunc != null)
             allEntries.Add($"    {{\"destroy\", l_{ot.CName}_destroy}},");
         allEntries.AddRange(ot.Methods.Select(m => $"    {{\"{m.LuaName}\", l_{m.CName}}},"));
+        if (ot.ExtraMethods != null)
+            allEntries.AddRange(ot.ExtraMethods.Select(m => $"    {{\"{m.LuaName}\", {m.CFunc}}},"));
         return $$"""
             static const luaL_Reg {{ot.CName}}_methods[] = {
             {{string.Join("\n", allEntries)}}
@@ -1690,6 +1955,7 @@ public static class CBindingGen
         BindingType.Double => "double",
         BindingType.Bool => "bool",
         BindingType.Str => "const char*",
+        BindingType.VoidPtr => "void*",
         BindingType.Void => "void",
         BindingType.Enum(var cName, _) => cName,
         BindingType.Struct(var cName, _, _) => cName,

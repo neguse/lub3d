@@ -1,0 +1,6 @@
+// sokol_glue — app↔gfx glue functions
+[Prefix="sglue_", CInclude="sokol_glue.h", ExtraCCode="extra/glue_extra.c"]
+namespace sglue {
+    sg_environment environment();
+    sg_swapchain swapchain();
+};

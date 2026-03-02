@@ -1,0 +1,224 @@
+[Prefix="ma_", CInclude="miniaudio.h",
+ExtraCCode="extra/miniaudio_extra.c",
+ExtraLuaReg="sound_init_from_file:l_ma_sound_new,vfs_new:l_ma_vfs_new",
+ExtraLuaFunc="sound_init_from_file:ma_engine+DOMString+long?:ma_sound"]
+
+enum ma_result {
+    "MA_SUCCESS" = 0,
+    "MA_ERROR" = -1,
+    "MA_INVALID_ARGS" = -2,
+    "MA_INVALID_OPERATION" = -3,
+    "MA_OUT_OF_MEMORY" = -4,
+    "MA_OUT_OF_RANGE" = -5,
+    "MA_ACCESS_DENIED" = -6,
+    "MA_DOES_NOT_EXIST" = -7,
+    "MA_ALREADY_EXISTS" = -8,
+    "MA_TOO_MANY_OPEN_FILES" = -9,
+    "MA_INVALID_FILE" = -10,
+    "MA_TOO_BIG" = -11,
+    "MA_PATH_TOO_LONG" = -12,
+    "MA_NAME_TOO_LONG" = -13,
+    "MA_NOT_DIRECTORY" = -14,
+    "MA_IS_DIRECTORY" = -15,
+    "MA_DIRECTORY_NOT_EMPTY" = -16,
+    "MA_AT_END" = -17,
+    "MA_NO_SPACE" = -18,
+    "MA_BUSY" = -19,
+    "MA_IO_ERROR" = -20,
+    "MA_INTERRUPT" = -21,
+    "MA_UNAVAILABLE" = -22,
+    "MA_ALREADY_IN_USE" = -23,
+    "MA_BAD_ADDRESS" = -24,
+    "MA_BAD_SEEK" = -25,
+    "MA_BAD_PIPE" = -26,
+    "MA_DEADLOCK" = -27,
+    "MA_TOO_MANY_LINKS" = -28,
+    "MA_NOT_IMPLEMENTED" = -29,
+    "MA_NO_MESSAGE" = -30,
+    "MA_BAD_MESSAGE" = -31,
+    "MA_NO_DATA_AVAILABLE" = -32,
+    "MA_INVALID_DATA" = -33,
+    "MA_TIMEOUT" = -34,
+    "MA_NO_NETWORK" = -35,
+    "MA_NOT_UNIQUE" = -36,
+    "MA_NOT_SOCKET" = -37,
+    "MA_NO_ADDRESS" = -38,
+    "MA_BAD_PROTOCOL" = -39,
+    "MA_PROTOCOL_UNAVAILABLE" = -40,
+    "MA_PROTOCOL_NOT_SUPPORTED" = -41,
+    "MA_PROTOCOL_FAMILY_NOT_SUPPORTED" = -42,
+    "MA_ADDRESS_FAMILY_NOT_SUPPORTED" = -43,
+    "MA_SOCKET_NOT_SUPPORTED" = -44,
+    "MA_CONNECTION_RESET" = -45,
+    "MA_ALREADY_CONNECTED" = -46,
+    "MA_NOT_CONNECTED" = -47,
+    "MA_CONNECTION_REFUSED" = -48,
+    "MA_NO_HOST" = -49,
+    "MA_IN_PROGRESS" = -50,
+    "MA_CANCELLED" = -51,
+    "MA_MEMORY_ALREADY_MAPPED" = -52,
+    "MA_CRC_MISMATCH" = -100,
+    "MA_FORMAT_NOT_SUPPORTED" = -200,
+    "MA_DEVICE_TYPE_NOT_SUPPORTED" = -201,
+    "MA_SHARE_MODE_NOT_SUPPORTED" = -202,
+    "MA_NO_BACKEND" = -203,
+    "MA_NO_DEVICE" = -204,
+    "MA_API_NOT_FOUND" = -205,
+    "MA_INVALID_DEVICE_CONFIG" = -206,
+    "MA_LOOP" = -207,
+    "MA_BACKEND_NOT_ENABLED" = -208,
+    "MA_DEVICE_NOT_INITIALIZED" = -300,
+    "MA_DEVICE_ALREADY_INITIALIZED" = -301,
+    "MA_DEVICE_NOT_STARTED" = -302,
+    "MA_DEVICE_NOT_STOPPED" = -303,
+    "MA_FAILED_TO_INIT_BACKEND" = -400,
+    "MA_FAILED_TO_OPEN_BACKEND_DEVICE" = -401,
+    "MA_FAILED_TO_START_BACKEND_DEVICE" = -402,
+    "MA_FAILED_TO_STOP_BACKEND_DEVICE" = -403,
+};
+
+enum ma_pan_mode {
+    "ma_pan_mode_balance" = 0,
+    "ma_pan_mode_pan" = 1,
+};
+
+enum ma_attenuation_model {
+    "ma_attenuation_model_none" = 0,
+    "ma_attenuation_model_inverse" = 1,
+    "ma_attenuation_model_linear" = 2,
+    "ma_attenuation_model_exponential" = 3,
+};
+
+enum ma_positioning {
+    "ma_positioning_absolute" = 0,
+    "ma_positioning_relative" = 1,
+};
+
+enum ma_sound_flags {
+    "MA_SOUND_FLAG_STREAM" = 1,
+    "MA_SOUND_FLAG_DECODE" = 2,
+    "MA_SOUND_FLAG_ASYNC" = 4,
+    "MA_SOUND_FLAG_WAIT_INIT" = 8,
+    "MA_SOUND_FLAG_UNKNOWN_LENGTH" = 16,
+    "MA_SOUND_FLAG_LOOPING" = 32,
+    "MA_SOUND_FLAG_NO_DEFAULT_ATTACHMENT" = 4096,
+    "MA_SOUND_FLAG_NO_PITCH" = 8192,
+    "MA_SOUND_FLAG_NO_SPATIALIZATION" = 16384,
+};
+
+[CamelCase]
+dictionary ma_engine_config {
+    Callback pResourceManager;
+    Callback pContext;
+    Callback pDevice;
+    Callback pPlaybackDeviceID;
+    Callback dataCallback;
+    Callback notificationCallback;
+    Callback pLog;
+    unsigned long listenerCount;
+    unsigned long channels;
+    unsigned long sampleRate;
+    unsigned long periodSizeInFrames;
+    unsigned long periodSizeInMilliseconds;
+    unsigned long gainSmoothTimeInFrames;
+    unsigned long gainSmoothTimeInMilliseconds;
+    unsigned long defaultVolumeSmoothTimeInPCMFrames;
+    unsigned long preMixStackSizeInBytes;
+    Callback allocationCallbacks;
+    boolean noAutoStart;
+    boolean noDevice;
+    unsigned long monoExpansionMode;
+    VoidPtr pResourceManagerVFS;
+    Callback onProcess;
+    VoidPtr pProcessUserData;
+    Callback resourceManagerResampling;
+    Callback pitchResampling;
+};
+
+[InitFunc="ma_engine_init", UninitFunc="ma_engine_uninit",
+ConfigType="ma_engine_config", ConfigInitFunc="ma_engine_config_init"]
+interface ma_engine {
+    unsigned long long get_time_in_pcm_frames();
+    unsigned long long get_time_in_milliseconds();
+    ma_result set_time_in_pcm_frames(unsigned long long globalTime);
+    ma_result set_time_in_milliseconds(unsigned long long globalTime);
+    unsigned long get_channels();
+    unsigned long get_sample_rate();
+    ma_result start();
+    ma_result stop();
+    ma_result set_volume(float volume);
+    float get_volume();
+    ma_result set_gain_db(float gainDB);
+    float get_gain_db();
+    unsigned long get_listener_count();
+    unsigned long find_closest_listener(float absolutePosX, float absolutePosY, float absolutePosZ);
+    void listener_set_position(unsigned long listenerIndex, float x, float y, float z);
+    ma_vec3f listener_get_position(unsigned long listenerIndex);
+    void listener_set_direction(unsigned long listenerIndex, float x, float y, float z);
+    ma_vec3f listener_get_direction(unsigned long listenerIndex);
+    void listener_set_velocity(unsigned long listenerIndex, float x, float y, float z);
+    ma_vec3f listener_get_velocity(unsigned long listenerIndex);
+    void listener_set_world_up(unsigned long listenerIndex, float x, float y, float z);
+    ma_vec3f listener_get_world_up(unsigned long listenerIndex);
+    void listener_set_enabled(unsigned long listenerIndex, boolean isEnabled);
+    boolean listener_is_enabled(unsigned long listenerIndex);
+    ma_result play_sound(DOMString pFilePath, VoidPtr pGroup);
+};
+
+[UninitFunc="ma_sound_uninit"]
+interface ma_sound {
+    ma_result start();
+    ma_result stop();
+    void set_volume(float volume);
+    float get_volume();
+    void set_pan(float pan);
+    float get_pan();
+    void set_pan_mode(ma_pan_mode panMode);
+    ma_pan_mode get_pan_mode();
+    void set_pitch(float pitch);
+    float get_pitch();
+    void set_spatialization_enabled(boolean enabled);
+    boolean is_spatialization_enabled();
+    void set_pinned_listener_index(unsigned long listenerIndex);
+    unsigned long get_pinned_listener_index();
+    unsigned long get_listener_index();
+    void set_position(float x, float y, float z);
+    ma_vec3f get_position();
+    void set_direction(float x, float y, float z);
+    ma_vec3f get_direction();
+    void set_velocity(float x, float y, float z);
+    ma_vec3f get_velocity();
+    void set_attenuation_model(ma_attenuation_model attenuationModel);
+    ma_attenuation_model get_attenuation_model();
+    void set_positioning(ma_positioning positioning);
+    ma_positioning get_positioning();
+    void set_rolloff(float rolloff);
+    float get_rolloff();
+    void set_min_gain(float minGain);
+    float get_min_gain();
+    void set_max_gain(float maxGain);
+    float get_max_gain();
+    void set_min_distance(float minDistance);
+    float get_min_distance();
+    void set_max_distance(float maxDistance);
+    float get_max_distance();
+    void set_doppler_factor(float dopplerFactor);
+    float get_doppler_factor();
+    void set_directional_attenuation_factor(float directionalAttenuationFactor);
+    float get_directional_attenuation_factor();
+    void set_fade_in_pcm_frames(float volumeBeg, float volumeEnd, unsigned long long fadeLengthInFrames);
+    void set_fade_in_milliseconds(float volumeBeg, float volumeEnd, unsigned long long fadeLengthInMilliseconds);
+    float get_current_fade_volume();
+    void set_start_time_in_pcm_frames(unsigned long long absoluteGlobalTimeInFrames);
+    void set_start_time_in_milliseconds(unsigned long long absoluteGlobalTimeInMilliseconds);
+    void set_stop_time_in_pcm_frames(unsigned long long absoluteGlobalTimeInFrames);
+    void set_stop_time_in_milliseconds(unsigned long long absoluteGlobalTimeInMilliseconds);
+    boolean is_playing();
+    unsigned long long get_time_in_pcm_frames();
+    unsigned long long get_time_in_milliseconds();
+    void set_looping(boolean isLooping);
+    boolean is_looping();
+    boolean at_end();
+    ma_result seek_to_pcm_frame(unsigned long long frameIndex);
+    ma_result seek_to_second(float seekPointInSeconds);
+};

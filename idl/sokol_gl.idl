@@ -1,0 +1,153 @@
+// sokol_gl.h — OpenGL 1.x style immediate-mode rendering
+[Prefix="sgl_", CInclude="sokol_gl.h"]
+
+enum sgl_log_item_t {
+    "SGL_LOGITEM_OK" = 0,
+    "SGL_LOGITEM_MALLOC_FAILED" = 1,
+    "SGL_LOGITEM_MAKE_PIPELINE_FAILED" = 2,
+    "SGL_LOGITEM_PIPELINE_POOL_EXHAUSTED" = 3,
+    "SGL_LOGITEM_ADD_COMMIT_LISTENER_FAILED" = 4,
+    "SGL_LOGITEM_CONTEXT_POOL_EXHAUSTED" = 5,
+    "SGL_LOGITEM_CANNOT_DESTROY_DEFAULT_CONTEXT" = 6,
+};
+
+dictionary sgl_logger_t {
+    Callback func;
+    VoidPtr user_data;
+};
+
+dictionary sgl_pipeline {
+    unsigned long id;
+};
+
+dictionary sgl_context {
+    unsigned long id;
+};
+
+dictionary sgl_error_t {
+    boolean any;
+    boolean vertices_full;
+    boolean uniforms_full;
+    boolean commands_full;
+    boolean stack_overflow;
+    boolean stack_underflow;
+    boolean no_context;
+};
+
+dictionary sgl_context_desc_t {
+    long max_vertices;
+    long max_commands;
+    sg_pixel_format color_format;
+    sg_pixel_format depth_format;
+    long sample_count;
+};
+
+dictionary sgl_allocator_t {
+    Callback alloc_fn;
+    Callback free_fn;
+    VoidPtr user_data;
+};
+
+dictionary sgl_desc_t {
+    long max_vertices;
+    long max_commands;
+    long context_pool_size;
+    long pipeline_pool_size;
+    sg_pixel_format color_format;
+    sg_pixel_format depth_format;
+    long sample_count;
+    sg_face_winding face_winding;
+    sgl_allocator_t allocator;
+    sgl_logger_t logger;
+};
+
+namespace sgl {
+    void setup(sgl_desc_t desc);
+    void shutdown();
+    float rad(float deg);
+    float deg(float rad);
+    sgl_error_t error();
+    sgl_error_t context_error(sgl_context ctx);
+    sgl_context make_context(sgl_context_desc_t desc);
+    void destroy_context(sgl_context ctx);
+    void set_context(sgl_context ctx);
+    sgl_context get_context();
+    sgl_context default_context();
+    long num_vertices();
+    long num_commands();
+    void draw();
+    void context_draw(sgl_context ctx);
+    void draw_layer(long layer_id);
+    void context_draw_layer(sgl_context ctx, long layer_id);
+    sgl_pipeline make_pipeline(sg_pipeline_desc desc);
+    sgl_pipeline context_make_pipeline(sgl_context ctx, sg_pipeline_desc desc);
+    void destroy_pipeline(sgl_pipeline pip);
+    void defaults();
+    void viewport(long x, long y, long w, long h, boolean origin_top_left);
+    void viewportf(float x, float y, float w, float h, boolean origin_top_left);
+    void scissor_rect(long x, long y, long w, long h, boolean origin_top_left);
+    void scissor_rectf(float x, float y, float w, float h, boolean origin_top_left);
+    void enable_texture();
+    void disable_texture();
+    void texture(sg_view tex_view, sg_sampler smp);
+    void layer(long layer_id);
+    void load_default_pipeline();
+    void load_pipeline(sgl_pipeline pip);
+    void push_pipeline();
+    void pop_pipeline();
+    void matrix_mode_modelview();
+    void matrix_mode_projection();
+    void matrix_mode_texture();
+    void load_identity();
+    // [Ignore] sgl_load_matrix — raw float[16] pointer
+    // [Ignore] sgl_load_transpose_matrix — raw float[16] pointer
+    // [Ignore] sgl_mult_matrix — raw float[16] pointer
+    // [Ignore] sgl_mult_transpose_matrix — raw float[16] pointer
+    void rotate(float angle_rad, float x, float y, float z);
+    void scale(float x, float y, float z);
+    void translate(float x, float y, float z);
+    void frustum(float l, float r, float b, float t, float n, float f);
+    void ortho(float l, float r, float b, float t, float n, float f);
+    void perspective(float fov_y, float aspect, float z_near, float z_far);
+    void lookat(float eye_x, float eye_y, float eye_z, float center_x, float center_y, float center_z, float up_x, float up_y, float up_z);
+    void push_matrix();
+    void pop_matrix();
+    void t2f(float u, float v);
+    void c3f(float r, float g, float b);
+    void c4f(float r, float g, float b, float a);
+    void c3b(octet r, octet g, octet b);
+    void c4b(octet r, octet g, octet b, octet a);
+    void c1i(unsigned long rgba);
+    void point_size(float s);
+    void begin_points();
+    void begin_lines();
+    void begin_line_strip();
+    void begin_triangles();
+    void begin_triangle_strip();
+    void begin_quads();
+    void v2f(float x, float y);
+    void v3f(float x, float y, float z);
+    void v2f_t2f(float x, float y, float u, float v);
+    void v3f_t2f(float x, float y, float z, float u, float v);
+    void v2f_c3f(float x, float y, float r, float g, float b);
+    void v2f_c3b(float x, float y, octet r, octet g, octet b);
+    void v2f_c4f(float x, float y, float r, float g, float b, float a);
+    void v2f_c4b(float x, float y, octet r, octet g, octet b, octet a);
+    void v2f_c1i(float x, float y, unsigned long rgba);
+    void v3f_c3f(float x, float y, float z, float r, float g, float b);
+    void v3f_c3b(float x, float y, float z, octet r, octet g, octet b);
+    void v3f_c4f(float x, float y, float z, float r, float g, float b, float a);
+    void v3f_c4b(float x, float y, float z, octet r, octet g, octet b, octet a);
+    void v3f_c1i(float x, float y, float z, unsigned long rgba);
+    void v2f_t2f_c3f(float x, float y, float u, float v, float r, float g, float b);
+    void v2f_t2f_c3b(float x, float y, float u, float v, octet r, octet g, octet b);
+    void v2f_t2f_c4f(float x, float y, float u, float v, float r, float g, float b, float a);
+    void v2f_t2f_c4b(float x, float y, float u, float v, octet r, octet g, octet b, octet a);
+    void v2f_t2f_c1i(float x, float y, float u, float v, unsigned long rgba);
+    void v3f_t2f_c3f(float x, float y, float z, float u, float v, float r, float g, float b);
+    void v3f_t2f_c3b(float x, float y, float z, float u, float v, octet r, octet g, octet b);
+    void v3f_t2f_c4f(float x, float y, float z, float u, float v, float r, float g, float b, float a);
+    void v3f_t2f_c4b(float x, float y, float z, float u, float v, octet r, octet g, octet b, octet a);
+    void v3f_t2f_c1i(float x, float y, float z, float u, float v, unsigned long rgba);
+    void end();
+};

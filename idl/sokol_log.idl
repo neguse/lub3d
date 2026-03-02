@@ -1,0 +1,5 @@
+// sokol_log — default logging function
+[Prefix="slog_", CInclude="sokol_log.h"]
+namespace slog {
+    void func(DOMString tag, unsigned long log_level, unsigned long log_item, DOMString message, unsigned long line_nr, DOMString filename, VoidPtr user_data);
+};

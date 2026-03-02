@@ -526,13 +526,34 @@ if(LUB3D_BUILD_JOLT)
 
     add_subdirectory(${JOLT_DIR}/Build ${CMAKE_CURRENT_BINARY_DIR}/jolt)
 
-    # Jolt Lua bindings (C++)
-    add_library(jolt_lua STATIC src/jolt_lua.cpp)
+    # Jolt Lua bindings (C++ — generated from idl/jolt.idl)
+    add_custom_command(
+        OUTPUT ${GEN_DIR}/jolt.cpp ${GEN_DIR}/jolt.lua
+        COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
+            gen generate-from-idl
+            ${CMAKE_CURRENT_SOURCE_DIR}/idl/jolt.idl
+            --module jolt
+            --out-c ${GEN_DIR}/jolt.cpp
+            --out-lua ${GEN_DIR}/jolt.lua
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/idl/jolt.idl
+            ${CMAKE_CURRENT_SOURCE_DIR}/idl/extra/jolt_extra.cpp
+            ${GENERATOR_DIR}/Program.cs
+            ${GENERATOR_DIR}/WebIdl/WebIdlParser.cs
+            ${GENERATOR_DIR}/WebIdl/WebIdlToSpec.cs
+            ${GENERATOR_DIR}/CBinding/CBindingGen.cs
+            ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
+            ${GENERATOR_OUTPUTS}
+        COMMENT "Generating Jolt bindings from idl/jolt.idl"
+    )
+    add_library(jolt_lua STATIC ${GEN_DIR}/jolt.cpp)
     target_include_directories(jolt_lua
         PRIVATE ${JOLT_DIR}
         PRIVATE ${LUA_INCLUDE}
     )
     target_link_libraries(jolt_lua PUBLIC Jolt ${LUA_TARGET})
+    target_compile_definitions(jolt_lua PRIVATE "LUB3D_API=")
     set_target_properties(jolt_lua PROPERTIES CXX_STANDARD 17)
 
     target_link_libraries(lub3d PUBLIC jolt_lua)

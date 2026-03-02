@@ -79,16 +79,16 @@ function M:init()
     }))
 
     -- Create physics world
-    world = jolt.init()
+    world = jolt.World()
     world:set_gravity(0, -10, 0)
 
     -- Ground (static box)
-    local ground = world:create_box(50, 0.5, 50, 0, -0.5, 0, jolt.STATIC)
+    local ground = world:create_box(50, 0.5, 50, 0, -0.5, 0, jolt.EMotionType.STATIC)
     bodies[#bodies + 1] = { id = ground, hx = 50, hy = 0.5, hz = 50 }
 
     -- Initial falling boxes
     for i = 1, 5 do
-        local id = world:create_box(0.5, 0.5, 0.5, (i - 3) * 1.5, 5 + i * 2, 0, jolt.DYNAMIC)
+        local id = world:create_box(0.5, 0.5, 0.5, (i - 3) * 1.5, 5 + i * 2, 0, jolt.EMotionType.DYNAMIC)
         bodies[#bodies + 1] = { id = id, hx = 0.5, hy = 0.5, hz = 0.5 }
     end
 
@@ -97,7 +97,7 @@ end
 
 function M:frame()
     -- Step physics
-    world:update(1.0 / 60.0)
+    world:update(1.0 / 60.0, 1)
 
     -- Begin render
     gfx.begin_pass(gfx.Pass({
@@ -175,20 +175,20 @@ function M:event(ev)
             -- Spawn box above center
             local x = (math.random() - 0.5) * 4
             local z = (math.random() - 0.5) * 4
-            local id = world:create_box(0.5, 0.5, 0.5, x, 15, z, jolt.DYNAMIC)
+            local id = world:create_box(0.5, 0.5, 0.5, x, 15, z, jolt.EMotionType.DYNAMIC)
             bodies[#bodies + 1] = { id = id, hx = 0.5, hy = 0.5, hz = 0.5 }
         elseif ev.key_code == app.Keycode.B then
             -- Spawn sphere
             local x = (math.random() - 0.5) * 4
             local z = (math.random() - 0.5) * 4
-            local id = world:create_sphere(0.5, x, 15, z, jolt.DYNAMIC)
+            local id = world:create_sphere(0.5, x, 15, z, jolt.EMotionType.DYNAMIC)
             bodies[#bodies + 1] = { id = id, is_sphere = true, radius = 0.5 }
         end
     elseif ev.type == app.EventType.MOUSE_DOWN then
         -- Spawn box at click
         local x = (math.random() - 0.5) * 6
         local z = (math.random() - 0.5) * 6
-        local id = world:create_box(0.5, 0.5, 0.5, x, 15, z, jolt.DYNAMIC)
+        local id = world:create_box(0.5, 0.5, 0.5, x, 15, z, jolt.EMotionType.DYNAMIC)
         bodies[#bodies + 1] = { id = id, hx = 0.5, hy = 0.5, hz = 0.5 }
     elseif ev.type == app.EventType.MOUSE_MOVE then
         if ev.mouse_button == app.Mousebutton.RIGHT or ev.modifiers_shift then

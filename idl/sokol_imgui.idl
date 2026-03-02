@@ -1,0 +1,68 @@
+// sokol_imgui.h — Dear ImGui integration for Sokol
+[Prefix="simgui_", CInclude="sokol_imgui.h"]
+
+enum simgui_log_item_t {
+    "SIMGUI_LOGITEM_OK" = 0,
+    "SIMGUI_LOGITEM_MALLOC_FAILED" = 1,
+    "SIMGUI_LOGITEM_BUFFER_OVERFLOW" = 2,
+};
+
+dictionary simgui_allocator_t {
+    Callback alloc_fn;
+    Callback free_fn;
+    VoidPtr user_data;
+};
+
+dictionary simgui_logger_t {
+    Callback func;
+    VoidPtr user_data;
+};
+
+dictionary simgui_desc_t {
+    long max_vertices;
+    sg_pixel_format color_format;
+    sg_pixel_format depth_format;
+    long sample_count;
+    DOMString ini_filename;
+    boolean no_default_font;
+    boolean disable_paste_override;
+    boolean disable_set_mouse_cursor;
+    boolean disable_windows_resize_from_edges;
+    boolean write_alpha_channel;
+    simgui_allocator_t allocator;
+    simgui_logger_t logger;
+};
+
+dictionary simgui_frame_desc_t {
+    long width;
+    long height;
+    double delta_time;
+    float dpi_scale;
+};
+
+dictionary simgui_font_tex_desc_t {
+    sg_filter min_filter;
+    sg_filter mag_filter;
+};
+
+namespace simgui {
+    void setup(simgui_desc_t desc);
+    void new_frame(simgui_frame_desc_t desc);
+    void render();
+    unsigned long long imtextureid(sg_view tex_view);
+    unsigned long long imtextureid_with_sampler(sg_view tex_view, sg_sampler smp);
+    sg_view texture_view_from_imtextureid(unsigned long long imtex_id);
+    sg_sampler sampler_from_imtextureid(unsigned long long imtex_id);
+    void add_focus_event(boolean focus);
+    void add_mouse_pos_event(float x, float y);
+    void add_touch_pos_event(float x, float y);
+    void add_mouse_button_event(long mouse_button, boolean down);
+    void add_mouse_wheel_event(float wheel_x, float wheel_y);
+    void add_key_event(long imgui_key, boolean down);
+    void add_input_character(unsigned long c);
+    void add_input_characters_utf8(DOMString c);
+    void add_touch_button_event(long mouse_button, boolean down);
+    boolean handle_event(sapp_event ev);
+    long map_keycode(sapp_keycode keycode);
+    void shutdown();
+};

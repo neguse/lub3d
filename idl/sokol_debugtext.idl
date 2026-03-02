@@ -1,0 +1,100 @@
+// sokol_debugtext.h — Simple ASCII debug text rendering
+[Prefix="sdtx_", CInclude="sokol_debugtext.h"]
+
+enum sdtx_log_item_t {
+    "SDTX_LOGITEM_OK" = 0,
+    "SDTX_LOGITEM_MALLOC_FAILED" = 1,
+    "SDTX_LOGITEM_ADD_COMMIT_LISTENER_FAILED" = 2,
+    "SDTX_LOGITEM_COMMAND_BUFFER_FULL" = 3,
+    "SDTX_LOGITEM_CONTEXT_POOL_EXHAUSTED" = 4,
+    "SDTX_LOGITEM_CANNOT_DESTROY_DEFAULT_CONTEXT" = 5,
+};
+
+dictionary sdtx_logger_t {
+    Callback func;
+    VoidPtr user_data;
+};
+
+dictionary sdtx_context {
+    unsigned long id;
+};
+
+dictionary sdtx_range {
+    ConstVoidPtr ptr;
+    Size size;
+};
+
+dictionary sdtx_font_desc_t {
+    sdtx_range data;
+    octet first_char;
+    octet last_char;
+};
+
+dictionary sdtx_context_desc_t {
+    long max_commands;
+    long char_buf_size;
+    float canvas_width;
+    float canvas_height;
+    long tab_width;
+    sg_pixel_format color_format;
+    sg_pixel_format depth_format;
+    long sample_count;
+};
+
+dictionary sdtx_allocator_t {
+    Callback alloc_fn;
+    Callback free_fn;
+    VoidPtr user_data;
+};
+
+dictionary sdtx_desc_t {
+    long context_pool_size;
+    long printf_buf_size;
+    sdtx_font_desc_t[8] fonts;
+    sdtx_context_desc_t context;
+    sdtx_allocator_t allocator;
+    sdtx_logger_t logger;
+};
+
+namespace sdtx {
+    void setup(sdtx_desc_t desc);
+    void shutdown();
+    sdtx_font_desc_t font_kc853();
+    sdtx_font_desc_t font_kc854();
+    sdtx_font_desc_t font_z1013();
+    sdtx_font_desc_t font_cpc();
+    sdtx_font_desc_t font_c64();
+    sdtx_font_desc_t font_oric();
+    sdtx_context make_context(sdtx_context_desc_t desc);
+    void destroy_context(sdtx_context ctx);
+    void set_context(sdtx_context ctx);
+    sdtx_context get_context();
+    sdtx_context default_context();
+    void draw();
+    void context_draw(sdtx_context ctx);
+    void draw_layer(long layer_id);
+    void context_draw_layer(sdtx_context ctx, long layer_id);
+    void layer(long layer_id);
+    void font(long font_index);
+    void canvas(float w, float h);
+    void origin(float x, float y);
+    void home();
+    void pos(float x, float y);
+    void pos_x(float x);
+    void pos_y(float y);
+    void move(float dx, float dy);
+    void move_x(float dx);
+    void move_y(float dy);
+    void crlf();
+    void color3b(octet r, octet g, octet b);
+    void color3f(float r, float g, float b);
+    void color4b(octet r, octet g, octet b, octet a);
+    void color4f(float r, float g, float b, float a);
+    void color1i(unsigned long rgba);
+    void puts(DOMString str);
+    void putr(DOMString str, long len);
+    sdtx_range get_cleared_fmt_buffer();
+    // [Ignore] sdtx_printf — varargs
+    // [Ignore] sdtx_vprintf — varargs
+    // [Ignore] sdtx_putc — single char
+};

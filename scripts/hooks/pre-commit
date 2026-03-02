@@ -1,0 +1,35 @@
+#!/bin/sh
+# pre-commit hook: auto-format staged .idl files
+# Activate: git config core.hooksPath scripts/hooks
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+IDL_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.idl$')
+
+if [ -z "$IDL_FILES" ]; then
+    exit 0
+fi
+
+# Build Generator if needed
+dotnet build "$REPO_ROOT/Generator" --nologo -q 2>/dev/null
+if [ $? -ne 0 ]; then
+    echo "Warning: Generator build failed, skipping IDL format"
+    exit 0
+fi
+
+FORMATTED=0
+for f in $IDL_FILES; do
+    FULL_PATH="$REPO_ROOT/$f"
+    if [ -f "$FULL_PATH" ]; then
+        dotnet run --project "$REPO_ROOT/Generator" --no-build -- format-idl "$FULL_PATH" 2>/dev/null
+        if [ $? -eq 0 ]; then
+            git add "$FULL_PATH"
+            FORMATTED=$((FORMATTED + 1))
+        fi
+    fi
+done
+
+if [ $FORMATTED -gt 0 ]; then
+    echo "Formatted $FORMATTED .idl file(s)"
+fi
+
+exit 0

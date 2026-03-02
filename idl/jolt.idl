@@ -1,0 +1,2218 @@
+// Jolt Physics — lub3d binding via CppClass pipeline
+// JoltWorld wraps JPH::PhysicsSystem + subsystems into a single opaque type.
+// Complex operations (multi-return, constructor with optional params) are in ExtraCCode.
+[Prefix="jolt_", IsCpp, EntryPoint="luaopen_jolt", StandaloneEntry,
+ExtraCCode="extra/jolt_extra.cpp",
+ExtraLuaReg="World:l_jolt_World_new"]
+
+// ===== Enums =====
+
+enum EMotionType {
+    "EMotionType_Static" = 0,
+    "EMotionType_Kinematic" = 1,
+    "EMotionType_Dynamic" = 2
+};
+
+enum EActivation {
+    "EActivation_Activate" = 0,
+    "EActivation_DontActivate" = 1
+};
+
+enum EBodyType {
+    "EBodyType_RigidBody" = 0,
+    "EBodyType_SoftBody" = 1
+};
+
+enum EMotionQuality {
+    "EMotionQuality_Discrete" = 0,
+    "EMotionQuality_LinearCast" = 1
+};
+
+enum EOverrideMassProperties {
+    "EOverrideMassProperties_CalculateMassAndInertia" = 0,
+    "EOverrideMassProperties_CalculateInertia" = 1,
+    "EOverrideMassProperties_MassAndInertiaProvided" = 2
+};
+
+enum EAllowedDOFs {
+    "EAllowedDOFs_All" = 63,
+    "EAllowedDOFs_TranslationX" = 1,
+    "EAllowedDOFs_TranslationY" = 2,
+    "EAllowedDOFs_TranslationZ" = 4,
+    "EAllowedDOFs_RotationX" = 8,
+    "EAllowedDOFs_RotationY" = 16,
+    "EAllowedDOFs_RotationZ" = 32,
+    "EAllowedDOFs_Plane2D" = 41
+};
+
+enum EShapeType {
+    "EShapeType_Convex" = 0,
+    "EShapeType_Compound" = 1,
+    "EShapeType_Decorated" = 2,
+    "EShapeType_Mesh" = 3,
+    "EShapeType_HeightField" = 4,
+    "EShapeType_SoftBody" = 5,
+    "EShapeType_Plane" = 10,
+    "EShapeType_Empty" = 11
+};
+
+enum EShapeSubType {
+    "EShapeSubType_Sphere" = 0,
+    "EShapeSubType_Box" = 1,
+    "EShapeSubType_Capsule" = 3,
+    "EShapeSubType_TaperedCapsule" = 4,
+    "EShapeSubType_Cylinder" = 5,
+    "EShapeSubType_ConvexHull" = 6,
+    "EShapeSubType_StaticCompound" = 7,
+    "EShapeSubType_MutableCompound" = 8,
+    "EShapeSubType_RotatedTranslated" = 9,
+    "EShapeSubType_Scaled" = 10,
+    "EShapeSubType_OffsetCenterOfMass" = 11,
+    "EShapeSubType_Mesh" = 12,
+    "EShapeSubType_HeightField" = 13,
+    "EShapeSubType_SoftBody" = 14,
+    "EShapeSubType_Plane" = 31,
+    "EShapeSubType_TaperedCylinder" = 32,
+    "EShapeSubType_Empty" = 33
+};
+
+enum EBackFaceMode {
+    "EBackFaceMode_IgnoreBackFaces" = 0,
+    "EBackFaceMode_CollideWithBackFaces" = 1
+};
+
+enum EActiveEdgeMode {
+    "EActiveEdgeMode_CollideOnlyWithActive" = 0,
+    "EActiveEdgeMode_CollideWithAll" = 1
+};
+
+enum ECollectFacesMode {
+    "ECollectFacesMode_CollectFaces" = 0,
+    "ECollectFacesMode_NoFaces" = 1
+};
+
+enum EConstraintSpace {
+    "EConstraintSpace_LocalToBodyCOM" = 0,
+    "EConstraintSpace_WorldSpace" = 1
+};
+
+enum EConstraintType {
+    "EConstraintType_Constraint" = 0,
+    "EConstraintType_TwoBodyConstraint" = 1
+};
+
+enum EConstraintSubType {
+    "EConstraintSubType_Fixed" = 0,
+    "EConstraintSubType_Point" = 1,
+    "EConstraintSubType_Hinge" = 2,
+    "EConstraintSubType_Slider" = 3,
+    "EConstraintSubType_Distance" = 4,
+    "EConstraintSubType_Cone" = 5,
+    "EConstraintSubType_SwingTwist" = 6,
+    "EConstraintSubType_SixDOF" = 7,
+    "EConstraintSubType_Path" = 8,
+    "EConstraintSubType_Vehicle" = 9,
+    "EConstraintSubType_RackAndPinion" = 10,
+    "EConstraintSubType_Gear" = 11,
+    "EConstraintSubType_Pulley" = 12
+};
+
+enum EMotorState {
+    "EMotorState_Off" = 0,
+    "EMotorState_Velocity" = 1,
+    "EMotorState_Position" = 2
+};
+
+enum ESwingType {
+    "ESwingType_Cone" = 0,
+    "ESwingType_Pyramid" = 1
+};
+
+enum ESpringMode {
+    "ESpringMode_FrequencyAndDamping" = 0,
+    "ESpringMode_StiffnessAndDamping" = 1
+};
+
+enum EPathRotationConstraintType {
+    "EPathRotationConstraintType_Free" = 0,
+    "EPathRotationConstraintType_ConstrainAroundTangent" = 1,
+    "EPathRotationConstraintType_ConstrainAroundNormal" = 2,
+    "EPathRotationConstraintType_ConstrainAroundBinormal" = 3,
+    "EPathRotationConstraintType_ConstrainToPath" = 4,
+    "EPathRotationConstraintType_FullyConstrained" = 5
+};
+
+enum SixDOFConstraintSettings_EAxis {
+    "SixDOFConstraintSettings_EAxis_TranslationX" = 0,
+    "SixDOFConstraintSettings_EAxis_TranslationY" = 1,
+    "SixDOFConstraintSettings_EAxis_TranslationZ" = 2,
+    "SixDOFConstraintSettings_EAxis_RotationX" = 3,
+    "SixDOFConstraintSettings_EAxis_RotationY" = 4,
+    "SixDOFConstraintSettings_EAxis_RotationZ" = 5
+};
+
+enum EGroundState {
+    "EGroundState_OnGround" = 0,
+    "EGroundState_OnSteepGround" = 1,
+    "EGroundState_NotSupported" = 2,
+    "EGroundState_InAir" = 3
+};
+
+enum EStateRecorderState {
+    "EStateRecorderState_None" = 0,
+    "EStateRecorderState_Global" = 1,
+    "EStateRecorderState_Bodies" = 2,
+    "EStateRecorderState_Contacts" = 4,
+    "EStateRecorderState_Constraints" = 8,
+    "EStateRecorderState_All" = 15
+};
+
+enum ETransmissionMode {
+    "ETransmissionMode_Auto" = 0,
+    "ETransmissionMode_Manual" = 1
+};
+
+enum ValidateResult {
+    "ValidateResult_AcceptAllContactsForThisBodyPair" = 0,
+    "ValidateResult_AcceptContact" = 1,
+    "ValidateResult_RejectContact" = 2,
+    "ValidateResult_RejectAllContactsForThisBodyPair" = 3
+};
+
+enum SoftBodyValidateResult {
+    "SoftBodyValidateResult_AcceptContact" = 0,
+    "SoftBodyValidateResult_RejectContact" = 1
+};
+
+enum SoftBodySharedSettings_EBendType {
+    "SoftBodySharedSettings_EBendType_None" = 0,
+    "SoftBodySharedSettings_EBendType_Distance" = 1,
+    "SoftBodySharedSettings_EBendType_Dihedral" = 2
+};
+
+enum SoftBodySharedSettings_ELRAType {
+    "SoftBodySharedSettings_ELRAType_None" = 0,
+    "SoftBodySharedSettings_ELRAType_EuclideanDistance" = 1,
+    "SoftBodySharedSettings_ELRAType_GeodesicDistance" = 2
+};
+
+enum MeshShapeSettings_EBuildQuality {
+    "MeshShapeSettings_EBuildQuality_FavorRuntimePerformance" = 0,
+    "MeshShapeSettings_EBuildQuality_FavorBuildSpeed" = 1
+};
+
+// ===== Math ValueTypes =====
+
+[CppClass="JPH::Vec3", ValueType]
+interface Vec3 {
+    [Constructor]
+    void create(float x, float y, float z);
+    float GetX();
+    float GetY();
+    float GetZ();
+    void SetX(float v);
+    void SetY(float v);
+    void SetZ(float v);
+    void Set(float x, float y, float z);
+    float Length();
+    float LengthSq();
+    Vec3 Normalized();
+    Vec3 Cross(Vec3 v);
+    float Dot(Vec3 v);
+    Vec3 Abs();
+    Vec3 GetSign();
+};
+
+[CppClass="JPH::RVec3", ValueType]
+interface RVec3 {
+    [Constructor]
+    void create(double x, double y, double z);
+    double GetX();
+    double GetY();
+    double GetZ();
+    void SetX(double v);
+    void SetY(double v);
+    void SetZ(double v);
+    void Set(double x, double y, double z);
+    double Length();
+    double LengthSq();
+    RVec3 Normalized();
+    RVec3 Cross(RVec3 v);
+    double Dot(RVec3 v);
+    RVec3 Abs();
+};
+
+[CppClass="JPH::Quat", ValueType]
+interface Quat {
+    [Constructor]
+    void create(float x, float y, float z, float w);
+    float GetX();
+    float GetY();
+    float GetZ();
+    float GetW();
+    void SetX(float v);
+    void SetY(float v);
+    void SetZ(float v);
+    void SetW(float v);
+    float Length();
+    float LengthSq();
+    Quat Normalized();
+    Quat Conjugated();
+    Quat Inversed();
+    float Dot(Quat q);
+    Vec3 GetEulerAngles();
+    Vec3 RotateAxisX();
+    Vec3 RotateAxisY();
+    Vec3 RotateAxisZ();
+    Vec3 InverseRotate(Vec3 v);
+};
+
+[CppClass="JPH::Mat44", ValueType]
+interface Mat44 {
+    [Constructor]
+    void create();
+    Vec3 GetAxisX();
+    Vec3 GetAxisY();
+    Vec3 GetAxisZ();
+    Vec3 GetTranslation();
+    void SetTranslation(Vec3 v);
+    Quat GetQuaternion();
+    Mat44 Inversed();
+    Mat44 Transposed();
+    Vec3 Multiply3x3(Vec3 v);
+    float GetDeterminant3x3();
+};
+
+[CppClass="JPH::RMat44", ValueType]
+interface RMat44 {
+    [Constructor]
+    void create();
+    Vec3 GetAxisX();
+    Vec3 GetAxisY();
+    Vec3 GetAxisZ();
+    RVec3 GetTranslation();
+    void SetTranslation(RVec3 v);
+    Quat GetQuaternion();
+    RMat44 Inversed();
+    Vec3 Multiply3x3(Vec3 v);
+};
+
+[CppClass="JPH::Float2", ValueType]
+interface Vector2 {
+    [Constructor]
+    void create(float x, float y);
+};
+
+[CppClass="JPH::Float3", ValueType]
+interface Float3 {
+    [Constructor]
+    void create(float x, float y, float z);
+};
+
+[CppClass="JPH::Vec4", ValueType]
+interface Vec4 {
+    [Constructor]
+    void create(float x, float y, float z, float w);
+    float GetX();
+    float GetY();
+    float GetZ();
+    float GetW();
+    void SetX(float v);
+    void SetY(float v);
+    void SetZ(float v);
+    void SetW(float v);
+    void Set(float x, float y, float z, float w);
+};
+
+[CppClass="JPH::Plane", ValueType]
+interface Plane {
+    [Constructor]
+    void create(Vec3 normal, float constant);
+    Vec3 GetNormal();
+    void SetNormal(Vec3 normal);
+    float GetConstant();
+    void SetConstant(float constant);
+    float SignedDistance(Vec3 point);
+};
+
+[CppClass="JPH::AABox", ValueType]
+interface AABox {
+    [Constructor]
+    void create(Vec3 min, Vec3 max);
+    void SetEmpty();
+    boolean IsValid();
+    Vec3 GetCenter();
+    Vec3 GetExtent();
+    Vec3 GetSize();
+    float GetSurfaceArea();
+    float GetVolume();
+    void ExpandBy(Vec3 v);
+};
+
+[CppClass="JPH::OrientedBox", ValueType]
+interface OrientedBox {
+    [Constructor]
+    void create(Mat44 orientation, Vec3 halfExtents);
+};
+
+[CppClass="JPH::Triangle", ValueType]
+interface Triangle {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::IndexedTriangle", ValueType]
+interface IndexedTriangle {
+    [Constructor]
+    void create(unsigned long i1, unsigned long i2, unsigned long i3,
+    unsigned long materialIndex);
+};
+
+// ===== Body types =====
+
+[CppClass="JPH::BodyID", ValueType]
+interface BodyID {
+    [Constructor]
+    void create(unsigned long indexAndSequenceNumber);
+    unsigned long GetIndex();
+    unsigned long GetIndexAndSequenceNumber();
+};
+
+[CppClass="JPH::Body", NoDelete]
+interface Body {
+    BodyID GetID();
+    boolean IsActive();
+    boolean IsStatic();
+    boolean IsKinematic();
+    boolean IsDynamic();
+    boolean IsRigidBody();
+    boolean IsSoftBody();
+    EBodyType GetBodyType();
+    EMotionType GetMotionType();
+    boolean IsSensor();
+    void SetIsSensor(boolean v);
+    float GetFriction();
+    void SetFriction(float v);
+    float GetRestitution();
+    void SetRestitution(float v);
+    Vec3 GetLinearVelocity();
+    void SetLinearVelocity(Vec3 v);
+    Vec3 GetAngularVelocity();
+    void SetAngularVelocity(Vec3 v);
+    void AddForce(Vec3 force);
+    void AddTorque(Vec3 torque);
+    void AddImpulse(Vec3 impulse);
+    void AddAngularImpulse(Vec3 impulse);
+    void ResetForce();
+    void ResetTorque();
+    void ResetMotion();
+    RVec3 GetPosition();
+    Quat GetRotation();
+    RMat44 GetWorldTransform();
+    RVec3 GetCenterOfMassPosition();
+    Vec3 GetAccumulatedForce();
+    Vec3 GetAccumulatedTorque();
+    boolean GetAllowSleeping();
+    void SetAllowSleeping(boolean v);
+    void ResetSleepTimer();
+    unsigned long long GetUserData();
+    void SetUserData(unsigned long long data);
+    MotionProperties GetMotionProperties();
+};
+
+[CppClass="JPH::MotionProperties", NoDelete]
+interface MotionProperties {
+    EMotionQuality GetMotionQuality();
+    Vec3 GetLinearVelocity();
+    void SetLinearVelocity(Vec3 v);
+    Vec3 GetAngularVelocity();
+    void SetAngularVelocity(Vec3 v);
+    float GetMaxLinearVelocity();
+    void SetMaxLinearVelocity(float v);
+    float GetMaxAngularVelocity();
+    void SetMaxAngularVelocity(float v);
+    float GetLinearDamping();
+    void SetLinearDamping(float v);
+    float GetAngularDamping();
+    void SetAngularDamping(float v);
+    float GetGravityFactor();
+    void SetGravityFactor(float v);
+    float GetInverseMass();
+    void SetInverseMass(float v);
+    Vec3 GetAccumulatedForce();
+    Vec3 GetAccumulatedTorque();
+    void ResetForce();
+    void ResetTorque();
+    void ResetMotion();
+};
+
+[CppClass="JPH::MassProperties", ValueType]
+interface MassProperties {
+    [Constructor]
+    void create();
+    void SetMassAndInertiaOfSolidBox(Vec3 halfExtents, float density);
+    void ScaleToMass(float mass);
+    void Rotate(Mat44 rotation);
+    void Translate(Vec3 translation);
+    void Scale(Vec3 scale);
+};
+
+[CppClass="JPH::BodyCreationSettings", ValueType]
+interface BodyCreationSettings {
+    [Constructor]
+    void create();
+};
+
+// ===== BodyInterface =====
+
+[CppClass="JPH::BodyInterface", NoDelete]
+interface BodyInterface {
+    void DestroyBody(BodyID bodyID);
+    void AddBody(BodyID bodyID, EActivation activationMode);
+    void RemoveBody(BodyID bodyID);
+    boolean IsAdded(BodyID bodyID);
+    BodyID CreateAndAddBody(BodyCreationSettings settings, EActivation activationMode);
+    void SetPosition(BodyID bodyID, RVec3 position, EActivation activationMode);
+    RVec3 GetPosition(BodyID bodyID);
+    void SetRotation(BodyID bodyID, Quat rotation, EActivation activationMode);
+    Quat GetRotation(BodyID bodyID);
+    RMat44 GetWorldTransform(BodyID bodyID);
+    RMat44 GetCenterOfMassTransform(BodyID bodyID);
+    void SetLinearVelocity(BodyID bodyID, Vec3 linearVelocity);
+    Vec3 GetLinearVelocity(BodyID bodyID);
+    void SetAngularVelocity(BodyID bodyID, Vec3 angularVelocity);
+    Vec3 GetAngularVelocity(BodyID bodyID);
+    Vec3 GetPointVelocity(BodyID bodyID, RVec3 point);
+    void ActivateBody(BodyID bodyID);
+    void DeactivateBody(BodyID bodyID);
+    boolean IsActive(BodyID bodyID);
+    void SetMotionType(BodyID bodyID, EMotionType motionType, EActivation activationMode);
+    EMotionType GetMotionType(BodyID bodyID);
+    void SetMotionQuality(BodyID bodyID, EMotionQuality motionQuality);
+    EMotionQuality GetMotionQuality(BodyID bodyID);
+    Mat44 GetInverseInertia(BodyID bodyID);
+    void SetRestitution(BodyID bodyID, float restitution);
+    float GetRestitution(BodyID bodyID);
+    void SetFriction(BodyID bodyID, float friction);
+    float GetFriction(BodyID bodyID);
+    void SetGravityFactor(BodyID bodyID, float factor);
+    float GetGravityFactor(BodyID bodyID);
+    void SetMaxLinearVelocity(BodyID bodyID, float linearVelocity);
+    float GetMaxLinearVelocity(BodyID bodyID);
+    void SetMaxAngularVelocity(BodyID bodyID, float angularVelocity);
+    float GetMaxAngularVelocity(BodyID bodyID);
+    void AddImpulse(BodyID bodyID, Vec3 impulse);
+    void AddAngularImpulse(BodyID bodyID, Vec3 angularImpulse);
+    EBodyType GetBodyType(BodyID bodyID);
+    void SetIsSensor(BodyID bodyID, boolean isSensor);
+    boolean IsSensor(BodyID bodyID);
+    void ResetSleepTimer(BodyID bodyID);
+    unsigned long long GetUserData(BodyID bodyID);
+    void SetUserData(BodyID bodyID, unsigned long long userData);
+    void InvalidateContactCache(BodyID bodyID);
+};
+
+[CppClass="JPH::TransformedShape", ValueType]
+interface TransformedShape {
+    [Constructor]
+    void create();
+    Vec3 GetShapeScale();
+    void SetShapeScale(Vec3 scale);
+    RMat44 GetCenterOfMassTransform();
+    RMat44 GetInverseCenterOfMassTransform();
+    RMat44 GetWorldTransform();
+};
+
+// ===== Shape =====
+
+[CppClass="JPH::Shape", NoDelete]
+interface Shape {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    EShapeType GetType();
+    EShapeSubType GetSubType();
+    boolean MustBeStatic();
+    Vec3 GetCenterOfMass();
+    float GetInnerRadius();
+    float GetVolume();
+    unsigned long long GetUserData();
+    void SetUserData(unsigned long long data);
+    MassProperties GetMassProperties();
+};
+
+[CppClass="JPH::ShapeSettings", NoDelete]
+interface ShapeSettings {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    ShapeResult Create();
+    void ClearCachedResult();
+};
+
+[CppClass="JPH::ShapeSettings::ShapeResult", ValueType]
+interface ShapeResult {
+    boolean IsValid();
+    boolean HasError();
+    Shape Get();
+    void Clear();
+};
+
+// ===== Convex shapes =====
+
+[CppClass="JPH::ConvexShapeSettings", NoDelete]
+interface ConvexShapeSettings : ShapeSettings {
+};
+
+[CppClass="JPH::ConvexShape", NoDelete]
+interface ConvexShape : Shape {
+};
+
+[CppClass="JPH::BoxShapeSettings"]
+interface BoxShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create(Vec3 halfExtent);
+};
+
+[CppClass="JPH::BoxShape", NoDelete]
+interface BoxShape : ConvexShape {
+    Vec3 GetHalfExtent();
+};
+
+[CppClass="JPH::SphereShapeSettings"]
+interface SphereShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create(float radius);
+};
+
+[CppClass="JPH::SphereShape", NoDelete]
+interface SphereShape : ConvexShape {
+    float GetRadius();
+};
+
+[CppClass="JPH::CapsuleShapeSettings"]
+interface CapsuleShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create(float halfHeightOfCylinder, float radius);
+};
+
+[CppClass="JPH::CapsuleShape", NoDelete]
+interface CapsuleShape : ConvexShape {
+    float GetRadius();
+    float GetHalfHeightOfCylinder();
+};
+
+[CppClass="JPH::CylinderShapeSettings"]
+interface CylinderShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create(float halfHeight, float radius);
+};
+
+[CppClass="JPH::CylinderShape", NoDelete]
+interface CylinderShape : ConvexShape {
+    float GetRadius();
+    float GetHalfHeight();
+};
+
+[CppClass="JPH::TaperedCapsuleShapeSettings"]
+interface TaperedCapsuleShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create(float halfHeightOfTaperedCylinder, float topRadius, float bottomRadius);
+};
+
+[CppClass="JPH::TaperedCapsuleShape", NoDelete]
+interface TaperedCapsuleShape : ConvexShape {
+    float GetHalfHeight();
+    float GetTopRadius();
+    float GetBottomRadius();
+};
+
+[CppClass="JPH::TaperedCylinderShapeSettings"]
+interface TaperedCylinderShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create(float halfHeight, float topRadius, float bottomRadius);
+};
+
+[CppClass="JPH::TaperedCylinderShape", NoDelete]
+interface TaperedCylinderShape : ConvexShape {
+    float GetHalfHeight();
+    float GetTopRadius();
+    float GetBottomRadius();
+    float GetConvexRadius();
+};
+
+[CppClass="JPH::ConvexHullShapeSettings"]
+interface ConvexHullShapeSettings : ConvexShapeSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::ConvexHullShape", NoDelete]
+interface ConvexHullShape : ConvexShape {
+};
+
+// ===== Compound shapes =====
+
+[CppClass="JPH::CompoundShape::SubShape", NoDelete]
+interface CompoundShapeSubShape {
+    Vec3 GetPositionCOM();
+    Quat GetRotation();
+};
+
+[CppClass="JPH::CompoundShapeSettings", NoDelete]
+interface CompoundShapeSettings : ShapeSettings {
+};
+
+[CppClass="JPH::CompoundShape", NoDelete]
+interface CompoundShape : Shape {
+    unsigned long GetNumSubShapes();
+};
+
+[CppClass="JPH::StaticCompoundShapeSettings"]
+interface StaticCompoundShapeSettings : CompoundShapeSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::StaticCompoundShape", NoDelete]
+interface StaticCompoundShape : CompoundShape {
+};
+
+[CppClass="JPH::MutableCompoundShapeSettings"]
+interface MutableCompoundShapeSettings : CompoundShapeSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::MutableCompoundShape", NoDelete]
+interface MutableCompoundShape : CompoundShape {
+    void AdjustCenterOfMass();
+};
+
+// ===== Decorated shapes =====
+
+[CppClass="JPH::DecoratedShapeSettings", NoDelete]
+interface DecoratedShapeSettings : ShapeSettings {
+};
+
+[CppClass="JPH::DecoratedShape", NoDelete]
+interface DecoratedShape : Shape {
+};
+
+[CppClass="JPH::ScaledShapeSettings"]
+interface ScaledShapeSettings : DecoratedShapeSettings {
+    [Constructor]
+    void create(ShapeSettings shape, Vec3 scale);
+};
+
+[CppClass="JPH::ScaledShape", NoDelete]
+interface ScaledShape : DecoratedShape {
+    Vec3 GetScale();
+};
+
+[CppClass="JPH::OffsetCenterOfMassShapeSettings"]
+interface OffsetCenterOfMassShapeSettings : DecoratedShapeSettings {
+    [Constructor]
+    void create(Vec3 offset, ShapeSettings shape);
+};
+
+[CppClass="JPH::OffsetCenterOfMassShape", NoDelete]
+interface OffsetCenterOfMassShape : DecoratedShape {
+};
+
+[CppClass="JPH::RotatedTranslatedShapeSettings"]
+interface RotatedTranslatedShapeSettings : DecoratedShapeSettings {
+    [Constructor]
+    void create(Vec3 position, Quat rotation, ShapeSettings shape);
+};
+
+[CppClass="JPH::RotatedTranslatedShape", NoDelete]
+interface RotatedTranslatedShape : DecoratedShape {
+    Quat GetRotation();
+    Vec3 GetPosition();
+};
+
+// ===== Mesh / HeightField / Plane / Empty =====
+
+[CppClass="JPH::MeshShapeSettings"]
+interface MeshShapeSettings : ShapeSettings {
+    [Constructor]
+    void create();
+    void Sanitize();
+};
+
+[CppClass="JPH::MeshShape", NoDelete]
+interface MeshShape : Shape {
+};
+
+[CppClass="JPH::HeightFieldShapeSettings"]
+interface HeightFieldShapeSettings : ShapeSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::HeightFieldShape", NoDelete]
+interface HeightFieldShape : Shape {
+    unsigned long GetSampleCount();
+    unsigned long GetBlockSize();
+    float GetMinHeightValue();
+    float GetMaxHeightValue();
+};
+
+[CppClass="HeightFieldShapeConstantValues", ValueType]
+interface HeightFieldShapeConstantValues {
+    [Constructor]
+    void create();
+    float GetNoCollisionValue();
+};
+
+[CppClass="JPH::PlaneShapeSettings"]
+interface PlaneShapeSettings : ShapeSettings {
+    [Constructor]
+    void create(Plane plane);
+};
+
+[CppClass="JPH::PlaneShape", NoDelete]
+interface PlaneShape : Shape {
+    Plane GetPlane();
+    float GetHalfExtent();
+};
+
+[CppClass="JPH::EmptyShapeSettings"]
+interface EmptyShapeSettings : ShapeSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::EmptyShape", NoDelete]
+interface EmptyShape : Shape {
+};
+
+[CppClass="JPH::SoftBodyShape", NoDelete]
+interface SoftBodyShape : Shape {
+};
+
+// ===== SubShapeID =====
+
+[CppClass="JPH::SubShapeID", ValueType]
+interface SubShapeID {
+    [Constructor]
+    void create();
+    unsigned long GetValue();
+    void SetValue(unsigned long value);
+};
+
+[CppClass="JPH::SubShapeIDPair", ValueType]
+interface SubShapeIDPair {
+    [Constructor]
+    void create();
+};
+
+// ===== Shape Get Triangles =====
+
+[CppClass="ShapeGetTrianglesWrapper"]
+interface ShapeGetTriangles {
+    [Constructor]
+    void create(Shape shape, AABox box, Vec3 positionCOM, Quat rotation, Vec3 scale);
+    long GetNumTriangles();
+    long GetVerticesSize();
+};
+
+// ===== Shape Cast / Collide =====
+
+[CppClass="JPH::ShapeCast", ValueType]
+interface ShapeCast {
+    [Constructor]
+    void create(Shape shape, Vec3 scale, Mat44 centerOfMassStart, Vec3 direction);
+    Vec3 GetPointOnRay(float fraction);
+};
+
+[CppClass="JPH::RShapeCast", ValueType]
+interface RShapeCast {
+    [Constructor]
+    void create(Shape shape, Vec3 scale, RMat44 centerOfMassStart, Vec3 direction);
+    RVec3 GetPointOnRay(float fraction);
+};
+
+[CppClass="JPH::CollideShapeSettings", ValueType]
+interface CollideShapeSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::ShapeCastSettings", ValueType]
+interface ShapeCastSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::CollideShapeResult", ValueType]
+interface CollideShapeResult {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::ShapeCastResult", ValueType]
+interface ShapeCastResult {
+    [Constructor]
+    void create();
+};
+
+// ===== Shape Filters =====
+
+[CppClass="JPH::ShapeFilter", NoDelete]
+interface ShapeFilter {
+};
+
+[CppClass="JPH::SimShapeFilter", NoDelete]
+interface SimShapeFilter {
+};
+
+// ===== Collectors =====
+
+[CppClass="JPH::CollideShapeBodyCollector", NoDelete]
+interface CollideShapeBodyCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="JPH::CollideShapeCollector", NoDelete]
+interface CollideShapeCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="CollideShapeAllHitCollisionCollector"]
+interface CollideShapeAllHitCollisionCollector {
+    [Constructor]
+    void create();
+    void Sort();
+    boolean HadHit();
+};
+
+[CppClass="CollideShapeClosestHitCollisionCollector"]
+interface CollideShapeClosestHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+[CppClass="CollideShapeAnyHitCollisionCollector"]
+interface CollideShapeAnyHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+[CppClass="JPH::CastShapeBodyCollector", NoDelete]
+interface CastShapeBodyCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="JPH::CastShapeCollector", NoDelete]
+interface CastShapeCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="CastShapeAllHitCollisionCollector"]
+interface CastShapeAllHitCollisionCollector {
+    [Constructor]
+    void create();
+    void Sort();
+    boolean HadHit();
+};
+
+[CppClass="CastShapeClosestHitCollisionCollector"]
+interface CastShapeClosestHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+[CppClass="CastShapeAnyHitCollisionCollector"]
+interface CastShapeAnyHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+[CppClass="JPH::TransformedShapeCollector", NoDelete]
+interface TransformedShapeCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+// ===== Ray / Cast =====
+
+[CppClass="JPH::RayCast", ValueType]
+interface RayCast {
+    [Constructor]
+    void create(Vec3 origin, Vec3 direction);
+};
+
+[CppClass="JPH::RRayCast", ValueType]
+interface RRayCast {
+    [Constructor]
+    void create(RVec3 origin, Vec3 direction);
+};
+
+[CppClass="JPH::RayCastResult", ValueType]
+interface RayCastResult {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::RayCastSettings", ValueType]
+interface RayCastSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::BroadPhaseCastResult", ValueType]
+interface BroadPhaseCastResult {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::AABoxCast", ValueType]
+interface AABoxCast {
+    [Constructor]
+    void create();
+};
+
+// ===== Ray Collectors =====
+
+[CppClass="JPH::CastRayCollector", NoDelete]
+interface CastRayCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="JPH::RayCastBodyCollector", NoDelete]
+interface RayCastBodyCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="CastRayAllHitCollisionCollector"]
+interface CastRayAllHitCollisionCollector {
+    [Constructor]
+    void create();
+    void Sort();
+    boolean HadHit();
+};
+
+[CppClass="CastRayClosestHitCollisionCollector"]
+interface CastRayClosestHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+[CppClass="CastRayAnyHitCollisionCollector"]
+interface CastRayAnyHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+// ===== CollidePoint =====
+
+[CppClass="JPH::CollidePointCollector", NoDelete]
+interface CollidePointCollector {
+    void Reset();
+    float GetEarlyOutFraction();
+    boolean ShouldEarlyOut();
+};
+
+[CppClass="JPH::CollidePointResult", ValueType]
+interface CollidePointResult {
+    [Constructor]
+    void create();
+};
+
+[CppClass="CollidePointAllHitCollisionCollector"]
+interface CollidePointAllHitCollisionCollector {
+    [Constructor]
+    void create();
+    void Sort();
+    boolean HadHit();
+};
+
+[CppClass="CollidePointClosestHitCollisionCollector"]
+interface CollidePointClosestHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+[CppClass="CollidePointAnyHitCollisionCollector"]
+interface CollidePointAnyHitCollisionCollector {
+    [Constructor]
+    void create();
+    boolean HadHit();
+};
+
+// ===== Query =====
+
+[CppClass="JPH::NarrowPhaseQuery", NoDelete]
+interface NarrowPhaseQuery {
+};
+
+[CppClass="JPH::BroadPhaseQuery", NoDelete]
+interface BroadPhaseQuery {
+};
+
+// ===== BroadPhase Layer =====
+
+[CppClass="JPH::BroadPhaseLayer", ValueType]
+interface BroadPhaseLayer {
+    [Constructor]
+    void create(unsigned long value);
+};
+
+[CppClass="JPH::BroadPhaseLayerInterface", NoDelete]
+interface BroadPhaseLayerInterface {
+};
+
+[CppClass="JPH::BroadPhaseLayerInterfaceTable"]
+interface BroadPhaseLayerInterfaceTable {
+    [Constructor]
+    void create(unsigned long numObjectLayers, unsigned long numBroadPhaseLayers);
+    void MapObjectToBroadPhaseLayer(unsigned long objectLayer, BroadPhaseLayer broadPhaseLayer);
+};
+
+[CppClass="JPH::BroadPhaseLayerInterfaceMask"]
+interface BroadPhaseLayerInterfaceMask {
+    [Constructor]
+    void create(unsigned long numBroadPhaseLayers);
+    void ConfigureLayer(BroadPhaseLayer broadPhaseLayer, unsigned long groupsToInclude,
+    unsigned long groupsToExclude);
+};
+
+// ===== Object Layer Filters =====
+
+[CppClass="JPH::ObjectLayerFilter", NoDelete]
+interface ObjectLayerFilter {
+};
+
+[CppClass="JPH::DefaultObjectLayerFilter", NoDelete]
+interface DefaultObjectLayerFilter {
+};
+
+[CppClass="JPH::SpecifiedObjectLayerFilter"]
+interface SpecifiedObjectLayerFilter {
+    [Constructor]
+    void create(unsigned long layer);
+};
+
+[CppClass="JPH::ObjectLayerPairFilter", NoDelete]
+interface ObjectLayerPairFilter {
+};
+
+[CppClass="JPH::ObjectLayerPairFilterTable"]
+interface ObjectLayerPairFilterTable {
+    [Constructor]
+    void create(unsigned long numObjectLayers);
+    void EnableCollision(unsigned long layer1, unsigned long layer2);
+    void DisableCollision(unsigned long layer1, unsigned long layer2);
+};
+
+[CppClass="JPH::ObjectLayerPairFilterMask"]
+interface ObjectLayerPairFilterMask {
+    [Constructor]
+    void create();
+};
+
+// ===== BroadPhase Filters =====
+
+[CppClass="JPH::ObjectVsBroadPhaseLayerFilter", NoDelete]
+interface ObjectVsBroadPhaseLayerFilter {
+};
+
+[CppClass="JPH::ObjectVsBroadPhaseLayerFilterTable", NoDelete]
+interface ObjectVsBroadPhaseLayerFilterTable {
+};
+
+[CppClass="JPH::ObjectVsBroadPhaseLayerFilterMask", NoDelete]
+interface ObjectVsBroadPhaseLayerFilterMask {
+};
+
+[CppClass="JPH::BroadPhaseLayerFilter", NoDelete]
+interface BroadPhaseLayerFilter {
+};
+
+[CppClass="JPH::DefaultBroadPhaseLayerFilter", NoDelete]
+interface DefaultBroadPhaseLayerFilter {
+};
+
+// ===== Body / Group Filters =====
+
+[CppClass="JPH::BodyFilter", NoDelete]
+interface BodyFilter {
+};
+
+[CppClass="JPH::IgnoreSingleBodyFilter"]
+interface IgnoreSingleBodyFilter {
+    [Constructor]
+    void create(BodyID bodyID);
+};
+
+[CppClass="JPH::IgnoreMultipleBodiesFilter"]
+interface IgnoreMultipleBodiesFilter {
+    [Constructor]
+    void create();
+    void Clear();
+    void Reserve(unsigned long numBodies);
+    void IgnoreBody(BodyID bodyID);
+};
+
+[CppClass="JPH::GroupFilter", NoDelete]
+interface GroupFilter {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+};
+
+[CppClass="JPH::GroupFilterTable"]
+interface GroupFilterTable {
+    [Constructor]
+    void create(unsigned long numSubGroups);
+    void DisableCollision(unsigned long subGroup1, unsigned long subGroup2);
+    void EnableCollision(unsigned long subGroup1, unsigned long subGroup2);
+};
+
+[CppClass="JPH::CollisionGroup", ValueType]
+interface CollisionGroup {
+    [Constructor]
+    void create();
+    void SetGroupID(unsigned long groupID);
+    unsigned long GetGroupID();
+    void SetSubGroupID(unsigned long subGroupID);
+    unsigned long GetSubGroupID();
+};
+
+// ===== Contact =====
+
+[CppClass="JPH::ContactListener", NoDelete]
+interface ContactListener {
+};
+
+[CppClass="JPH::ContactManifold", NoDelete]
+interface ContactManifold {
+};
+
+[CppClass="JPH::ContactSettings", NoDelete]
+interface ContactSettings {
+};
+
+// ===== State Recorder =====
+
+[CppClass="JPH::StateRecorderFilter", NoDelete]
+interface StateRecorderFilter {
+};
+
+// ===== Character Collision =====
+
+[CppClass="JPH::CharacterContactListener", NoDelete]
+interface CharacterContactListener {
+};
+
+[CppClass="JPH::CharacterContactSettings", ValueType]
+interface CharacterContactSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::CharacterVirtual::Contact", ValueType]
+interface CharacterVirtualContact {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::CharacterVsCharacterCollision", NoDelete]
+interface CharacterVsCharacterCollision {
+};
+
+[CppClass="JPH::CharacterVsCharacterCollisionSimple"]
+interface CharacterVsCharacterCollisionSimple {
+    [Constructor]
+    void create();
+};
+
+// ===== SoftBody Contact =====
+
+[CppClass="JPH::SoftBodyContactListener", NoDelete]
+interface SoftBodyContactListener {
+};
+
+[CppClass="JPH::SoftBodyContactSettings", ValueType]
+interface SoftBodyContactSettings {
+    [Constructor]
+    void create();
+};
+
+// ===== Vehicle Collision =====
+
+[CppClass="JPH::VehicleCollisionTester", NoDelete]
+interface VehicleCollisionTester {
+};
+
+[CppClass="JPH::VehicleCollisionTesterRay"]
+interface VehicleCollisionTesterRay {
+    [Constructor]
+    void create(unsigned long objectLayer);
+};
+
+[CppClass="JPH::VehicleCollisionTesterCastSphere"]
+interface VehicleCollisionTesterCastSphere {
+    [Constructor]
+    void create(unsigned long objectLayer, float radius);
+};
+
+[CppClass="JPH::VehicleCollisionTesterCastCylinder"]
+interface VehicleCollisionTesterCastCylinder {
+    [Constructor]
+    void create(unsigned long objectLayer, float fraction);
+};
+
+// ===== ContactPoints container =====
+
+[CppClass="JPH::ContactPoints", NoDelete]
+interface ContactPoints {
+};
+
+// ===== CollideSettingsBase =====
+
+[CppClass="JPH::CollideSettingsBase", ValueType]
+interface CollideSettingsBase {
+    [Constructor]
+    void create();
+};
+
+// ===== System =====
+
+[CppClass="JPH::TempAllocator", NoDelete]
+interface TempAllocator {
+};
+
+[CppClass="JPH::PhysicsMaterial", NoDelete]
+interface PhysicsMaterial {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+};
+
+[CppClass="JPH::PhysicsSettings", ValueType]
+interface PhysicsSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JoltSettings", ValueType]
+interface JoltSettings {
+    [Constructor]
+    void create();
+    unsigned long get_max_bodies();
+    void set_max_bodies(unsigned long v);
+    unsigned long get_max_body_pairs();
+    void set_max_body_pairs(unsigned long v);
+    unsigned long get_max_contact_constraints();
+    void set_max_contact_constraints(unsigned long v);
+};
+
+[CppClass="JPH::PhysicsSystem", NoDelete]
+interface PhysicsSystem {
+    void SetGravity(Vec3 gravity);
+    Vec3 GetGravity();
+    unsigned long GetNumBodies();
+    unsigned long GetNumActiveBodies(EBodyType type);
+    unsigned long GetMaxBodies();
+    void OptimizeBroadPhase();
+};
+
+[CppClass="PhysicsStepListenerContextWrapper", NoDelete]
+interface PhysicsStepListenerContext {
+    float GetDeltaTime();
+    boolean GetIsFirstStep();
+    boolean GetIsLastStep();
+};
+
+// ===== Constraints: Support types =====
+
+[CppClass="JPH::SpringSettings", ValueType]
+interface SpringSettings {
+    [Constructor]
+    void create();
+    boolean HasStiffness();
+};
+
+[CppClass="JPH::MotorSettings", ValueType]
+interface MotorSettings {
+    [Constructor]
+    void create();
+};
+
+// ===== Constraints: Base types =====
+
+[CppClass="JPH::ConstraintSettings", NoDelete]
+interface ConstraintSettings {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+};
+
+[CppClass="JPH::Constraint", NoDelete]
+interface Constraint {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    EConstraintType GetType();
+    EConstraintSubType GetSubType();
+    unsigned long GetConstraintPriority();
+    void SetConstraintPriority(unsigned long priority);
+    void SetNumVelocityStepsOverride(unsigned long n);
+    unsigned long GetNumVelocityStepsOverride();
+    void SetNumPositionStepsOverride(unsigned long n);
+    unsigned long GetNumPositionStepsOverride();
+    void SetEnabled(boolean enabled);
+    boolean GetEnabled();
+    boolean IsActive();
+    unsigned long long GetUserData();
+    void SetUserData(unsigned long long userData);
+    void ResetWarmStart();
+};
+
+[CppClass="JPH::TwoBodyConstraintSettings", NoDelete]
+interface TwoBodyConstraintSettings : ConstraintSettings {
+};
+
+[CppClass="JPH::TwoBodyConstraint", NoDelete]
+interface TwoBodyConstraint : Constraint {
+    Body GetBody1();
+    Body GetBody2();
+    Mat44 GetConstraintToBody1Matrix();
+    Mat44 GetConstraintToBody2Matrix();
+};
+
+// ===== Constraints: Fixed =====
+
+[CppClass="JPH::FixedConstraintSettings"]
+interface FixedConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+// ===== Constraints: Distance =====
+
+[CppClass="JPH::DistanceConstraintSettings"]
+interface DistanceConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::DistanceConstraint", NoDelete]
+interface DistanceConstraint : TwoBodyConstraint {
+    void SetDistance(float minDistance, float maxDistance);
+    float GetMinDistance();
+    float GetMaxDistance();
+    SpringSettings GetLimitsSpringSettings();
+    void SetLimitsSpringSettings(SpringSettings settings);
+    float GetTotalLambdaPosition();
+};
+
+// ===== Constraints: Point =====
+
+[CppClass="JPH::PointConstraintSettings"]
+interface PointConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::PointConstraint", NoDelete]
+interface PointConstraint : TwoBodyConstraint {
+    Vec3 GetLocalSpacePoint1();
+    Vec3 GetLocalSpacePoint2();
+    Vec3 GetTotalLambdaPosition();
+};
+
+// ===== Constraints: Hinge =====
+
+[CppClass="JPH::HingeConstraintSettings"]
+interface HingeConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::HingeConstraint", NoDelete]
+interface HingeConstraint : TwoBodyConstraint {
+    Vec3 GetLocalSpacePoint1();
+    Vec3 GetLocalSpacePoint2();
+    Vec3 GetLocalSpaceHingeAxis1();
+    Vec3 GetLocalSpaceHingeAxis2();
+    Vec3 GetLocalSpaceNormalAxis1();
+    Vec3 GetLocalSpaceNormalAxis2();
+    float GetCurrentAngle();
+    void SetMaxFrictionTorque(float frictionTorque);
+    float GetMaxFrictionTorque();
+    MotorSettings GetMotorSettings();
+    void SetMotorState(EMotorState state);
+    EMotorState GetMotorState();
+    void SetTargetAngularVelocity(float angularVelocity);
+    float GetTargetAngularVelocity();
+    void SetTargetAngle(float angle);
+    float GetTargetAngle();
+    void SetTargetOrientationBS(Quat orientation);
+    void SetLimits(float limitsMin, float limitsMax);
+    float GetLimitsMin();
+    float GetLimitsMax();
+    boolean HasLimits();
+    SpringSettings GetLimitsSpringSettings();
+    void SetLimitsSpringSettings(SpringSettings settings);
+    Vec3 GetTotalLambdaPosition();
+    float GetTotalLambdaRotationLimits();
+    float GetTotalLambdaMotor();
+};
+
+// ===== Constraints: Cone =====
+
+[CppClass="JPH::ConeConstraintSettings"]
+interface ConeConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::ConeConstraint", NoDelete]
+interface ConeConstraint : TwoBodyConstraint {
+    void SetHalfConeAngle(float halfConeAngle);
+    float GetCosHalfConeAngle();
+    Vec3 GetTotalLambdaPosition();
+    float GetTotalLambdaRotation();
+};
+
+// ===== Constraints: Slider =====
+
+[CppClass="JPH::SliderConstraintSettings"]
+interface SliderConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::SliderConstraint", NoDelete]
+interface SliderConstraint : TwoBodyConstraint {
+    float GetCurrentPosition();
+    void SetMaxFrictionForce(float frictionForce);
+    float GetMaxFrictionForce();
+    MotorSettings GetMotorSettings();
+    void SetMotorState(EMotorState state);
+    EMotorState GetMotorState();
+    void SetTargetVelocity(float velocity);
+    float GetTargetVelocity();
+    void SetTargetPosition(float position);
+    float GetTargetPosition();
+    void SetLimits(float limitsMin, float limitsMax);
+    float GetLimitsMin();
+    float GetLimitsMax();
+    boolean HasLimits();
+    SpringSettings GetLimitsSpringSettings();
+    void SetLimitsSpringSettings(SpringSettings settings);
+    Vec3 GetTotalLambdaRotation();
+    float GetTotalLambdaMotor();
+};
+
+// ===== Constraints: SwingTwist =====
+
+[CppClass="JPH::SwingTwistConstraintSettings"]
+interface SwingTwistConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::SwingTwistConstraint", NoDelete]
+interface SwingTwistConstraint : TwoBodyConstraint {
+    Vec3 GetLocalSpacePosition1();
+    Vec3 GetLocalSpacePosition2();
+    Quat GetConstraintToBody1();
+    Quat GetConstraintToBody2();
+    float GetNormalHalfConeAngle();
+    void SetNormalHalfConeAngle(float angle);
+    float GetPlaneHalfConeAngle();
+    void SetPlaneHalfConeAngle(float angle);
+    float GetTwistMinAngle();
+    void SetTwistMinAngle(float angle);
+    float GetTwistMaxAngle();
+    void SetTwistMaxAngle(float angle);
+    MotorSettings GetSwingMotorSettings();
+    MotorSettings GetTwistMotorSettings();
+    void SetMaxFrictionTorque(float frictionTorque);
+    float GetMaxFrictionTorque();
+    void SetSwingMotorState(EMotorState state);
+    EMotorState GetSwingMotorState();
+    void SetTwistMotorState(EMotorState state);
+    EMotorState GetTwistMotorState();
+    void SetTargetAngularVelocityCS(Vec3 angularVelocity);
+    Vec3 GetTargetAngularVelocityCS();
+    void SetTargetOrientationCS(Quat orientation);
+    Quat GetTargetOrientationCS();
+    void SetTargetOrientationBS(Quat orientation);
+    Quat GetRotationInConstraintSpace();
+    Vec3 GetTotalLambdaPosition();
+    float GetTotalLambdaTwist();
+    float GetTotalLambdaSwingY();
+    float GetTotalLambdaSwingZ();
+    Vec3 GetTotalLambdaMotor();
+};
+
+// ===== Constraints: SixDOF =====
+
+[CppClass="JPH::SixDOFConstraintSettings"]
+interface SixDOFConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+    void MakeFreeAxis(SixDOFConstraintSettings_EAxis axis);
+    boolean IsFreeAxis(SixDOFConstraintSettings_EAxis axis);
+    void MakeFixedAxis(SixDOFConstraintSettings_EAxis axis);
+    boolean IsFixedAxis(SixDOFConstraintSettings_EAxis axis);
+    void SetLimitedAxis(SixDOFConstraintSettings_EAxis axis, float min, float max);
+};
+
+[CppClass="JPH::SixDOFConstraint", NoDelete]
+interface SixDOFConstraint : TwoBodyConstraint {
+    void SetTranslationLimits(Vec3 limitMin, Vec3 limitMax);
+    void SetRotationLimits(Vec3 limitMin, Vec3 limitMax);
+    float GetLimitsMin(SixDOFConstraintSettings_EAxis axis);
+    float GetLimitsMax(SixDOFConstraintSettings_EAxis axis);
+    Vec3 GetTranslationLimitsMin();
+    Vec3 GetTranslationLimitsMax();
+    Vec3 GetRotationLimitsMin();
+    Vec3 GetRotationLimitsMax();
+    boolean IsFixedAxis(SixDOFConstraintSettings_EAxis axis);
+    boolean IsFreeAxis(SixDOFConstraintSettings_EAxis axis);
+    void SetMaxFriction(SixDOFConstraintSettings_EAxis axis, float friction);
+    float GetMaxFriction(SixDOFConstraintSettings_EAxis axis);
+    Quat GetRotationInConstraintSpace();
+    MotorSettings GetMotorSettings(SixDOFConstraintSettings_EAxis axis);
+    void SetMotorState(SixDOFConstraintSettings_EAxis axis, EMotorState state);
+    EMotorState GetMotorState(SixDOFConstraintSettings_EAxis axis);
+    Vec3 GetTargetVelocityCS();
+    void SetTargetVelocityCS(Vec3 velocity);
+    void SetTargetAngularVelocityCS(Vec3 angularVelocity);
+    Vec3 GetTargetAngularVelocityCS();
+    Vec3 GetTargetPositionCS();
+    void SetTargetPositionCS(Vec3 position);
+    void SetTargetOrientationCS(Quat orientation);
+    Quat GetTargetOrientationCS();
+    void SetTargetOrientationBS(Quat orientation);
+    Vec3 GetTotalLambdaPosition();
+    Vec3 GetTotalLambdaRotation();
+    Vec3 GetTotalLambdaMotorTranslation();
+    Vec3 GetTotalLambdaMotorRotation();
+};
+
+// ===== Constraints: Path =====
+
+[CppClass="JPH::PathConstraintPath", NoDelete]
+interface PathConstraintPath {
+    boolean IsLooping();
+    void SetIsLooping(boolean isLooping);
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+};
+
+[CppClass="JPH::PathConstraintPathHermite"]
+interface PathConstraintPathHermite : PathConstraintPath {
+    [Constructor]
+    void create();
+    void AddPoint(Vec3 position, Vec3 tangent, Vec3 normal);
+};
+
+[CppClass="JPH::PathConstraintSettings"]
+interface PathConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::PathConstraint", NoDelete]
+interface PathConstraint : TwoBodyConstraint {
+    float GetPathFraction();
+    void SetMaxFrictionForce(float frictionForce);
+    float GetMaxFrictionForce();
+    MotorSettings GetPositionMotorSettings();
+    void SetPositionMotorState(EMotorState state);
+    EMotorState GetPositionMotorState();
+    void SetTargetVelocity(float velocity);
+    float GetTargetVelocity();
+    void SetTargetPathFraction(float fraction);
+    float GetTargetPathFraction();
+};
+
+// ===== Constraints: Pulley =====
+
+[CppClass="JPH::PulleyConstraintSettings"]
+interface PulleyConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::PulleyConstraint", NoDelete]
+interface PulleyConstraint : TwoBodyConstraint {
+    void SetLength(float minLength, float maxLength);
+    float GetMinLength();
+    float GetMaxLength();
+    float GetCurrentLength();
+};
+
+// ===== Constraints: Gear =====
+
+[CppClass="JPH::GearConstraintSettings"]
+interface GearConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+    void SetRatio(long numTeethGear1, long numTeethGear2);
+};
+
+[CppClass="JPH::GearConstraint", NoDelete]
+interface GearConstraint : TwoBodyConstraint {
+    void SetConstraints(Constraint gear1, Constraint gear2);
+    float GetTotalLambda();
+};
+
+// ===== Constraints: RackAndPinion =====
+
+[CppClass="JPH::RackAndPinionConstraintSettings"]
+interface RackAndPinionConstraintSettings : TwoBodyConstraintSettings {
+    [Constructor]
+    void create();
+    void SetRatio(long numTeethRack, float rackLength, long numTeethPinion);
+};
+
+[CppClass="JPH::RackAndPinionConstraint", NoDelete]
+interface RackAndPinionConstraint : TwoBodyConstraint {
+    void SetConstraints(Constraint pinion, Constraint rack);
+    float GetTotalLambda();
+};
+
+// ===== Constraints: ExtendedUpdateSettings =====
+
+[CppClass="JPH::CharacterVirtual::ExtendedUpdateSettings", ValueType]
+interface ExtendedUpdateSettings {
+    [Constructor]
+    void create();
+};
+
+// ===== Constraints: Vehicle =====
+
+[CppClass="JPH::VehicleConstraintSettings", NoDelete]
+interface VehicleConstraintSettings : ConstraintSettings {
+};
+
+[CppClass="JPH::VehicleConstraint", NoDelete]
+interface VehicleConstraint : Constraint {
+    void SetMaxPitchRollAngle(float maxPitchRollAngle);
+    float GetMaxPitchRollAngle();
+    boolean IsGravityOverridden();
+    Vec3 GetGravityOverride();
+    void ResetGravityOverride();
+    Vec3 GetLocalUp();
+    Vec3 GetLocalForward();
+    Vec3 GetWorldUp();
+    Body GetVehicleBody();
+};
+
+// ===== Constraints: Motorcycle =====
+
+[CppClass="JPH::MotorcycleControllerSettings", NoDelete]
+interface MotorcycleControllerSettings {
+};
+
+[CppClass="JPH::MotorcycleController", NoDelete]
+interface MotorcycleController {
+    float GetWheelBase();
+    void EnableLeanController(boolean enable);
+    boolean IsLeanControllerEnabled();
+};
+
+// ===== Constraints: Ragdoll =====
+
+[CppClass="JPH::RagdollSettings::AdditionalConstraint", ValueType]
+interface RagdollAdditionalConstraint {
+    [Constructor]
+    void create();
+};
+
+// ===== Character =====
+
+[CppClass="JPH::CharacterBaseSettings", NoDelete]
+interface CharacterBaseSettings {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+};
+
+[CppClass="JPH::CharacterBase", NoDelete]
+interface CharacterBase {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    void SetMaxSlopeAngle(float maxSlopeAngle);
+    float GetCosMaxSlopeAngle();
+    void SetUp(Vec3 up);
+    Vec3 GetUp();
+    EGroundState GetGroundState();
+    boolean IsSupported();
+    RVec3 GetGroundPosition();
+    Vec3 GetGroundNormal();
+    Vec3 GetGroundVelocity();
+    BodyID GetGroundBodyID();
+};
+
+[CppClass="JPH::CharacterID", ValueType]
+interface CharacterID {
+    [Constructor]
+    void create();
+    unsigned long GetValue();
+    boolean IsInvalid();
+};
+
+[CppClass="JPH::CharacterVirtualSettings"]
+interface CharacterVirtualSettings : CharacterBaseSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::CharacterVirtual", NoDelete]
+interface CharacterVirtual : CharacterBase {
+    Vec3 GetLinearVelocity();
+    void SetLinearVelocity(Vec3 linearVelocity);
+    RVec3 GetPosition();
+    void SetPosition(RVec3 position);
+    Quat GetRotation();
+    void SetRotation(Quat rotation);
+    RVec3 GetCenterOfMassPosition();
+    RMat44 GetWorldTransform();
+    RMat44 GetCenterOfMassTransform();
+    float GetMass();
+    void SetMass(float mass);
+    float GetMaxStrength();
+    void SetMaxStrength(float maxStrength);
+    float GetPenetrationRecoverySpeed();
+    void SetPenetrationRecoverySpeed(float speed);
+    float GetCharacterPadding();
+    unsigned long GetMaxNumHits();
+    void SetMaxNumHits(unsigned long maxHits);
+    float GetHitReductionCosMaxAngle();
+    void SetHitReductionCosMaxAngle(float cosMaxAngle);
+    boolean GetMaxHitsExceeded();
+    Vec3 GetShapeOffset();
+    void SetShapeOffset(Vec3 shapeOffset);
+    unsigned long long GetUserData();
+    void SetUserData(unsigned long long userData);
+    BodyID GetInnerBodyID();
+    void UpdateGroundVelocity();
+    TransformedShape GetTransformedShape();
+    boolean HasCollidedWith(BodyID bodyID);
+    Vec3 CancelVelocityTowardsSteepSlopes(Vec3 desiredVelocity);
+};
+
+// ===== SoftBody =====
+
+[CppClass="JPH::SoftBodyCreationSettings", ValueType]
+interface SoftBodyCreationSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::SoftBodyManifold", NoDelete]
+interface SoftBodyManifold {
+    unsigned long GetNumSensorContacts();
+};
+
+[CppClass="JPH::SoftBodyMotionProperties", NoDelete]
+interface SoftBodyMotionProperties : MotionProperties {
+    unsigned long GetNumIterations();
+    void SetNumIterations(unsigned long numIterations);
+    float GetPressure();
+    void SetPressure(float pressure);
+    boolean GetUpdatePosition();
+    void SetUpdatePosition(boolean updatePosition);
+    boolean GetEnableSkinConstraints();
+    void SetEnableSkinConstraints(boolean enableSkinConstraints);
+    float GetSkinnedMaxDistanceMultiplier();
+    void SetSkinnedMaxDistanceMultiplier(float skinnedMaxDistanceMultiplier);
+    float GetVertexRadius();
+    void SetVertexRadius(float vertexRadius);
+    AABox GetLocalBounds();
+};
+
+[CppClass="SoftBodySharedSettingsVertex", ValueType]
+interface SoftBodySharedSettingsVertex {
+    [Constructor]
+    void create();
+};
+
+[CppClass="SoftBodySharedSettingsEdge", ValueType]
+interface SoftBodySharedSettingsEdge {
+    [Constructor]
+    void create(unsigned long vertex1, unsigned long vertex2, float compliance);
+};
+
+[CppClass="SoftBodySharedSettingsFace", ValueType]
+interface SoftBodySharedSettingsFace {
+    [Constructor]
+    void create(unsigned long vertex1, unsigned long vertex2, unsigned long vertex3,
+    unsigned long materialIndex);
+};
+
+[CppClass="SoftBodySharedSettingsVolume", ValueType]
+interface SoftBodySharedSettingsVolume {
+    [Constructor]
+    void create(unsigned long vertex1, unsigned long vertex2, unsigned long vertex3,
+    unsigned long vertex4, float compliance);
+};
+
+[CppClass="SoftBodySharedSettingsDihedralBend", ValueType]
+interface SoftBodySharedSettingsDihedralBend {
+    [Constructor]
+    void create(unsigned long vertex1, unsigned long vertex2, unsigned long vertex3,
+    unsigned long vertex4, float compliance);
+};
+
+[CppClass="SoftBodySharedSettingsLRA", ValueType]
+interface SoftBodySharedSettingsLRA {
+    [Constructor]
+    void create(unsigned long vertex1, unsigned long vertex2, float maxDistance);
+};
+
+[CppClass="SoftBodySharedSettingsRodStretchShear", ValueType]
+interface SoftBodySharedSettingsRodStretchShear {
+    [Constructor]
+    void create(unsigned long vertex1, unsigned long vertex2, float compliance);
+};
+
+[CppClass="SoftBodySharedSettingsRodBendTwist", ValueType]
+interface SoftBodySharedSettingsRodBendTwist {
+    [Constructor]
+    void create(unsigned long rod1, unsigned long rod2, float compliance);
+};
+
+[CppClass="SoftBodySharedSettingsVertexAttributes", ValueType]
+interface SoftBodySharedSettingsVertexAttributes {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::SoftBodyVertex", ValueType]
+interface SoftBodyVertex {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::SoftBodySharedSettings"]
+interface SoftBodySharedSettings {
+    [Constructor]
+    void create();
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    void AddFace(SoftBodySharedSettingsFace face);
+    void CalculateEdgeLengths();
+    void CalculateRodProperties();
+    void CalculateLRALengths();
+    void CalculateBendConstraintConstants();
+    void CalculateVolumeConstraintVolumes();
+    void CalculateSkinnedConstraintNormals();
+    void Optimize();
+};
+
+// ===== Vehicle =====
+
+[CppClass="JPH::VehicleControllerSettings", NoDelete]
+interface VehicleControllerSettings {
+};
+
+[CppClass="JPH::VehicleController", NoDelete]
+interface VehicleController {
+};
+
+[CppClass="JPH::VehicleEngineSettings", ValueType]
+interface VehicleEngineSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::VehicleEngine", NoDelete]
+interface VehicleEngine {
+    void ClampRPM();
+    float GetCurrentRPM();
+    void SetCurrentRPM(float rpm);
+    float GetAngularVelocity();
+    float GetTorque(float acceleration);
+};
+
+[CppClass="JPH::VehicleTransmissionSettings", ValueType]
+interface VehicleTransmissionSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::VehicleTransmission", NoDelete]
+interface VehicleTransmission {
+    void Set(long currentGear, float clutchFriction);
+    long GetCurrentGear();
+    float GetClutchFriction();
+    boolean IsSwitchingGear();
+    float GetCurrentRatio();
+};
+
+[CppClass="JPH::VehicleDifferentialSettings", ValueType]
+interface VehicleDifferentialSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::VehicleTrackSettings", ValueType]
+interface VehicleTrackSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::VehicleTrack", NoDelete]
+interface VehicleTrack {
+};
+
+[CppClass="JPH::VehicleAntiRollBar", ValueType]
+interface VehicleAntiRollBar {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::WheelSettings", NoDelete]
+interface WheelSettings {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+};
+
+[CppClass="JPH::WheelSettingsWV"]
+interface WheelSettingsWV : WheelSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::WheelSettingsTV"]
+interface WheelSettingsTV : WheelSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::Wheel", NoDelete]
+interface Wheel {
+    float GetAngularVelocity();
+    void SetAngularVelocity(float vel);
+    float GetRotationAngle();
+    void SetRotationAngle(float angle);
+    float GetSteerAngle();
+    void SetSteerAngle(float angle);
+    boolean HasContact();
+    BodyID GetContactBodyID();
+    RVec3 GetContactPosition();
+    Vec3 GetContactPointVelocity();
+    Vec3 GetContactNormal();
+    Vec3 GetContactLongitudinal();
+    Vec3 GetContactLateral();
+    float GetSuspensionLength();
+    boolean HasHitHardPoint();
+    float GetSuspensionLambda();
+    float GetLongitudinalLambda();
+    float GetLateralLambda();
+};
+
+[CppClass="JPH::WheelWV", NoDelete]
+interface WheelWV : Wheel {
+};
+
+[CppClass="JPH::WheelTV", NoDelete]
+interface WheelTV : Wheel {
+};
+
+[CppClass="JPH::WheeledVehicleControllerSettings"]
+interface WheeledVehicleControllerSettings : VehicleControllerSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::WheeledVehicleController", NoDelete]
+interface WheeledVehicleController : VehicleController {
+    void SetForwardInput(float forward);
+    float GetForwardInput();
+    void SetRightInput(float right);
+    float GetRightInput();
+    void SetBrakeInput(float brake);
+    float GetBrakeInput();
+    void SetHandBrakeInput(float handBrake);
+    float GetHandBrakeInput();
+    float GetDifferentialLimitedSlipRatio();
+    void SetDifferentialLimitedSlipRatio(float v);
+    float GetWheelSpeedAtClutch();
+};
+
+[CppClass="JPH::TrackedVehicleControllerSettings"]
+interface TrackedVehicleControllerSettings : VehicleControllerSettings {
+    [Constructor]
+    void create();
+};
+
+[CppClass="JPH::TrackedVehicleController", NoDelete]
+interface TrackedVehicleController : VehicleController {
+    void SetForwardInput(float forward);
+    float GetForwardInput();
+    void SetLeftRatio(float leftRatio);
+    float GetLeftRatio();
+    void SetRightRatio(float rightRatio);
+    float GetRightRatio();
+    void SetBrakeInput(float brake);
+    float GetBrakeInput();
+};
+
+// ===== Skeleton / Animation =====
+
+[CppClass="JPH::Skeleton", NoDelete]
+interface Skeleton {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    long GetJointCount();
+};
+
+[CppClass="JPH::SkeletonPose"]
+interface SkeletonPose {
+    [Constructor]
+    void create();
+    void SetSkeleton(Skeleton skeleton);
+    void CalculateJointMatrices();
+    void CalculateJointStates();
+};
+
+[CppClass="JPH::SkeletalAnimation", NoDelete]
+interface SkeletalAnimation {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    float GetDuration();
+};
+
+[CppClass="SkeletalAnimationKeyframe", ValueType]
+interface SkeletalAnimationKeyframe {
+    [Constructor]
+    void create();
+};
+
+[CppClass="SkeletalAnimationJointState", ValueType]
+interface SkeletalAnimationJointState {
+    [Constructor]
+    void create();
+};
+
+[CppClass="SkeletalAnimationAnimatedJoint", ValueType]
+interface SkeletalAnimationAnimatedJoint {
+    [Constructor]
+    void create();
+};
+
+// ===== Ragdoll =====
+
+[CppClass="JPH::RagdollSettings", NoDelete]
+interface RagdollSettings {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    boolean Stabilize();
+    void DisableParentChildCollisions();
+};
+
+[CppClass="JPH::Ragdoll", NoDelete]
+interface Ragdoll {
+    unsigned long GetRefCount();
+    void AddRef();
+    void Release();
+    unsigned long GetBodyCount();
+};
+
+[CppClass="RagdollPart", NoDelete]
+interface RagdollPart {
+};
+
+// ===== State =====
+
+[CppClass="JPH::StateRecorder", NoDelete]
+interface StateRecorder {
+};
+
+[CppClass="JPH::StateRecorderImpl"]
+interface StateRecorderImpl {
+    [Constructor]
+    void create();
+};
+
+// ===== Body (additional) =====
+
+[CppClass="JPH::BodyActivationListener", NoDelete]
+interface BodyActivationListener {
+};
+
+[CppClass="JPH::BodyLockInterface", NoDelete]
+interface BodyLockInterface {
+};
+
+[CppClass="JPH::BodyLockInterfaceLocking", NoDelete]
+interface BodyLockInterfaceLocking : BodyLockInterface {
+};
+
+[CppClass="JPH::BodyLockInterfaceNoLock", NoDelete]
+interface BodyLockInterfaceNoLock : BodyLockInterface {
+};
+
+// ===== Misc =====
+
+[CppClass="JPH::PhysicsStepListener", NoDelete]
+interface PhysicsStepListener {
+};
+
+[CppClass="JPH::LinearCurve"]
+interface LinearCurve {
+    [Constructor]
+    void create();
+    void Clear();
+    void Reserve(unsigned long numPoints);
+    float GetMinX();
+    float GetMaxX();
+};
+
+// ===== World wrapper (convenience) =====
+
+[CppClass="JoltWorld",
+ExtraMethod="get_gravity:l_jolt_get_gravity,get_position:l_jolt_get_position,get_rotation:l_jolt_get_rotation"]
+interface World {
+    void set_gravity(float x, float y, float z);
+    long update(float dt, long steps);
+    void optimize();
+    unsigned long body_count();
+    boolean is_active(unsigned long body_id);
+    void remove_body(unsigned long body_id);
+    void set_linear_velocity(unsigned long body_id, float vx, float vy, float vz);
+    void add_impulse(unsigned long body_id, float ix, float iy, float iz);
+    unsigned long create_box(float hx, float hy, float hz,
+    float px, float py, float pz, long motion_type);
+    unsigned long create_sphere(float radius, float px, float py, float pz,
+    long motion_type);
+};

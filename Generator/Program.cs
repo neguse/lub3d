@@ -9,6 +9,7 @@ using Generator.Modules.Imgui;
 using Generator.Modules.Stb;
 using Generator.Modules.Box2d;
 using Generator.Modules.Jolt;
+using Generator.WebIdl;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -348,7 +349,440 @@ rootCommand.SetAction(parseResult =>
     return 0;
 });
 
+// --- format-idl サブコマンド ---
+var formatIdlFilesArg = new Argument<FileInfo[]>("files")
+{
+    Description = "IDL files to format",
+    Arity = ArgumentArity.OneOrMore,
+};
+var formatIdlEditorconfigOption = new Option<FileInfo?>("--editorconfig")
+{
+    Description = "Path to .editorconfig (default: auto-detect)",
+};
+var formatIdlCheckOption = new Option<bool>("--check")
+{
+    Description = "Check only, exit 1 if files need formatting",
+};
+
+var formatIdlCommand = new Command("format-idl", "Format WebIDL files using .editorconfig settings");
+formatIdlCommand.Arguments.Add(formatIdlFilesArg);
+formatIdlCommand.Options.Add(formatIdlEditorconfigOption);
+formatIdlCommand.Options.Add(formatIdlCheckOption);
+formatIdlCommand.SetAction(parseResult =>
+{
+    var files = parseResult.GetValue(formatIdlFilesArg)!;
+    var editorconfigFile = parseResult.GetValue(formatIdlEditorconfigOption);
+    var checkOnly = parseResult.GetValue(formatIdlCheckOption);
+
+    var opts = WebIdlFormatter.FormatOptions.Default;
+    var editorconfigPath = editorconfigFile?.FullName ?? FindEditorConfig();
+    if (editorconfigPath != null)
+        opts = WebIdlFormatter.LoadEditorConfig(editorconfigPath);
+
+    var needsFormat = false;
+    foreach (var file in files)
+    {
+        if (!file.Exists)
+        {
+            Console.Error.WriteLine($"File not found: {file.FullName}");
+            continue;
+        }
+        var source = File.ReadAllText(file.FullName);
+        var formatted = WebIdlFormatter.Format(source, opts);
+        if (source != formatted)
+        {
+            if (checkOnly)
+            {
+                Console.WriteLine($"Needs formatting: {file.Name}");
+                needsFormat = true;
+            }
+            else
+            {
+                File.WriteAllText(file.FullName, formatted);
+                Console.WriteLine($"Formatted: {file.Name}");
+            }
+        }
+    }
+    return checkOnly && needsFormat ? 1 : 0;
+});
+
+rootCommand.Subcommands.Add(formatIdlCommand);
+
+// --- generate-from-idl サブコマンド ---
+var genIdlFileArg = new Argument<FileInfo>("idl-file")
+{
+    Description = "Input WebIDL file",
+};
+var genIdlModuleOption = new Option<string>("--module")
+{
+    Description = "Module name (e.g. sokol.log)",
+    Required = true,
+};
+var genIdlOutCOption = new Option<FileInfo?>("--out-c")
+{
+    Description = "Output C file path",
+};
+var genIdlOutLuaOption = new Option<FileInfo?>("--out-lua")
+{
+    Description = "Output LuaCATS file path",
+};
+var genIdlBaseDirOption = new Option<DirectoryInfo?>("--base-dir")
+{
+    Description = "Base directory for resolving relative paths in extended attributes (default: IDL file directory)",
+};
+
+var genIdlCommand = new Command("generate-from-idl", "Generate Lua C binding + LuaCATS from WebIDL file");
+genIdlCommand.Arguments.Add(genIdlFileArg);
+genIdlCommand.Options.Add(genIdlModuleOption);
+genIdlCommand.Options.Add(genIdlOutCOption);
+genIdlCommand.Options.Add(genIdlOutLuaOption);
+genIdlCommand.Options.Add(genIdlBaseDirOption);
+genIdlCommand.SetAction(parseResult =>
+{
+    var idlFile = parseResult.GetValue(genIdlFileArg)!;
+    var moduleName = parseResult.GetValue(genIdlModuleOption)!;
+    var outC = parseResult.GetValue(genIdlOutCOption);
+    var outLua = parseResult.GetValue(genIdlOutLuaOption);
+    var baseDir = parseResult.GetValue(genIdlBaseDirOption)?.FullName
+        ?? Path.GetDirectoryName(idlFile.FullName)!;
+
+    if (!idlFile.Exists)
+    {
+        Console.Error.WriteLine($"IDL file not found: {idlFile.FullName}");
+        return 1;
+    }
+
+    var source = File.ReadAllText(idlFile.FullName);
+    var parsed = WebIdlParser.ParseFile(source);
+
+    // ExtraCCode: read from file if specified in extended attributes
+    string? extraCCode = null;
+    if (parsed.ExtAttrs.TryGetValue("ExtraCCode", out var extraPath))
+    {
+        var fullExtraPath = Path.IsPathRooted(extraPath)
+            ? extraPath
+            : Path.Combine(baseDir, extraPath);
+        if (File.Exists(fullExtraPath))
+            extraCCode = File.ReadAllText(fullExtraPath);
+        else
+            Console.Error.WriteLine($"Warning: ExtraCCode file not found: {fullExtraPath}");
+    }
+
+    var spec = WebIdlToSpec.Convert(parsed, moduleName, extraCCode, idlBasePath: baseDir);
+    spec = SpecTransform.ExpandHandleTypes(spec);
+
+    if (outC != null)
+    {
+        var dir = Path.GetDirectoryName(outC.FullName);
+        if (dir != null) Directory.CreateDirectory(dir);
+        var cCode = Generator.CBinding.CBindingGen.Generate(spec);
+        File.WriteAllText(outC.FullName, cCode);
+        Console.WriteLine($"Generated: {outC.FullName}");
+    }
+
+    if (outLua != null)
+    {
+        var dir = Path.GetDirectoryName(outLua.FullName);
+        if (dir != null) Directory.CreateDirectory(dir);
+        var luaCode = Generator.LuaCats.LuaCatsGen.Generate(spec);
+        File.WriteAllText(outLua.FullName, luaCode);
+        Console.WriteLine($"Generated: {outLua.FullName}");
+    }
+
+    if (outC == null && outLua == null)
+    {
+        // No output specified — just validate and print summary
+        Console.WriteLine($"Module: {spec.ModuleName}");
+        Console.WriteLine($"Prefix: {spec.Prefix}");
+        Console.WriteLine($"Functions: {spec.Funcs.Count}");
+        Console.WriteLine($"Structs: {spec.Structs.Count}");
+        Console.WriteLine($"Enums: {spec.Enums.Count}");
+    }
+
+    return 0;
+});
+
+rootCommand.Subcommands.Add(genIdlCommand);
+
+// --- dump-signatures サブコマンド ---
+var dumpSigHeadersArg = new Argument<FileInfo[]>("headers")
+{
+    Description = "Header files to parse",
+    Arity = ArgumentArity.OneOrMore,
+};
+var dumpSigPrefixOption = new Option<string>("--prefix")
+{
+    Description = "Function prefix to filter (e.g. sg_, b2_)",
+    Required = true,
+};
+var dumpSigModuleOption = new Option<string?>("--module")
+{
+    Description = "Module name (default: derived from prefix)",
+};
+var dumpSigClangOption = new Option<FileInfo?>("--clang")
+{
+    Description = "Path to clang executable",
+};
+var dumpSigIncludeOption = new Option<DirectoryInfo[]?>("--include")
+{
+    Description = "Additional include paths",
+};
+
+var dumpSigCppOption = new Option<bool>("--cpp")
+{
+    Description = "Parse as C++ (use clang++ with namespace extraction)",
+};
+var dumpSigNamespaceOption = new Option<string[]?>("--namespace")
+{
+    Description = "C++ namespaces to extract (required with --cpp)",
+};
+var dumpSigDefineOption = new Option<string[]?>("--define")
+{
+    Description = "Extra preprocessor defines (e.g. IMGUI_DISABLE_OBSOLETE_FUNCTIONS)",
+};
+
+var dumpSigCommand = new Command("dump-signatures", "Dump compact function/enum/struct signatures from C/C++ headers (via clang AST)");
+dumpSigCommand.Arguments.Add(dumpSigHeadersArg);
+dumpSigCommand.Options.Add(dumpSigPrefixOption);
+dumpSigCommand.Options.Add(dumpSigModuleOption);
+dumpSigCommand.Options.Add(dumpSigClangOption);
+dumpSigCommand.Options.Add(dumpSigIncludeOption);
+dumpSigCommand.Options.Add(dumpSigCppOption);
+dumpSigCommand.Options.Add(dumpSigNamespaceOption);
+dumpSigCommand.Options.Add(dumpSigDefineOption);
+dumpSigCommand.SetAction(parseResult =>
+{
+    var headers = parseResult.GetValue(dumpSigHeadersArg)!;
+    var prefix = parseResult.GetValue(dumpSigPrefixOption)!;
+    var moduleName = parseResult.GetValue(dumpSigModuleOption) ?? prefix.TrimEnd('_');
+    var clangPath = parseResult.GetValue(dumpSigClangOption)?.FullName ?? FindClang();
+    var includeDirs = parseResult.GetValue(dumpSigIncludeOption);
+    var isCpp = parseResult.GetValue(dumpSigCppOption);
+    var namespaces = parseResult.GetValue(dumpSigNamespaceOption);
+    var defines = parseResult.GetValue(dumpSigDefineOption);
+
+    if (clangPath == null)
+    {
+        Console.Error.WriteLine("Error: clang not found. Use --clang or add clang to PATH.");
+        return 1;
+    }
+
+    var headerPaths = headers.Select(h => h.FullName).ToList();
+    foreach (var h in headerPaths)
+    {
+        if (!File.Exists(h))
+        {
+            Console.Error.WriteLine($"Header not found: {h}");
+            return 1;
+        }
+    }
+
+    var includePathList = includeDirs?.Select(d => d.FullName).ToList()
+        ?? headerPaths.Select(h => Path.GetDirectoryName(h)!).Distinct().ToList();
+
+    Module parsed;
+    if (isCpp)
+    {
+        if (namespaces == null || namespaces.Length == 0)
+        {
+            Console.Error.WriteLine("Error: --namespace is required with --cpp");
+            return 1;
+        }
+        var (_, cppParsed) = ClangRunner.ParseCppHeadersWithRawJson(
+            clangPath, headerPaths, namespaces.ToList(), includePathList, defines?.ToList());
+        parsed = cppParsed;
+    }
+    else
+    {
+        var unified = ClangRunner.ParseHeaders(clangPath, headerPaths, [prefix], includePathList);
+        parsed = ClangRunner.CreateView(unified, prefix, moduleName);
+    }
+
+    var reg = TypeRegistry.FromModule(parsed);
+    Console.Write(SignatureDumper.Dump(reg));
+    return 0;
+});
+
+rootCommand.Subcommands.Add(dumpSigCommand);
+
+// --- import-emscripten-idl サブコマンド ---
+var importEmIdlFileArg = new Argument<FileInfo>("emscripten-idl")
+{
+    Description = "Input Emscripten WebIDL file (e.g. JoltJS.idl)",
+};
+var importEmOutOption = new Option<FileInfo?>("--out")
+{
+    Description = "Output lub3d IDL file (default: stdout)",
+};
+
+var importEmCommand = new Command("import-emscripten-idl", "Import Emscripten WebIDL and convert to lub3d IDL format");
+importEmCommand.Arguments.Add(importEmIdlFileArg);
+importEmCommand.Options.Add(importEmOutOption);
+importEmCommand.SetAction(parseResult =>
+{
+    var inputFile = parseResult.GetValue(importEmIdlFileArg)!;
+    var outFile = parseResult.GetValue(importEmOutOption);
+
+    if (!inputFile.Exists)
+    {
+        Console.Error.WriteLine($"File not found: {inputFile.FullName}");
+        return 1;
+    }
+
+    var source = File.ReadAllText(inputFile.FullName);
+    var parsed = EmscriptenIdlReader.Parse(source);
+
+    Console.Error.WriteLine($"Parsed: {parsed.Interfaces.Count} interfaces, {parsed.Enums.Count} enums, {parsed.Implements.Count} implements");
+
+    var lub3dIdl = EmscriptenIdlReader.ToLub3dIdl(parsed);
+
+    if (outFile != null)
+    {
+        var dir = Path.GetDirectoryName(outFile.FullName);
+        if (dir != null) Directory.CreateDirectory(dir);
+        File.WriteAllText(outFile.FullName, lub3dIdl);
+        Console.Error.WriteLine($"Written: {outFile.FullName}");
+    }
+    else
+    {
+        Console.Write(lub3dIdl);
+    }
+
+    return 0;
+});
+
+rootCommand.Subcommands.Add(importEmCommand);
+
+// --- jolt-coverage サブコマンド ---
+var joltCovSourceArg = new Argument<FileInfo>("source-idl")
+{
+    Description = "Source-of-truth Emscripten WebIDL file (e.g. JoltJS.idl)",
+};
+var joltCovImplArg = new Argument<FileInfo>("impl-idl")
+{
+    Description = "Implementation IDL file (e.g. idl/jolt.idl)",
+};
+
+var joltCovCommand = new Command("jolt-coverage", "Compare JoltJS.idl (Emscripten) with jolt.idl (lub3d) and report coverage");
+joltCovCommand.Arguments.Add(joltCovSourceArg);
+joltCovCommand.Arguments.Add(joltCovImplArg);
+joltCovCommand.SetAction(parseResult =>
+{
+    var sourceFile = parseResult.GetValue(joltCovSourceArg)!;
+    var implFile = parseResult.GetValue(joltCovImplArg)!;
+
+    if (!sourceFile.Exists) { Console.Error.WriteLine($"File not found: {sourceFile.FullName}"); return 1; }
+    if (!implFile.Exists) { Console.Error.WriteLine($"File not found: {implFile.FullName}"); return 1; }
+
+    var sourceText = File.ReadAllText(sourceFile.FullName);
+    var implText = File.ReadAllText(implFile.FullName);
+
+    var emIdl = EmscriptenIdlReader.Parse(sourceText);
+    var lub3dIdl = WebIdlParser.ParseFile(implText);
+
+    // Exclude Emscripten-specific, container, and JS/Em callback interfaces
+    var excludePrefixes = new[] { "JoltJS", "Emscripten", "JS", "Array" };
+    var excludeSuffixes = new[] { "Array", "MemRef", "ArrayArgument", "JS", "JS2", "Em" };
+
+    bool IsExcluded(string name) =>
+        excludePrefixes.Any(p => name.StartsWith(p)) ||
+        excludeSuffixes.Any(s => name.EndsWith(s));
+
+    var sourceInterfaces = emIdl.Interfaces
+        .Where(i => !IsExcluded(i.Name))
+        .Select(i => i.Name).ToHashSet();
+    var sourceEnums = emIdl.Enums.Select(e => e.Name).ToHashSet();
+
+    var implInterfaces = lub3dIdl.Interfaces.Select(i => i.CName).ToHashSet();
+    var implEnums = lub3dIdl.Enums.Select(e => e.CName).ToHashSet();
+
+    // Category classification
+    var categories = new Dictionary<string, HashSet<string>>
+    {
+        ["MATH"] = ["Vec3", "RVec3", "Quat", "Mat44", "RMat44", "Float3", "Vec4", "Color", "Plane", "AABox", "OrientedBox", "Triangle", "IndexedTriangle", "VertexList", "IndexedTriangleList"],
+        ["BODY"] = ["Body", "BodyID", "BodyInterface", "BodyCreationSettings", "MotionProperties", "MassProperties", "BodyIDVector", "TransformedShape"],
+        ["SYSTEM"] = ["PhysicsSystem", "JoltInterface", "JoltSettings", "PhysicsSettings", "PhysicsMaterial", "PhysicsMaterialList", "TempAllocator"],
+        ["SHAPE"] = [],
+        ["QUERY"] = [],
+        ["COLLISION"] = [],
+        ["CONSTRAINT"] = [],
+        ["CHARACTER"] = [],
+        ["SOFTBODY"] = [],
+        ["VEHICLE"] = [],
+    };
+
+    // Auto-classify by name patterns
+    foreach (var name in sourceInterfaces)
+    {
+        if (categories.Values.Any(s => s.Contains(name))) continue;
+        if (name.Contains("Shape") || name.Contains("Collide") && name.Contains("Shape"))
+            categories["SHAPE"].Add(name);
+        else if (name.Contains("Ray") || name.Contains("Cast") || name.Contains("Query") || name.Contains("NarrowPhase") || name.Contains("BroadPhase") && name.Contains("Cast"))
+            categories["QUERY"].Add(name);
+        else if (name.Contains("Filter") || name.Contains("Layer") || name.Contains("Contact") || name.Contains("Collision") || name.Contains("BroadPhase"))
+            categories["COLLISION"].Add(name);
+        else if (name.Contains("Constraint") || name.Contains("Spring") || name.Contains("Motor"))
+            categories["CONSTRAINT"].Add(name);
+        else if (name.Contains("Character"))
+            categories["CHARACTER"].Add(name);
+        else if (name.Contains("SoftBody"))
+            categories["SOFTBODY"].Add(name);
+        else if (name.Contains("Vehicle") || name.Contains("Wheel") || name.Contains("Track") || name.Contains("Motorcycle"))
+            categories["VEHICLE"].Add(name);
+    }
+
+    // Print summary
+    var implTotal = implInterfaces.Intersect(sourceInterfaces).Count();
+    var implEnumTotal = implEnums.Intersect(sourceEnums).Count();
+    Console.WriteLine($"Interfaces: {implTotal}/{sourceInterfaces.Count} ({100.0 * implTotal / Math.Max(sourceInterfaces.Count, 1):F1}%)  Enums: {implEnumTotal}/{sourceEnums.Count} ({100.0 * implEnumTotal / Math.Max(sourceEnums.Count, 1):F1}%)");
+
+    foreach (var (cat, names) in categories)
+    {
+        // Only count names that actually exist in source-of-truth
+        names.IntersectWith(sourceInterfaces);
+        if (names.Count == 0) continue;
+        var catImpl = names.Count(n => implInterfaces.Contains(n));
+        var pct = 100.0 * catImpl / names.Count;
+        var bar = new string('#', (int)(pct / 25)) + new string('-', 4 - (int)(pct / 25));
+        Console.WriteLine($"  {cat,-12} {catImpl,3}/{names.Count,-3} [{bar}]");
+    }
+
+    // Missing interfaces
+    var missing = sourceInterfaces.Except(implInterfaces).OrderBy(n => n).ToList();
+    if (missing.Count > 0)
+    {
+        Console.WriteLine($"\nMissing ({missing.Count}): {string.Join(", ", missing.Take(20))}");
+        if (missing.Count > 20)
+            Console.WriteLine($"  ... and {missing.Count - 20} more");
+    }
+
+    // Missing enums
+    var missingEnums = sourceEnums.Except(implEnums).OrderBy(n => n).ToList();
+    if (missingEnums.Count > 0)
+    {
+        Console.WriteLine($"\nMissing enums ({missingEnums.Count}): {string.Join(", ", missingEnums.Take(20))}");
+        if (missingEnums.Count > 20)
+            Console.WriteLine($"  ... and {missingEnums.Count - 20} more");
+    }
+
+    return 0;
+});
+
+rootCommand.Subcommands.Add(joltCovCommand);
+
 return rootCommand.Parse(args).Invoke();
+
+static string? FindEditorConfig()
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (dir != null)
+    {
+        var candidate = Path.Combine(dir.FullName, ".editorconfig");
+        if (File.Exists(candidate)) return candidate;
+        dir = dir.Parent;
+    }
+    return null;
+}
 
 /// <summary>
 /// モジュール名から LuaCATS .lua ファイルパスを生成 (dots → /)

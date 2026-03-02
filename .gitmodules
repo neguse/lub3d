@@ -37,3 +37,6 @@
 [submodule "deps/HandmadeMath"]
 	path = deps/HandmadeMath
 	url = https://github.com/HandmadeMath/HandmadeMath.git
+[submodule "deps/JoltPhysics.js"]
+	path = deps/JoltPhysics.js
+	url = https://github.com/jrouwe/JoltPhysics.js.git
