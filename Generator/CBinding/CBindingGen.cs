@@ -864,12 +864,15 @@ public static class CBindingGen
                     }
                 """
             : "";
-        var nuv = ot.Dependencies.Count;
+        var nuv = ot.Dependencies?.Count ?? 0;
         var depCode = "";
-        foreach (var dep in ot.Dependencies)
+        if (ot.Dependencies != null)
         {
-            depCode += $"    lua_pushvalue(L, {dep.ConstructorArgIndex});\n";
-            depCode += $"    lua_setiuservalue(L, -2, {dep.UservalueSlot});\n";
+            foreach (var dep in ot.Dependencies)
+            {
+                depCode += $"    lua_pushvalue(L, {dep.ConstructorArgIndex});\n";
+                depCode += $"    lua_setiuservalue(L, -2, {dep.UservalueSlot});\n";
+            }
         }
         return $$"""
             static int l_{{ot.CName}}_new(lua_State *L) {
@@ -1690,6 +1693,7 @@ public static class CBindingGen
         BindingType.Double => "double",
         BindingType.Bool => "bool",
         BindingType.Str => "const char*",
+        BindingType.VoidPtr => "void*",
         BindingType.Void => "void",
         BindingType.Enum(var cName, _) => cName,
         BindingType.Struct(var cName, _, _) => cName,

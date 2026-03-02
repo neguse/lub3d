@@ -9,6 +9,7 @@ using Generator.Modules.Imgui;
 using Generator.Modules.Stb;
 using Generator.Modules.Box2d;
 using Generator.Modules.Jolt;
+using Generator.WebIdl;
 
 var outputDirArg = new Argument<DirectoryInfo>("output-dir")
 {
@@ -348,7 +349,174 @@ rootCommand.SetAction(parseResult =>
     return 0;
 });
 
+// --- format-idl サブコマンド ---
+var formatIdlFilesArg = new Argument<FileInfo[]>("files")
+{
+    Description = "IDL files to format",
+    Arity = ArgumentArity.OneOrMore,
+};
+var formatIdlEditorconfigOption = new Option<FileInfo?>("--editorconfig")
+{
+    Description = "Path to .editorconfig (default: auto-detect)",
+};
+var formatIdlCheckOption = new Option<bool>("--check")
+{
+    Description = "Check only, exit 1 if files need formatting",
+};
+
+var formatIdlCommand = new Command("format-idl", "Format WebIDL files using .editorconfig settings");
+formatIdlCommand.Arguments.Add(formatIdlFilesArg);
+formatIdlCommand.Options.Add(formatIdlEditorconfigOption);
+formatIdlCommand.Options.Add(formatIdlCheckOption);
+formatIdlCommand.SetAction(parseResult =>
+{
+    var files = parseResult.GetValue(formatIdlFilesArg)!;
+    var editorconfigFile = parseResult.GetValue(formatIdlEditorconfigOption);
+    var checkOnly = parseResult.GetValue(formatIdlCheckOption);
+
+    var opts = WebIdlFormatter.FormatOptions.Default;
+    var editorconfigPath = editorconfigFile?.FullName ?? FindEditorConfig();
+    if (editorconfigPath != null)
+        opts = WebIdlFormatter.LoadEditorConfig(editorconfigPath);
+
+    var needsFormat = false;
+    foreach (var file in files)
+    {
+        if (!file.Exists)
+        {
+            Console.Error.WriteLine($"File not found: {file.FullName}");
+            continue;
+        }
+        var source = File.ReadAllText(file.FullName);
+        var formatted = WebIdlFormatter.Format(source, opts);
+        if (source != formatted)
+        {
+            if (checkOnly)
+            {
+                Console.WriteLine($"Needs formatting: {file.Name}");
+                needsFormat = true;
+            }
+            else
+            {
+                File.WriteAllText(file.FullName, formatted);
+                Console.WriteLine($"Formatted: {file.Name}");
+            }
+        }
+    }
+    return checkOnly && needsFormat ? 1 : 0;
+});
+
+rootCommand.Subcommands.Add(formatIdlCommand);
+
+// --- generate-from-idl サブコマンド ---
+var genIdlFileArg = new Argument<FileInfo>("idl-file")
+{
+    Description = "Input WebIDL file",
+};
+var genIdlModuleOption = new Option<string>("--module")
+{
+    Description = "Module name (e.g. sokol.log)",
+    Required = true,
+};
+var genIdlOutCOption = new Option<FileInfo?>("--out-c")
+{
+    Description = "Output C file path",
+};
+var genIdlOutLuaOption = new Option<FileInfo?>("--out-lua")
+{
+    Description = "Output LuaCATS file path",
+};
+var genIdlBaseDirOption = new Option<DirectoryInfo?>("--base-dir")
+{
+    Description = "Base directory for resolving relative paths in extended attributes (default: IDL file directory)",
+};
+
+var genIdlCommand = new Command("generate-from-idl", "Generate Lua C binding + LuaCATS from WebIDL file");
+genIdlCommand.Arguments.Add(genIdlFileArg);
+genIdlCommand.Options.Add(genIdlModuleOption);
+genIdlCommand.Options.Add(genIdlOutCOption);
+genIdlCommand.Options.Add(genIdlOutLuaOption);
+genIdlCommand.Options.Add(genIdlBaseDirOption);
+genIdlCommand.SetAction(parseResult =>
+{
+    var idlFile = parseResult.GetValue(genIdlFileArg)!;
+    var moduleName = parseResult.GetValue(genIdlModuleOption)!;
+    var outC = parseResult.GetValue(genIdlOutCOption);
+    var outLua = parseResult.GetValue(genIdlOutLuaOption);
+    var baseDir = parseResult.GetValue(genIdlBaseDirOption)?.FullName
+        ?? Path.GetDirectoryName(idlFile.FullName)!;
+
+    if (!idlFile.Exists)
+    {
+        Console.Error.WriteLine($"IDL file not found: {idlFile.FullName}");
+        return 1;
+    }
+
+    var source = File.ReadAllText(idlFile.FullName);
+    var parsed = WebIdlParser.ParseFile(source);
+
+    // ExtraCCode: read from file if specified in extended attributes
+    string? extraCCode = null;
+    if (parsed.ExtAttrs.TryGetValue("ExtraCCode", out var extraPath))
+    {
+        var fullExtraPath = Path.IsPathRooted(extraPath)
+            ? extraPath
+            : Path.Combine(baseDir, extraPath);
+        if (File.Exists(fullExtraPath))
+            extraCCode = File.ReadAllText(fullExtraPath);
+        else
+            Console.Error.WriteLine($"Warning: ExtraCCode file not found: {fullExtraPath}");
+    }
+
+    var spec = WebIdlToSpec.Convert(parsed, moduleName, extraCCode, idlBasePath: baseDir);
+    spec = SpecTransform.ExpandHandleTypes(spec);
+
+    if (outC != null)
+    {
+        var dir = Path.GetDirectoryName(outC.FullName);
+        if (dir != null) Directory.CreateDirectory(dir);
+        var cCode = Generator.CBinding.CBindingGen.Generate(spec);
+        File.WriteAllText(outC.FullName, cCode);
+        Console.WriteLine($"Generated: {outC.FullName}");
+    }
+
+    if (outLua != null)
+    {
+        var dir = Path.GetDirectoryName(outLua.FullName);
+        if (dir != null) Directory.CreateDirectory(dir);
+        var luaCode = Generator.LuaCats.LuaCatsGen.Generate(spec);
+        File.WriteAllText(outLua.FullName, luaCode);
+        Console.WriteLine($"Generated: {outLua.FullName}");
+    }
+
+    if (outC == null && outLua == null)
+    {
+        // No output specified — just validate and print summary
+        Console.WriteLine($"Module: {spec.ModuleName}");
+        Console.WriteLine($"Prefix: {spec.Prefix}");
+        Console.WriteLine($"Functions: {spec.Funcs.Count}");
+        Console.WriteLine($"Structs: {spec.Structs.Count}");
+        Console.WriteLine($"Enums: {spec.Enums.Count}");
+    }
+
+    return 0;
+});
+
+rootCommand.Subcommands.Add(genIdlCommand);
+
 return rootCommand.Parse(args).Invoke();
+
+static string? FindEditorConfig()
+{
+    var dir = new DirectoryInfo(Directory.GetCurrentDirectory());
+    while (dir != null)
+    {
+        var candidate = Path.Combine(dir.FullName, ".editorconfig");
+        if (File.Exists(candidate)) return candidate;
+        dir = dir.Parent;
+    }
+    return null;
+}
 
 /// <summary>
 /// モジュール名から LuaCATS .lua ファイルパスを生成 (dots → /)
