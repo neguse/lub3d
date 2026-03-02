@@ -527,7 +527,26 @@ if(LUB3D_BUILD_JOLT)
     add_subdirectory(${JOLT_DIR}/Build ${CMAKE_CURRENT_BINARY_DIR}/jolt)
 
     # Jolt Lua bindings (C++ — generated from idl/jolt.idl)
-    add_library(jolt_lua STATIC ${CMAKE_CURRENT_SOURCE_DIR}/gen/jolt.cpp)
+    add_custom_command(
+        OUTPUT ${GEN_DIR}/jolt.cpp ${GEN_DIR}/jolt.lua
+        COMMAND ${DOTNET_EXECUTABLE} run --project ${GENERATOR_DIR} --
+            gen generate-from-idl
+            ${CMAKE_CURRENT_SOURCE_DIR}/idl/jolt.idl
+            --module jolt
+            --out-c ${GEN_DIR}/jolt.cpp
+            --out-lua ${GEN_DIR}/jolt.lua
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        DEPENDS
+            ${CMAKE_CURRENT_SOURCE_DIR}/idl/jolt.idl
+            ${CMAKE_CURRENT_SOURCE_DIR}/idl/extra/jolt_extra.cpp
+            ${GENERATOR_DIR}/Program.cs
+            ${GENERATOR_DIR}/WebIdl/WebIdlParser.cs
+            ${GENERATOR_DIR}/WebIdl/WebIdlToSpec.cs
+            ${GENERATOR_DIR}/CBinding/CBindingGen.cs
+            ${GENERATOR_DIR}/LuaCats/LuaCatsGen.cs
+        COMMENT "Generating Jolt bindings from idl/jolt.idl"
+    )
+    add_library(jolt_lua STATIC ${GEN_DIR}/jolt.cpp)
     target_include_directories(jolt_lua
         PRIVATE ${JOLT_DIR}
         PRIVATE ${LUA_INCLUDE}
