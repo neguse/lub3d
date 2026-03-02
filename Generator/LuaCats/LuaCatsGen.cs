@@ -153,20 +153,31 @@ public static class LuaCatsGen
             moduleFields.Add(StructCtor(s.PascalName, spec.ModuleName, s.AllowStringInit));
         foreach (var ot in spec.OpaqueTypes)
         {
-            if (ot.InitFunc == null) continue;
-            if (ot.ConfigType != null)
+            if (ot.ConstructorParams != null)
             {
-                var configStruct = spec.Structs.FirstOrDefault(s => s.CName == ot.ConfigType);
-                var configClass = configStruct != null
-                    ? $"{spec.ModuleName}.{configStruct.PascalName}"
-                    : "any";
-                var initName = Pipeline.StripPrefix(ot.InitFunc, spec.Prefix);
-                moduleFields.Add($"---@field {initName} fun(config?: {configClass}): {ot.LuaClassName}");
+                // CppClass mode: constructor with explicit params
+                var parms = ot.ConstructorParams
+                    .Select(p => $"{p.Name}: {TypeToString(ToLuaCatsType(p.Type))}")
+                    .ToList();
+                var paramStr = string.Join(", ", parms);
+                moduleFields.Add($"---@field {ot.PascalName} fun({paramStr}): {ot.LuaClassName}");
             }
-            else
+            else if (ot.InitFunc != null)
             {
-                var initName = Pipeline.StripPrefix(ot.InitFunc, spec.Prefix);
-                moduleFields.Add($"---@field {initName} fun(): {ot.LuaClassName}");
+                if (ot.ConfigType != null)
+                {
+                    var configStruct = spec.Structs.FirstOrDefault(s => s.CName == ot.ConfigType);
+                    var configClass = configStruct != null
+                        ? $"{spec.ModuleName}.{configStruct.PascalName}"
+                        : "any";
+                    var initName = Pipeline.StripPrefix(ot.InitFunc, spec.Prefix);
+                    moduleFields.Add($"---@field {initName} fun(config?: {configClass}): {ot.LuaClassName}");
+                }
+                else
+                {
+                    var initName = Pipeline.StripPrefix(ot.InitFunc, spec.Prefix);
+                    moduleFields.Add($"---@field {initName} fun(): {ot.LuaClassName}");
+                }
             }
         }
         foreach (var f in spec.Funcs)
@@ -256,6 +267,8 @@ public static class LuaCatsGen
             => new Type.Primitive(luaCatsType),
         BindingType.ValueStructArray(_, var luaCatsType, _, _)
             => new Type.Primitive(luaCatsType),
+        BindingType.OpaqueRef(_, _, _, var luaClassName, _)
+            => new Type.Class(luaClassName),
         BindingType.Custom(_, var luaCatsType, _, _, _, _)
             => new Type.Primitive(luaCatsType),
         _ => new Type.Primitive("any")

@@ -53,6 +53,15 @@ public static class Pipeline
     }
 
     /// <summary>
+    /// 名前空間を除去 (例: "JPH::Vec3" → "Vec3")
+    /// </summary>
+    public static string StripNamespace(string name)
+    {
+        var idx = name.LastIndexOf("::");
+        return idx >= 0 ? name[(idx + 2)..] : name;
+    }
+
+    /// <summary>
     /// Enum アイテム名からプレフィックスを除去
     /// </summary>
     public static string EnumItemName(string itemName, string enumName, string prefix)

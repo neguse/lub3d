@@ -52,6 +52,15 @@ public abstract record BindingType
     public sealed record ScalarField(string CAccessor) : ValueStructField(CAccessor);
     public sealed record NestedFields(string CAccessor, List<string> SubAccessors) : ValueStructField(CAccessor);
 
+    // Opaque 型参照 — 他の interface を引数/戻り値に取る
+    public sealed record OpaqueRef(
+        string CName,        // C++ 型名 "JPH::Vec3"
+        string CheckName,    // check 関数接頭辞 "Vec3" → check_Vec3()
+        string Metatable,    // "jolt.Vec3"
+        string LuaClassName, // LuaCATS クラス名
+        bool IsValueType     // true=inline userdata, false=T** double-indirect
+    ) : BindingType;
+
     // エスケープハッチ — sg_range 等の自動演繹不可な型
     public sealed record Custom(
         string CTypeName, string LuaCatsType,

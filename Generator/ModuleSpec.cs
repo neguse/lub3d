@@ -127,7 +127,8 @@ public record OpaqueTypeBinding(
     string? CppClassName = null,
     bool NoDelete = false,
     List<ParamBinding>? ConstructorParams = null,
-    List<(string LuaName, string CFunc)>? ExtraMethods = null
+    List<(string LuaName, string CFunc)>? ExtraMethods = null,
+    bool IsValueType = false
 )
 {
     public List<DependencyBinding> Dependencies { get; init; } = Dependencies ?? [];

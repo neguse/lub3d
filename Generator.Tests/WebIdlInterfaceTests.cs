@@ -414,20 +414,23 @@ public class WebIdlInterfaceTests
         var source = File.ReadAllText(idlPath);
         var file = WebIdlParser.ParseFile(source);
 
-        Assert.Single(file.Enums);
+        Assert.True(file.Enums.Count >= 8);
         Assert.Equal("EMotionType", file.Enums[0].CName);
-        Assert.Single(file.Interfaces);
-        Assert.Equal("World", file.Interfaces[0].CName);
+        Assert.True(file.Interfaces.Count >= 20);
 
         var spec = WebIdlToSpec.Convert(file, "jolt");
         Assert.True(spec.IsCpp);
         Assert.True(spec.StandaloneEntry);
-        Assert.Single(spec.OpaqueTypes);
-        var ot = spec.OpaqueTypes[0];
-        Assert.Equal("JoltWorld", ot.CppClassName);
-        Assert.Null(ot.ConstructorParams); // Constructor handled via ExtraLuaReg
-        Assert.NotNull(ot.ExtraMethods);
-        Assert.Equal(3, ot.ExtraMethods.Count);
+        Assert.True(spec.OpaqueTypes.Count >= 20);
+        var world = spec.OpaqueTypes.First(o => o.CppClassName == "JoltWorld");
+        Assert.Null(world.ConstructorParams); // Constructor handled via ExtraLuaReg
+        Assert.NotNull(world.ExtraMethods);
+        Assert.Equal(3, world.ExtraMethods.Count);
+        // ValueType interfaces present
+        var vec3 = spec.OpaqueTypes.First(o => o.CppClassName == "JPH::Vec3");
+        Assert.True(vec3.IsValueType);
+        var quat = spec.OpaqueTypes.First(o => o.CppClassName == "JPH::Quat");
+        Assert.True(quat.IsValueType);
 
         // Generate code — should not throw
         var code = CBindingGen.Generate(spec);

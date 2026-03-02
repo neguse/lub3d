@@ -33,6 +33,16 @@ public static class WebIdlToSpec
         var ifaceNames = file.Interfaces.Select(i => i.CName).ToHashSet();
         var callbackNames = file.Callbacks.Select(c => c.CName).ToHashSet();
 
+        // ValueType interface 名を収集
+        var valueTypeNames = file.Interfaces
+            .Where(i => HasFlag(i.ExtAttrs, "ValueType"))
+            .Select(i => i.CName).ToHashSet();
+
+        // interface → CppClassName マッピング
+        var ifaceCppClassMap = file.Interfaces
+            .Where(i => i.ExtAttrs?.ContainsKey("CppClass") == true)
+            .ToDictionary(i => i.CName, i => i.ExtAttrs!["CppClass"]);
+
         // ValueStruct 名を収集
         var valueStructNames = file.Dictionaries
             .Where(d => HasFlag(d.ExtAttrs, "ValueStruct"))
@@ -58,7 +68,8 @@ public static class WebIdlToSpec
 
         BindingType ResolveType(IdlType t) => MapType(t, moduleName, prefix,
             enumNames, dictNames, ifaceNames, callbackNames, callbackTypes,
-            valueStructNames, handleTypeNames, file);
+            valueStructNames, handleTypeNames, file,
+            valueTypeNames, ifaceCppClassMap);
 
         // namespace → funcs
         var funcs = new List<FuncBinding>();
@@ -169,6 +180,9 @@ public static class WebIdlToSpec
             if (HasFlag(d.ExtAttrs, "ValueStruct")) continue; // ValueStruct は型解決で処理
             structs.Add(ConvertDict(d, moduleName, prefix, ResolveType, file, idlBasePath));
         }
+
+        // Inheritance: 親メソッドを子に継承
+        ResolveInheritance(file.Interfaces);
 
         // interface → OpaqueTypeBinding
         var opaqueTypes = file.Interfaces.Select(i => ConvertInterface(i, moduleName, prefix, ResolveType, isPascalCase)).ToList();
@@ -473,6 +487,8 @@ public static class WebIdlToSpec
         var extraMethodsRaw = iface.ExtAttrs?.GetValueOrDefault("ExtraMethod", null);
         var extraMethods = string.IsNullOrEmpty(extraMethodsRaw) ? null : ParseKvList(extraMethodsRaw);
 
+        var isValueType = HasFlag(iface.ExtAttrs, "ValueType");
+
         return new OpaqueTypeBinding(
             iface.CName, pascalName, metatable, metatable,
             initFunc, uninitFunc, configType, configInitFunc,
@@ -480,7 +496,31 @@ public static class WebIdlToSpec
             CppClassName: cppClassName,
             NoDelete: noDelete,
             ConstructorParams: constructorParams,
-            ExtraMethods: extraMethods);
+            ExtraMethods: extraMethods,
+            IsValueType: isValueType);
+    }
+
+    /// <summary>
+    /// 親 interface のメソッドを子に継承する。
+    /// interface SphereShape : Shape の場合、Shape のメソッドを SphereShape に追加。
+    /// </summary>
+    private static void ResolveInheritance(List<IdlInterface> interfaces)
+    {
+        var byName = interfaces.ToDictionary(i => i.CName);
+        foreach (var iface in interfaces)
+        {
+            if (iface.ParentName == null) continue;
+            if (!byName.TryGetValue(iface.ParentName, out var parent)) continue;
+
+            // 子に既に定義されているメソッド名
+            var existingNames = iface.Methods.Select(m => m.Name).ToHashSet();
+
+            // 親メソッドを先頭に挿入 (子の固有メソッドの前)
+            var inherited = parent.Methods
+                .Where(m => !existingNames.Contains(m.Name))
+                .ToList();
+            iface.Methods.InsertRange(0, inherited);
+        }
     }
 
     private static EventAdapterBinding ConvertEventAdapter(IdlEventAdapter ev, string prefix,
@@ -546,13 +586,17 @@ public static class WebIdlToSpec
         Dictionary<string, BindingType.Callback>? callbackTypes = null,
         HashSet<string>? valueStructNames = null,
         HashSet<string>? handleTypeNames = null,
-        IdlFile? file = null)
+        IdlFile? file = null,
+        HashSet<string>? valueTypeNames = null,
+        Dictionary<string, string>? ifaceCppClassMap = null)
     {
         ifaceNames ??= [];
         callbackNames ??= [];
         callbackTypes ??= [];
         valueStructNames ??= [];
         handleTypeNames ??= [];
+        valueTypeNames ??= [];
+        ifaceCppClassMap ??= [];
 
         // FixedArray: type[N]
         if (t.ArrayLength.HasValue)
@@ -627,13 +671,15 @@ public static class WebIdlToSpec
             return new BindingType.Struct(t.Name, fullName, fullName);
         }
 
-        // Interface (opaque type) reference
+        // Interface (opaque type) reference → OpaqueRef
         if (ifaceNames.Contains(t.Name))
         {
             var stripped = Pipeline.StripPrefix(t.Name, prefix);
             var pascalName = Pipeline.ToPascalCase(Pipeline.StripTypeSuffix(stripped));
             var fullName = $"{moduleName}.{pascalName}";
-            return new BindingType.Struct(t.Name, fullName, fullName);
+            var cppName = ifaceCppClassMap.TryGetValue(t.Name, out var cn) ? cn : t.Name;
+            var isValueType = valueTypeNames.Contains(t.Name);
+            return new BindingType.OpaqueRef(cppName, t.Name, fullName, fullName, isValueType);
         }
 
         // Cross-module struct reference (e.g. sg_environment from sokol.gfx)

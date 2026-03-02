@@ -653,6 +653,123 @@ importEmCommand.SetAction(parseResult =>
 
 rootCommand.Subcommands.Add(importEmCommand);
 
+// --- jolt-coverage サブコマンド ---
+var joltCovSourceArg = new Argument<FileInfo>("source-idl")
+{
+    Description = "Source-of-truth Emscripten WebIDL file (e.g. JoltJS.idl)",
+};
+var joltCovImplArg = new Argument<FileInfo>("impl-idl")
+{
+    Description = "Implementation IDL file (e.g. idl/jolt.idl)",
+};
+
+var joltCovCommand = new Command("jolt-coverage", "Compare JoltJS.idl (Emscripten) with jolt.idl (lub3d) and report coverage");
+joltCovCommand.Arguments.Add(joltCovSourceArg);
+joltCovCommand.Arguments.Add(joltCovImplArg);
+joltCovCommand.SetAction(parseResult =>
+{
+    var sourceFile = parseResult.GetValue(joltCovSourceArg)!;
+    var implFile = parseResult.GetValue(joltCovImplArg)!;
+
+    if (!sourceFile.Exists) { Console.Error.WriteLine($"File not found: {sourceFile.FullName}"); return 1; }
+    if (!implFile.Exists) { Console.Error.WriteLine($"File not found: {implFile.FullName}"); return 1; }
+
+    var sourceText = File.ReadAllText(sourceFile.FullName);
+    var implText = File.ReadAllText(implFile.FullName);
+
+    var emIdl = EmscriptenIdlReader.Parse(sourceText);
+    var lub3dIdl = WebIdlParser.ParseFile(implText);
+
+    // Exclude Emscripten-specific, container, and JS/Em callback interfaces
+    var excludePrefixes = new[] { "JoltJS", "Emscripten", "JS", "Array" };
+    var excludeSuffixes = new[] { "Array", "MemRef", "ArrayArgument", "JS", "JS2", "Em" };
+
+    bool IsExcluded(string name) =>
+        excludePrefixes.Any(p => name.StartsWith(p)) ||
+        excludeSuffixes.Any(s => name.EndsWith(s));
+
+    var sourceInterfaces = emIdl.Interfaces
+        .Where(i => !IsExcluded(i.Name))
+        .Select(i => i.Name).ToHashSet();
+    var sourceEnums = emIdl.Enums.Select(e => e.Name).ToHashSet();
+
+    var implInterfaces = lub3dIdl.Interfaces.Select(i => i.CName).ToHashSet();
+    var implEnums = lub3dIdl.Enums.Select(e => e.CName).ToHashSet();
+
+    // Category classification
+    var categories = new Dictionary<string, HashSet<string>>
+    {
+        ["MATH"] = ["Vec3", "RVec3", "Quat", "Mat44", "RMat44", "Float3", "Vec4", "Color", "Plane", "AABox", "OrientedBox", "Triangle", "IndexedTriangle", "VertexList", "IndexedTriangleList"],
+        ["BODY"] = ["Body", "BodyID", "BodyInterface", "BodyCreationSettings", "MotionProperties", "MassProperties", "BodyIDVector", "TransformedShape"],
+        ["SYSTEM"] = ["PhysicsSystem", "JoltInterface", "JoltSettings", "PhysicsSettings", "PhysicsMaterial", "PhysicsMaterialList", "TempAllocator"],
+        ["SHAPE"] = [],
+        ["QUERY"] = [],
+        ["COLLISION"] = [],
+        ["CONSTRAINT"] = [],
+        ["CHARACTER"] = [],
+        ["SOFTBODY"] = [],
+        ["VEHICLE"] = [],
+    };
+
+    // Auto-classify by name patterns
+    foreach (var name in sourceInterfaces)
+    {
+        if (categories.Values.Any(s => s.Contains(name))) continue;
+        if (name.Contains("Shape") || name.Contains("Collide") && name.Contains("Shape"))
+            categories["SHAPE"].Add(name);
+        else if (name.Contains("Ray") || name.Contains("Cast") || name.Contains("Query") || name.Contains("NarrowPhase") || name.Contains("BroadPhase") && name.Contains("Cast"))
+            categories["QUERY"].Add(name);
+        else if (name.Contains("Filter") || name.Contains("Layer") || name.Contains("Contact") || name.Contains("Collision") || name.Contains("BroadPhase"))
+            categories["COLLISION"].Add(name);
+        else if (name.Contains("Constraint") || name.Contains("Spring") || name.Contains("Motor"))
+            categories["CONSTRAINT"].Add(name);
+        else if (name.Contains("Character"))
+            categories["CHARACTER"].Add(name);
+        else if (name.Contains("SoftBody"))
+            categories["SOFTBODY"].Add(name);
+        else if (name.Contains("Vehicle") || name.Contains("Wheel") || name.Contains("Track") || name.Contains("Motorcycle"))
+            categories["VEHICLE"].Add(name);
+    }
+
+    // Print summary
+    var implTotal = implInterfaces.Intersect(sourceInterfaces).Count();
+    var implEnumTotal = implEnums.Intersect(sourceEnums).Count();
+    Console.WriteLine($"Interfaces: {implTotal}/{sourceInterfaces.Count} ({100.0 * implTotal / Math.Max(sourceInterfaces.Count, 1):F1}%)  Enums: {implEnumTotal}/{sourceEnums.Count} ({100.0 * implEnumTotal / Math.Max(sourceEnums.Count, 1):F1}%)");
+
+    foreach (var (cat, names) in categories)
+    {
+        // Only count names that actually exist in source-of-truth
+        names.IntersectWith(sourceInterfaces);
+        if (names.Count == 0) continue;
+        var catImpl = names.Count(n => implInterfaces.Contains(n));
+        var pct = 100.0 * catImpl / names.Count;
+        var bar = new string('#', (int)(pct / 25)) + new string('-', 4 - (int)(pct / 25));
+        Console.WriteLine($"  {cat,-12} {catImpl,3}/{names.Count,-3} [{bar}]");
+    }
+
+    // Missing interfaces
+    var missing = sourceInterfaces.Except(implInterfaces).OrderBy(n => n).ToList();
+    if (missing.Count > 0)
+    {
+        Console.WriteLine($"\nMissing ({missing.Count}): {string.Join(", ", missing.Take(20))}");
+        if (missing.Count > 20)
+            Console.WriteLine($"  ... and {missing.Count - 20} more");
+    }
+
+    // Missing enums
+    var missingEnums = sourceEnums.Except(implEnums).OrderBy(n => n).ToList();
+    if (missingEnums.Count > 0)
+    {
+        Console.WriteLine($"\nMissing enums ({missingEnums.Count}): {string.Join(", ", missingEnums.Take(20))}");
+        if (missingEnums.Count > 20)
+            Console.WriteLine($"  ... and {missingEnums.Count - 20} more");
+    }
+
+    return 0;
+});
+
+rootCommand.Subcommands.Add(joltCovCommand);
+
 return rootCommand.Parse(args).Invoke();
 
 static string? FindEditorConfig()
